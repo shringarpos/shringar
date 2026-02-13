@@ -58,6 +58,7 @@ create table public.ornament_categories (
     shop_id     uuid            references public.shops(id) on delete restrict not null,
     name        varchar(100)    not null,
     description text,
+    image_url   text,
     is_active   boolean         default true not null,
 
 
