@@ -20,8 +20,8 @@ create table public.shops (
     gst_number      varchar(20),
     created_at      timestamp with time zone default now() not null,
     updated_at      timestamp with time zone default now() not null,
-    created_by      varchar(100),
-    updated_by      varchar(100)
+    created_by      uuid            references auth.users(id),
+    updated_by      uuid            references auth.users(id)
 );
 
 create index idx_shops_code on public.shops(code);
@@ -38,6 +38,9 @@ create policy "Users can insert their own shop" on public.shops
 create policy "Users can update their own shop" on public.shops
   for update using ((select auth.uid()) = user_id);
 
+create policy "Users can delete their own shop" on public.shops
+  for delete using ((select auth.uid()) = user_id);
+
 -- Update timestamp trigger function
 create or replace function public.update_updated_at_column()
 returns trigger as $$
@@ -50,6 +53,17 @@ $$ language plpgsql;
 create trigger update_shops_updated_at before update on public.shops
   for each row execute function public.update_updated_at_column();
 
+
+-- Helper function to check if user has system_admin role
+create or replace function public.is_system_admin()
+returns boolean as $$
+begin
+  return coalesce(
+    (select (auth.jwt() -> 'app_metadata' ->> 'role') = 'system_admin'),
+    false
+  );
+end;
+$$ language plpgsql security definer;
 
 
 -- Ornament Categories (Rings, Necklace, Bracelet etc)
@@ -64,8 +78,8 @@ create table public.ornament_categories (
 
     created_at  timestamp with time zone default now() not null,
     updated_at  timestamp with time zone default now() not null,
-    created_by  varchar(100),
-    updated_by  varchar(100)
+    created_by  uuid            references auth.users(id),
+    updated_by  uuid            references auth.users(id)
 );
 
 create index idx_ornament_categories_active on public.ornament_categories(is_active);
@@ -100,6 +114,15 @@ create policy "Users can update categories from their shop" on public.ornament_c
     )
   );
 
+create policy "Users can delete categories from their shop" on public.ornament_categories
+  for delete using (
+    exists (
+      select 1 from public.shops
+      where shops.id = ornament_categories.shop_id
+      and shops.user_id = (select auth.uid())
+    )
+  );
+
 create trigger update_ornament_categories_updated_at before update on public.ornament_categories
   for each row execute function public.update_updated_at_column();
 
@@ -122,11 +145,14 @@ alter table public.metal_types enable row level security;
 create policy "Metal types are viewable by authenticated users" on public.metal_types
   for select using (auth.role() = 'authenticated');
 
-create policy "Metal types can be inserted by authenticated users" on public.metal_types
-  for insert with check (auth.role() = 'authenticated');
+create policy "Metal types can be inserted by system admins" on public.metal_types
+  for insert with check (public.is_system_admin());
 
-create policy "Metal types can be updated by authenticated users" on public.metal_types
-  for update using (auth.role() = 'authenticated');
+create policy "Metal types can be updated by system admins" on public.metal_types
+  for update using (public.is_system_admin());
+
+create policy "Metal types can be deleted by system admins" on public.metal_types
+  for delete using (public.is_system_admin());
 
 create trigger update_metal_types_updated_at before update on public.metal_types
   for each row execute function public.update_updated_at_column();
@@ -154,11 +180,14 @@ alter table public.purity_levels enable row level security;
 create policy "Purity levels are viewable by authenticated users" on public.purity_levels
   for select using (auth.role() = 'authenticated');
 
-create policy "Purity levels can be inserted by authenticated users" on public.purity_levels
-  for insert with check (auth.role() = 'authenticated');
+create policy "Purity levels can be inserted by system admins" on public.purity_levels
+  for insert with check (public.is_system_admin());
 
-create policy "Purity levels can be updated by authenticated users" on public.purity_levels
-  for update using (auth.role() = 'authenticated');
+create policy "Purity levels can be updated by system admins" on public.purity_levels
+  for update using (public.is_system_admin());
+
+create policy "Purity levels can be deleted by system admins" on public.purity_levels
+  for delete using (public.is_system_admin());
 
 create trigger update_purity_levels_updated_at before update on public.purity_levels
   for each row execute function public.update_updated_at_column();
@@ -177,8 +206,8 @@ create table public.making_charges (
 
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
-    created_by varchar(100),
-    updated_by varchar(100)
+    created_by uuid            references auth.users(id),
+    updated_by uuid            references auth.users(id)
 );
 
 create index idx_making_charges_metal_active on public.making_charges(metal_type_id, is_active, effective_from);
@@ -214,6 +243,15 @@ create policy "Users can update making charges from their shop" on public.making
     )
   );
 
+create policy "Users can delete making charges from their shop" on public.making_charges
+  for delete using (
+    exists (
+      select 1 from public.shops
+      where shops.id = making_charges.shop_id
+      and shops.user_id = (select auth.uid())
+    )
+  );
+
 create trigger update_making_charges_updated_at before update on public.making_charges
   for each row execute function public.update_updated_at_column();
 
@@ -240,8 +278,8 @@ create table public.customers (
 
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
-    created_by varchar(100),
-    updated_by varchar(100)
+    created_by uuid            references auth.users(id),
+    updated_by uuid            references auth.users(id)
 );
 
 create index idx_customers_shop_code on public.customers(shop_id, customer_code);
@@ -277,6 +315,15 @@ create policy "Users can update customers from their shop" on public.customers
     )
   );
 
+create policy "Users can delete customers from their shop" on public.customers
+  for delete using (
+    exists (
+      select 1 from public.shops
+      where shops.id = customers.shop_id
+      and shops.user_id = (select auth.uid())
+    )
+  );
+
 create trigger update_customers_updated_at before update on public.customers
   for each row execute function public.update_updated_at_column();
 
@@ -305,8 +352,8 @@ create table public.ornaments (
 
     created_at      timestamp with time zone default now() not null,
     updated_at      timestamp with time zone default now() not null,
-    created_by      varchar(100),
-    updated_by      varchar(100)
+    created_by      uuid            references auth.users(id),
+    updated_by      uuid            references auth.users(id)
 );
 
 create index idx_ornaments_shop on public.ornaments(shop_id);
@@ -343,6 +390,15 @@ create policy "Users can update ornaments from their shop" on public.ornaments
     )
   );
 
+create policy "Users can delete ornaments from their shop" on public.ornaments
+  for delete using (
+    exists (
+      select 1 from public.shops
+      where shops.id = ornaments.shop_id
+      and shops.user_id = (select auth.uid())
+    )
+  );
+
 create trigger update_ornaments_updated_at before update on public.ornaments
   for each row execute function public.update_updated_at_column();
 
@@ -358,10 +414,10 @@ create table public.ornament_rates (
 
     created_at              timestamp with time zone default now() not null,
     updated_at              timestamp with time zone default now() not null,
-    created_by              varchar(100),
-    updated_by              varchar(100),
+    created_by              uuid            references auth.users(id),
+    updated_by              uuid            references auth.users(id),
 
-    constraint unique_metal_rate_date unique (metal_type_id, rate_date)
+    constraint unique_metal_rate_date unique (shop_id, metal_type_id, rate_date)
 );
 
 create index idx_ornament_rates_date on public.ornament_rates(rate_date, metal_type_id);
@@ -389,6 +445,15 @@ create policy "Users can insert rates to their shop" on public.ornament_rates
 
 create policy "Users can update rates from their shop" on public.ornament_rates
   for update using (
+    exists (
+      select 1 from public.shops
+      where shops.id = ornament_rates.shop_id
+      and shops.user_id = (select auth.uid())
+    )
+  );
+
+create policy "Users can delete rates from their shop" on public.ornament_rates
+  for delete using (
     exists (
       select 1 from public.shops
       where shops.id = ornament_rates.shop_id
@@ -425,13 +490,13 @@ create table public.invoices (
     notes                           text,
     is_cancelled                    boolean         default false not null,
     cancelled_at                    timestamp with time zone,
-    cancelled_by                    varchar(100),
+    cancelled_by                    uuid            references auth.users(id),
     cancelled_reason                text,
 
     created_at                      timestamp with time zone default now() not null,
     updated_at                      timestamp with time zone default now() not null,
-    created_by                      varchar(100),
-    updated_by                      varchar(100)
+    created_by                      uuid            references auth.users(id),
+    updated_by                      uuid            references auth.users(id)
 );
 
 create index idx_invoices_shop_date on public.invoices(shop_id, invoice_date);
@@ -461,6 +526,15 @@ create policy "Users can insert invoices to their shop" on public.invoices
 
 create policy "Users can update invoices from their shop" on public.invoices
   for update using (
+    exists (
+      select 1 from public.shops
+      where shops.id = invoices.shop_id
+      and shops.user_id = (select auth.uid())
+    )
+  );
+
+create policy "Users can delete invoices from their shop" on public.invoices
+  for delete using (
     exists (
       select 1 from public.shops
       where shops.id = invoices.shop_id
@@ -500,7 +574,7 @@ create table public.invoice_items (
 );
 
 
-reate index idx_invoice_items_invoice on public.invoice_items(invoice_id);
+create index idx_invoice_items_invoice on public.invoice_items(invoice_id);
 create index idx_invoice_items_ornament on public.invoice_items(ornament_id);
 
 alter table public.invoice_items enable row level security;
