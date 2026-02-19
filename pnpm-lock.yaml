@@ -11,6 +11,9 @@ importers:
       '@ant-design/icons':
         specifier: ^5.5.1
         version: 5.6.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@ant-design/v5-patch-for-react-19':
+        specifier: ^1.0.3
+        version: 1.0.3(antd@5.29.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@refinedev/antd':
         specifier: ^6.0.1
         version: 6.0.3(@refinedev/core@5.0.9(@tanstack/react-query@5.90.20(react@19.2.4))(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@5.29.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(dayjs@1.11.19)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -38,6 +41,12 @@ importers:
       antd:
         specifier: ^5.23.0
         version: 5.29.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^0.574.0
+        version: 0.574.0(react@19.2.4)
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -47,6 +56,9 @@ importers:
       react-router:
         specifier: ^7.0.2
         version: 7.13.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
     devDependencies:
       '@eslint/js':
         specifier: ^9.25.0
@@ -153,6 +165,14 @@ packages:
     resolution: {integrity: sha512-EzlvzE6xQUBrZuuhSAFTdsr4P2bBBHGZwKFemEfq8gIGyIQCxalYfZW/T2ORbtQx5rU69o+WycP3exY/7T1hGA==}
     peerDependencies:
       react: '>=16.9.0'
+
+  '@ant-design/v5-patch-for-react-19@1.0.3':
+    resolution: {integrity: sha512-iWfZuSUl5kuhqLUw7jJXUQFMMkM7XpW7apmKzQBQHU0cpifYW4A79xIBt9YVO5IBajKpPG5UKP87Ft7Yrw1p/w==}
+    engines: {node: '>=12.x'}
+    peerDependencies:
+      antd: '>=5.22.6'
+      react: '>=19.0.0'
+      react-dom: '>=19.0.0'
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -1424,6 +1444,9 @@ packages:
     resolution: {integrity: sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==}
     engines: {node: '>=0.8'}
 
+  clsx@2.1.1:
+    resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
+    engines: {node: '>=6'}
   cmd-shim@8.0.0:
     resolution: {integrity: sha512-Jk/BK6NCapZ58BKUxlSI+ouKRbjH1NLZCgJkYoab+vEHUY3f6OzpNBN9u7HFSv9J6TRDGs4PLOHezoKGaFRSCA==}
     engines: {node: ^20.17.0 || >=22.9.0}
@@ -2233,6 +2256,11 @@ packages:
   lru-cache@6.0.0:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
+
+  lucide-react@0.574.0:
+    resolution: {integrity: sha512-dJ8xb5juiZVIbdSn3HTyHsjjIwUwZ4FNwV0RtYDScOyySOeie1oXZTymST6YPJ4Qwt3Po8g4quhYl4OxtACiuQ==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
@@ -3237,9 +3265,8 @@ packages:
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  tar@7.5.7:
-    resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
-    engines: {node: '>=18'}
+  tailwind-merge@3.5.0:
+    resolution: {integrity: sha512-I8K9wewnVDkL1NTGoqWmVEIlUcB9gFriAEkXkfCjX5ib8ezGxtR3xD7iZIxrfArjEsH7F1CHD4RFUtxefdqV/A==}
 
   temp@0.9.4:
     resolution: {integrity: sha512-yYrrsWnrXMcdsnu/7YMYAofM1ktpL5By7vZhf15CrXijWWrEYZks5AXBudalfSWJLlnen/QUJUB5aoB0kqZUGA==}
@@ -3653,6 +3680,12 @@ snapshots:
       react: 19.2.4
       resize-observer-polyfill: 1.5.1
       throttle-debounce: 5.0.2
+
+  '@ant-design/v5-patch-for-react-19@1.0.3(antd@5.29.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      antd: 5.29.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -5093,7 +5126,7 @@ snapshots:
 
   clone@1.0.4: {}
 
-  cmd-shim@8.0.0: {}
+  clsx@2.1.1: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -5947,6 +5980,10 @@ snapshots:
   lru-cache@6.0.0:
     dependencies:
       yallist: 4.0.0
+
+  lucide-react@0.574.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
 
   make-dir@2.1.0:
     dependencies:
@@ -7100,13 +7137,7 @@ snapshots:
       react: 19.2.4
       use-sync-external-store: 1.6.0(react@19.2.4)
 
-  tar@7.5.7:
-    dependencies:
-      '@isaacs/fs-minipass': 4.0.1
-      chownr: 3.0.0
-      minipass: 7.1.2
-      minizlib: 3.1.0
-      yallist: 5.0.0
+  tailwind-merge@3.5.0: {}
 
   temp@0.9.4:
     dependencies:

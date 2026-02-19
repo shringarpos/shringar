@@ -1,8 +1,8 @@
-import { Authenticated, ErrorComponent, Refine, WelcomePage } from "@refinedev/core";
+import { Authenticated, Refine } from "@refinedev/core";
 import { DevtoolsPanel, DevtoolsProvider } from "@refinedev/devtools";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 import { GoogleOutlined } from "@ant-design/icons"
-import { AuthPage, ThemedLayout, useNotificationProvider } from "@refinedev/antd";
+import { AuthPage, ErrorComponent, ThemedLayout, useNotificationProvider } from "@refinedev/antd";
 import "@refinedev/antd/dist/reset.css";
 
 import routerProvider, {
@@ -11,13 +11,19 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { liveProvider } from "@refinedev/supabase";
 import { App as AntdApp } from "antd";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { supabaseClient } from "./providers/supabase-client";
+import { Gem, SettingsIcon, ShoppingCart, Store, Users } from "lucide-react";
+import Dashboard from "./pages/dashboard";
+import CreateSale from "./pages/pos";
+import Customers from "./pages/customers";
+import Ornaments from "./pages/ornaments";
+import Settings from "./pages/settings";
+import ShopSetup from "./pages/onboarding";
+import { OnboardingGuard } from "./components/onboarding-guard";
 
 function App() {
   return (
@@ -28,15 +34,57 @@ function App() {
             <DevtoolsProvider>
               <Refine
                 dataProvider={dataProvider}
-                liveProvider={liveProvider(supabaseClient)}
                 authProvider={authProvider}
                 routerProvider={routerProvider}
                 notificationProvider={useNotificationProvider}
                 resources={[
                   {
+                    name: "dashboard",
+                    list: "/dashboard",
+                    meta: {
+                      label: "Dashboard",
+                      icon: <Gem size={20}/>
+                    },
+                  },
+                  {
+                    name: "create-sale",
+                    list: "/create-sale",
+                    meta: {
+                      label: "Create Sale",
+                      icon: <ShoppingCart size={20} />
+                    }
+                  },
+                  {
                     name: "ornaments",
                     list: "/ornaments",
-                  }
+                    meta: {
+                      label: "Ornament",
+                      icon: <Gem size={20} />
+                    }
+                  },
+                  {
+                    name: "customers",
+                    list: "/customers",
+                    meta: {
+                      label: "Customers",
+                      icon: <Users size={20} />
+                    }
+                  },
+                  {
+                    name: "settings",
+                    list: "/settings",
+                    meta: {
+                      label: "Settings",
+                      icon: <SettingsIcon size={20} />
+                    }
+                  },
+                  {
+                    name: "shops",
+                    meta: {
+                      hide: true,
+                      icon: <Store size={20} />
+                    },
+                  },
                 ]}
                 options={{
                   liveMode: "off",
@@ -45,32 +93,57 @@ function App() {
                 }}
               >
                 <Routes>
+
+                  {/* Onboarding Route */}
+                  <Route
+                    element={
+                      <Authenticated
+                        key={"onboarding"}
+                        fallback={<CatchAllNavigate to="/login"/>}
+                      >
+                        <Outlet />
+                      </Authenticated>
+                    }
+                  >
+                    <Route path="/onboarding/shop-setup" element={<ShopSetup />} />
+                  </Route>
+
+                  {/* Main Routes */}
                   <Route
                     element={
                       <Authenticated
                         key={"authenticated-routes"}
                         fallback={<CatchAllNavigate to="/login"/>}
                       >
-                        <ThemedLayout>
-                          <Outlet />
-                        </ThemedLayout>
+                        <OnboardingGuard>
+                          <ThemedLayout>
+                            <Outlet />
+                          </ThemedLayout>
+                        </OnboardingGuard>
                       </Authenticated>
                     }
                   >
                     <Route
                       index
-                      element={<NavigateToResource resource="ornaments" />}
+                      element={<NavigateToResource resource="dashboard" />}
                     />
 
-                    <Route path="/ornaments">
-                      <Route index element={ <> hii this is ornaments index pages </>}/>
+                    <Route path="/dashboard">
+                      <Route index element={<Dashboard />}/>
                     </Route>
+
+                    <Route path="/create-sale" element={<CreateSale />} />
+                    <Route path="/customers" element={<Customers />} />
+                    <Route path="/ornaments" element={<Ornaments />} />
+                    <Route path="/settings" element={<Settings />} />
                   </Route>
+
+                {/* Auth Routes  */}
 
                   <Route
                     element={
                       <Authenticated key={"auth-pages"} fallback={<Outlet />}>
-                        <NavigateToResource resource="ornaments"/>
+                        <NavigateToResource resource="dashboard"/>
                       </Authenticated>
                     }
                   >
@@ -96,7 +169,7 @@ function App() {
                           ]}
                           formProps={{
                             initialValues: {
-                              email: "info@shringarpos.com",
+                              email: "info@shringarpos.dev",
                               password: "shringar-pos",
                             },
                           }}
@@ -113,7 +186,8 @@ function App() {
                       element={<AuthPage title="Shringar POS" type="updatePassword" />}
                     />
                   </Route>
-
+                      
+                {/* Catch All  */}
                   <Route
                     element={
                       <Authenticated key={"catch-all"}>
@@ -140,3 +214,9 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
