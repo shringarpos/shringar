@@ -24,7 +24,6 @@ export function useShopCheck() {
             enabled: !!identity?.id,
             retry: 1, // Only retry once to avoid hanging
             staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-            throwOnError: false,
         },
     });
 
@@ -32,6 +31,5 @@ export function useShopCheck() {
         hasShop: (shops?.data?.length ?? 0) > 0,
         isLoading: isIdentityLoading || isShopsLoading,
         shops: shops?.data,
-        isError,
     };
 }
