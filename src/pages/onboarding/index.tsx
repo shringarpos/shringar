@@ -194,7 +194,26 @@ export default function ShopSetup() {
               {/* Right section: Logo */}
               <Col span={8}>
                 {/* Logo Upload (Optional) */}
-                
+                <Form.Item label="Images">
+                  <Form.Item
+                    name="images"
+                    valuePropName="fileList"
+                    normalize={normalizeFile}
+                    noStyle
+                  >
+                    <UploadImageToSupabase
+                      bucketName="shop-logos"
+                      uploadText="Click or drag logo"
+                      hintText="PNG, JPG, or JPEG"
+                      onUploadSuccess={(url) => {
+                        setLogoUrl(url);
+                      }}
+                      onRemoveSuccess={() => {
+                        setLogoUrl(undefined);
+                      }}
+                    />
+                  </Form.Item>
+                </Form.Item>
               </Col>
             </Row>
 
