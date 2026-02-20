@@ -158,7 +158,6 @@ create trigger update_metal_types_updated_at before update on public.metal_types
   for each row execute function public.update_updated_at_column();
 
 
-
 -- Purity Levels 
 create table public.purity_levels (
     id              uuid        primary key default uuid_generate_v4(),
@@ -199,6 +198,7 @@ create table public.making_charges (
     id                      uuid        primary key default uuid_generate_v4(),
     shop_id                 uuid        references public.shops(id) on delete restrict not null,
     metal_type_id           uuid        references public.metal_types(id) on delete restrict not null,
+    purity_level_id         uuid        references public.purity_levels(id) on delete restrict not null,
     charge_per_gram_paise   bigint      not null, -- Making charge per gram in paise (e.g., 22000 paise = ₹220)
     effective_from          timestamp with time zone default now() not null,
     effective_to            timestamp with time zone, -- Null means currently active
@@ -206,8 +206,8 @@ create table public.making_charges (
 
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
-    created_by uuid            references auth.users(id),
-    updated_by uuid            references auth.users(id)
+    created_by              uuid            references auth.users(id),
+    updated_by              uuid            references auth.users(id)
 );
 
 create index idx_making_charges_metal_active on public.making_charges(metal_type_id, is_active, effective_from);
