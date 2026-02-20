@@ -205,6 +205,7 @@ export default function ShopSetup() {
                       bucketName="shop-logos"
                       uploadText="Click or drag logo"
                       hintText="PNG, JPG, or JPEG"
+                      defaultImageUrl={logoUrl}
                       onUploadSuccess={(url) => {
                         setLogoUrl(url);
                       }}
