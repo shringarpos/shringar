@@ -4,6 +4,7 @@ interface Shop {
     id: string;
     user_id: string;
     name: string;
+    code: string;
 }
 
 export function useShopCheck() {
@@ -11,7 +12,7 @@ export function useShopCheck() {
         id: string;
     }>();
 
-    const { data: shops, isLoading: isShopsLoading } = useList<Shop>({
+    const { query: shopsQuery } = useList<Shop>({
         resource: "shops",
         filters: [
             {
@@ -20,16 +21,22 @@ export function useShopCheck() {
                 value: identity?.id,
             },
         ],
+        pagination: {
+            pageSize: 1, // We only need to know if at least one exists
+        },
         queryOptions: {
             enabled: !!identity?.id,
-            retry: 1, // Only retry once to avoid hanging
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+            retry: 2,
+            staleTime: 1000,
         },
     });
 
+    const hasShop = (shopsQuery?.data?.data?.length ?? 0) > 0;
+    const isLoading = isIdentityLoading || shopsQuery?.isLoading;
+
     return {
-        hasShop: (shops?.data?.length ?? 0) > 0,
-        isLoading: isIdentityLoading || isShopsLoading,
-        shops: shops?.data,
+        hasShop,
+        isLoading,
+        shops: shopsQuery?.data?.data,
     };
 }

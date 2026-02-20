@@ -2,24 +2,42 @@ import { useForm } from "@refinedev/antd";
 import { useGetIdentity } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import { IShop } from "../../libs/interfaces";
-import { Button, Card, Col, Form, Input, Row, Space, Typography, Upload, message } from "antd";
+import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from "antd";
 import { StoreIcon } from "lucide-react";
-import type { RcFile } from "antd/lib/upload/interface";
-import { supabaseClient } from "../../providers/supabase-client";
-import { InboxOutlined } from "@ant-design/icons";
+import { useShopCheck } from "../../hooks/use-shop-check";
+import { useEffect, useState } from "react";
+import { normalizeFile } from "../../libs/normalize";
+import { UploadImageToSupabase } from "../../components/upload-image";
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function ShopSetup() {
   const navigate = useNavigate();
   const { data: identity } = useGetIdentity<{ id: string }>();
+  const { hasShop, isLoading: isCheckingShop } = useShopCheck();
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
+
+  // redirect to dashboard if shop already exists
+  useEffect(() => {
+    if (!isCheckingShop && hasShop) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [hasShop, isCheckingShop, navigate]);
 
   const { formProps, saveButtonProps, onFinish } = useForm<IShop>({
     action: "create",
     resource: "shops",
-    redirect: "list",
+    redirect: false,
     onMutationSuccess: () => {
-      navigate("/dashboard");
+      message.success("Shop setup completed successfully!");
+      // Small delay to ensure data is persisted
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 500);
+    },
+    onMutationError: (error) => {
+      console.error("Error creating shop:", error);
+      message.error("Failed to create shop. Please try again.");
     },
   });
 
@@ -33,7 +51,7 @@ export default function ShopSetup() {
         phone: values.phone,
         email: values.email || null,
         gst_number: values.gst_number || null,
-        logo_url: values.logo_url?.[0]?.url || null,
+        logo_url: logoUrl,
         created_by: identity?.id,
         updated_by: identity?.id,
       };
@@ -41,15 +59,26 @@ export default function ShopSetup() {
       await onFinish(shopData);
     } catch (error) {
       console.error("Error creating shop: ", error);
+      message.error("Failed to setup shop");
     }
   };
 
-  const normalizeFile = (e: any) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
-    return e?.fileList;
-  };
+  if (isCheckingShop) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Space direction="vertical" align="center">
+          <Title level={4}>Loading...</Title>
+        </Space>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -165,77 +194,7 @@ export default function ShopSetup() {
               {/* Right section: Logo */}
               <Col span={8}>
                 {/* Logo Upload (Optional) */}
-                <Form.Item
-                  label={<Text strong>Shop Logo</Text>}
-                  name={"logo_url"}
-                  valuePropName="fileList"
-                  normalize={normalizeFile}
-                  style={{ marginBottom: 12 }}
-                >
-                  <Upload.Dragger
-                    name="file"
-                    listType="picture-card"
-                    maxCount={1}
-                    accept="image/*"
-                    style={{ 
-                      height: '100px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    showUploadList={{
-                      showPreviewIcon: false,
-                      showRemoveIcon: true,
-                    }}
-                    beforeUpload={(file) => {
-                      const isLt10M = file.size / 1024 / 1024 < 10;
-                      if (!isLt10M) {
-                        message.error('Image must be smaller than 10MB!');
-                        return Upload.LIST_IGNORE;
-                      }
-                      return true;
-                    }}
-                    customRequest={async ({ file, onError, onSuccess }) => {
-                      try {
-                        const rcFile = file as RcFile;
-                        const fileExt = rcFile.name.split(".").pop();
-                        const fileName = `${Date.now()}.${fileExt}`;
-                        const filePath = `shop-logos/${fileName}`;
-
-                        const { error: uploadError } = await supabaseClient.storage
-                          .from('refine')
-                          .upload(filePath, file, {
-                            cacheControl: "3600",
-                            upsert: true,
-                          });
-
-                        if (uploadError) {
-                          throw uploadError;
-                        }
-
-                        const { data } = await supabaseClient.storage
-                          .from('refine')
-                          .getPublicUrl(filePath);
-
-                        onSuccess?.({ url: data?.publicUrl }, new XMLHttpRequest());
-                      } catch (error) {
-                        onError?.(new Error("Upload Error"));
-                      }
-                    }}
-                  >
-                    <div style={{ textAlign: 'center', padding: '20px' }}>
-                      <p className="ant-upload-drag-icon">
-                        <InboxOutlined style={{ color: "#667eea", fontSize: "48px" }} />
-                      </p>
-                      <p className="ant-upload-text" style={{ fontSize: '14px' }}>
-                        Click or drag logo
-                      </p>
-                      <p className="ant-upload-hint" style={{ fontSize: '12px' }}>
-                        PNG, JPG, or JPEG
-                      </p>
-                    </div>
-                  </Upload.Dragger>
-                </Form.Item>
+                
               </Col>
             </Row>
 
