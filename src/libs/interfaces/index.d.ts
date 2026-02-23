@@ -37,5 +37,6 @@ interface IMakingCharge {
   is_active: boolean;
   effective_from: string;
   effective_to: string | null;
+  created_by?: string;
   updated_by?: string;
 }

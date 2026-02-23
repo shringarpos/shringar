@@ -4,7 +4,7 @@ import MakingChargesSettings from "../../components/settings/making-charges-sett
 import { useState } from "react";
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<"shop" | "making-charges">("shop");
+  const [activeTab, setActiveTab] = useState<"shop" | "making-charges">("making-charges");
 
   return (
     <div style={{ padding: 40, fontFamily: "sans-serif" }}>
@@ -19,14 +19,14 @@ export default function Settings() {
         }}
       >
         <TabItem
-          label="Shop Settings"
-          active={activeTab === "shop"}
-          onClick={() => setActiveTab("shop")}
-        />
-        <TabItem
           label="Making Charges"
           active={activeTab === "making-charges"}
           onClick={() => setActiveTab("making-charges")}
+        />
+        <TabItem
+          label="Shop Settings"
+          active={activeTab === "shop"}
+          onClick={() => setActiveTab("shop")}
         />
       </div>
 
