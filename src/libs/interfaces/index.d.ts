@@ -40,3 +40,38 @@ interface IMakingCharge {
   created_by?: string;
   updated_by?: string;
 }
+
+export interface ICategory {
+  id: string;
+  shop_id: string;
+  name: string;
+  description?: string | null;
+  image_url?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+}
+
+export interface IOrnament {
+  id: string;
+  shop_id: string;
+  category_id: string;
+  metal_type_id: string;
+  purity_level_id: string;
+  name: string;
+  weight_mg: number;
+  quantity: number;
+  purchase_metal_rate_paise?: number | null;
+  purchase_making_charge_paise?: number | null;
+  purchase_total_cost_paise?: number | null;
+  purchase_date?: string | null;
+  sku?: string | null;
+  description?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+}

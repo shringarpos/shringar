@@ -16,14 +16,15 @@ import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { Gem, SettingsIcon, ShoppingCart, Store, Users } from "lucide-react";
+import { Gem, LayoutGrid, List, SettingsIcon, ShoppingCart, Store, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
 import CreateSale from "./pages/pos";
 import Customers from "./pages/customers";
-import Ornaments from "./pages/ornaments";
+import Ornaments from "./pages/inventory/ornaments";
 import Settings from "./pages/settings";
 import ShopSetup from "./pages/onboarding";
 import { OnboardingGuard } from "./components/onboarding-guard";
+import Categories from "./pages/inventory/categories";
 
 function App() {
   return (
@@ -55,11 +56,28 @@ function App() {
                     }
                   },
                   {
-                    name: "ornaments",
-                    list: "/ornaments",
+                    name: "inventory",
                     meta: {
-                      label: "Ornament",
-                      icon: <Gem size={20} />
+                      icon: <LayoutGrid size={20}/>,
+                      label: "Inventory"
+                    }
+                  },
+                  {
+                    name: "ornaments",
+                    list: "/inventory/ornaments",
+                    meta: {
+                      label: "Ornaments",
+                      icon: <Gem size={20} />,
+                      parent: "inventory"
+                    }
+                  },
+                  {
+                    name: "ornament_categories",
+                    list: "/inventory/categories",
+                    meta: {
+                      label: "Categories",
+                      icon: <List size={20} />,
+                      parent: "inventory"
                     }
                   },
                   {
@@ -133,7 +151,8 @@ function App() {
 
                     <Route path="/create-sale" element={<CreateSale />} />
                     <Route path="/customers" element={<Customers />} />
-                    <Route path="/ornaments" element={<Ornaments />} />
+                    <Route path="/inventory/ornaments" element={<Ornaments />}/>
+                    <Route path="/inventory/categories" element={<Categories />}/>
                     <Route path="/settings" element={<Settings />} />
                   </Route>
 
