@@ -10,6 +10,7 @@ import {
 } from "antd";
 import React, { useContext } from "react";
 import { ColorModeContext } from "../../contexts/color-mode";
+import { HeaderRatesWidget } from "../metal-rates/header-rates-widget";
 
 const { Text } = Typography;
 const { useToken } = theme;
@@ -30,7 +31,6 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
   const headerStyles: React.CSSProperties = {
     backgroundColor: token.colorBgElevated,
     display: "flex",
-    justifyContent: "flex-end",
     alignItems: "center",
     padding: "0px 24px",
     height: "64px",
@@ -44,14 +44,16 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
 
   return (
     <AntdLayout.Header style={headerStyles}>
-      <Space>
-        <Switch
-          checkedChildren="🌛"
-          unCheckedChildren="🔆"
-          onChange={() => setMode(mode === "light" ? "dark" : "light")}
-          defaultChecked={mode === "dark"}
-        />
-        <Space style={{ marginLeft: "8px" }} size="middle">
+      <Space style={{ width: "100%", justifyContent: "space-between" }}>
+        <div></div>
+        <Space size="middle">
+          <HeaderRatesWidget />
+          <Switch
+            checkedChildren="🌛"
+            unCheckedChildren="🔆"
+            onChange={() => setMode(mode === "light" ? "dark" : "light")}
+            defaultChecked={mode === "dark"}
+          />
           {user?.name && <Text strong>{user.name}</Text>}
           {user?.avatar && <Avatar src={user?.avatar} alt={user?.name} />}
         </Space>

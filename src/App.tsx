@@ -2,7 +2,7 @@ import { Authenticated, Refine } from "@refinedev/core";
 import { DevtoolsPanel, DevtoolsProvider } from "@refinedev/devtools";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 import { GoogleOutlined } from "@ant-design/icons"
-import { AuthPage, ErrorComponent, ThemedLayout, useNotificationProvider } from "@refinedev/antd";
+import { AuthPage, ErrorComponent, ThemedLayout, ThemedSider, useNotificationProvider } from "@refinedev/antd";
 import "@refinedev/antd/dist/reset.css";
 
 import routerProvider, {
@@ -16,7 +16,7 @@ import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { Gem, LayoutGrid, List, SettingsIcon, ShoppingCart, Store, Users } from "lucide-react";
+import { Gem, LayoutGrid, List, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
 import CreateSale from "./pages/pos";
 import Customers from "./pages/customers";
@@ -25,6 +25,8 @@ import Settings from "./pages/settings";
 import ShopSetup from "./pages/onboarding";
 import { OnboardingGuard } from "./components/onboarding-guard";
 import Categories from "./pages/inventory/categories";
+import MetalRates from "./pages/metal-rates";
+import { Header } from "./components";
 
 function App() {
   return (
@@ -89,6 +91,14 @@ function App() {
                     }
                   },
                   {
+                    name: "ornament_rates",
+                    list: "/metal-rates",
+                    meta: {
+                      label: "Metal Rates",
+                      icon: <TrendingUp size={20} />
+                    }
+                  },
+                  {
                     name: "settings",
                     list: "/settings",
                     meta: {
@@ -133,7 +143,18 @@ function App() {
                         fallback={<CatchAllNavigate to="/login"/>}
                       >
                         <OnboardingGuard>
-                          <ThemedLayout>
+                          <ThemedLayout
+                            Sider={() => (
+                              <ThemedSider
+                                render={({ items }) => items}
+                              />
+                            )}
+                            Header={() => {
+                              return (
+                                <Header />
+                              );
+                            }}
+                          >
                             <Outlet />
                           </ThemedLayout>
                         </OnboardingGuard>
@@ -153,6 +174,7 @@ function App() {
                     <Route path="/customers" element={<Customers />} />
                     <Route path="/inventory/ornaments" element={<Ornaments />}/>
                     <Route path="/inventory/categories" element={<Categories />}/>
+                    <Route path="/metal-rates" element={<MetalRates />}/>
                     <Route path="/settings" element={<Settings />} />
                   </Route>
 
