@@ -7,6 +7,7 @@ insert into public.purity_levels (metal_type_id, purity_value, display_name) val
   ('00000000-0000-0000-0000-000000000001', 78, '18K'),
   ('00000000-0000-0000-0000-000000000001', 84, '20K'),
   ('00000000-0000-0000-0000-000000000001', 92, '22K');
+  ('00000000-0000-0000-0000-000000000001', 99, '24K');
 --
 insert into public.purity_levels (metal_type_id, purity_value, display_name) values
   ('00000000-0000-0000-0000-000000000002', 45, '45%'),

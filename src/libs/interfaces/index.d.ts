@@ -54,6 +54,18 @@ export interface ICategory {
   updated_by?: string | null;
 }
 
+export interface IMetalRate {
+  id: string;
+  shop_id: string;
+  metal_type_id: string;
+  rate_date: string;        // ISO date string, e.g. "2026-02-25"
+  rate_per_gram_paise: number; // stored as paise per gram for all metals
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+}
+
 export interface IOrnament {
   id: string;
   shop_id: string;
