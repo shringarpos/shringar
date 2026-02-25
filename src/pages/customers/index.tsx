@@ -35,6 +35,8 @@ import {
     Tooltip,
     Typography,
 } from "antd";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import React, { useState } from "react";
 import { CustomerModal } from "../../components/customers/customer-modal";
 import { CustomerShowModal } from "../../components/customers/customer-show-modal";
@@ -107,6 +109,8 @@ const ReferredByFilterDropdown: React.FC<ReferredByFilterProps> = ({
         </div>
     );
 };
+
+dayjs.extend(relativeTime);
 
 export default function Customers() {
     return <CustomerList />;
@@ -431,7 +435,7 @@ const CustomerList: React.FC = () => {
                     {...tableProps}
                     rowKey="id"
                     size="small"
-                    scroll={{ x: 1300 }}
+                    scroll={{ x: 1320 }}
                     onChange={(pagination, _columnFilters, sorter, extra) => {
                         // Filters are managed entirely via setFilters; pass empty column
                         // filters to prevent Ant Design from re-applying them as "in"
@@ -444,38 +448,51 @@ const CustomerList: React.FC = () => {
                         onClick: () => setShowRecord(record),
                     })}
                 >
-                    {/* Customer Code */}
+                    {/* Date */}
                     <Table.Column<ICustomer>
-                        key="customer_code"
-                        dataIndex="customer_code"
-                        title="Code"
+                        key="created_at"
+                        dataIndex="created_at"
+                        title="Date"
                         width={110}
                         sorter
-                        defaultSortOrder={getDefaultSortOrder("customer_code", sorters)}
-                        filterDropdown={makeColumnFilter("customer_code", "Filter by code…")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(code: string) => (
-                            <Tag color="blue" style={{ fontFamily: "monospace" }}>
-                                {code}
-                            </Tag>
+                        defaultSortOrder={getDefaultSortOrder("created_at", sorters)}
+                        render={(val: string) => (
+                            <Tooltip title={new Date(val).toLocaleString("en-IN")}>
+                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                    {dayjs(val).fromNow()}
+                                </Typography.Text>
+                            </Tooltip>
                         )}
                     />
 
-                    {/* Name */}
+                    {/* Name + Code */}
                     <Table.Column<ICustomer>
                         key="name"
                         dataIndex="name"
                         title="Name"
                         sorter
+                        width={285}
                         defaultSortOrder={getDefaultSortOrder("name", sorters)}
                         filterDropdown={makeColumnFilter("name", "Filter by name…")}
                         filterIcon={(active) => (
                             <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
                         )}
-                        render={(name: string) => (
-                            <Typography.Text strong>{name}</Typography.Text>
+                        render={(_: unknown, record: ICustomer) => (
+                            <div>
+                                <Typography.Text strong>{record.name}</Typography.Text>
+                                <div style={{ marginTop: 2 }}>
+                                    <Tag
+                                        color="blue"
+                                        style={{
+                                            fontSize: 10,
+                                            padding: "0 4px",
+                                            fontFamily: "monospace",
+                                        }}
+                                    >
+                                        {record.customer_code}
+                                    </Tag>
+                                </div>
+                            </div>
                         )}
                     />
 
