@@ -217,12 +217,6 @@ function App() {
                               ),
                             },
                           ]}
-                          formProps={{
-                            initialValues: {
-                              email: "info@shringarpos.dev",
-                              password: "shringar-pos",
-                            },
-                          }}
                         />
                       }
                     />
