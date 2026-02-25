@@ -14,13 +14,13 @@ export interface IShop {
     updated_by?; string;
 }
 
-interface IMetalType {
+export interface IMetalType {
   id: string;
   name: string;
   is_active: boolean;
 }
 
-interface IPurityLevel {
+export interface IPurityLevel {
   id: string;
   metal_type_id: string;
   purity_value: number;
@@ -106,4 +106,11 @@ export interface ICustomer {
   updated_at: string;
   created_by?: string | null;
   updated_by?: string | null;
+}
+
+/** IOrnament with PostgREST-joined relations for display in the list/show */
+export interface IOrnamentWithDetails extends IOrnament {
+  category?: { id: string; name: string } | null;
+  metal_type?: { id: string; name: string } | null;
+  purity_level?: { id: string; display_name: string; purity_value: number } | null;
 }
