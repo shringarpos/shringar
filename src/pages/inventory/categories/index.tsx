@@ -82,7 +82,6 @@ const CategoryList: React.FC = () => {
         formProps: createFormProps,
         show: showCreate,
         close: closeCreate,
-        onFinish: onFinishCreate,
     } = useModalForm<ICategory>({
         action: "create",
         resource: "ornament_categories",
@@ -95,7 +94,6 @@ const CategoryList: React.FC = () => {
         formProps: editFormProps,
         show: showEdit,
         close: closeEdit,
-        onFinish: onFinishEdit,
     } = useModalForm<ICategory>({
         action: "edit",
         resource: "ornament_categories",
@@ -108,7 +106,6 @@ const CategoryList: React.FC = () => {
         formProps: cloneFormProps,
         show: showClone,
         close: closeClone,
-        onFinish: onFinishClone,
     } = useModalForm<ICategory>({
         action: "clone",
         resource: "ornament_categories",
@@ -117,7 +114,7 @@ const CategoryList: React.FC = () => {
     });
 
     const handleCreateFinish = async (values: Partial<ICategory>) => {
-        return onFinishCreate({
+        return createFormProps.onFinish?.({
             ...values,
             shop_id: shopId,
             created_by: userId,
@@ -127,11 +124,11 @@ const CategoryList: React.FC = () => {
     };
 
     const handleEditFinish = async (values: Partial<ICategory>) => {
-        return onFinishEdit({ ...values, updated_by: userId });
+        return editFormProps.onFinish?.({ ...values, updated_by: userId });
     };
 
     const handleCloneFinish = async (values: Partial<ICategory>) => {
-        return onFinishClone({
+        return cloneFormProps.onFinish?.({
             ...values,
             shop_id: shopId,
             created_by: userId,

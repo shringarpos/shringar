@@ -26,7 +26,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
     modalProps,
     formProps,
     onFinish,
-    close,
+    close: _close,
 }) => {
     const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
 
@@ -41,7 +41,6 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
 
     const handleFinish = async (values: Partial<ICategory>) => {
         await onFinish({ ...values, image_url: imageUrl ?? null });
-        close();
     };
 
     return (

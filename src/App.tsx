@@ -16,7 +16,7 @@ import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { Gem, LayoutGrid, List, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
+import { Gem, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
 import CreateSale from "./pages/pos";
 import Customers from "./pages/customers";
@@ -27,6 +27,7 @@ import { OnboardingGuard } from "./components/onboarding-guard";
 import Categories from "./pages/inventory/categories";
 import MetalRates from "./pages/metal-rates";
 import { Header } from "./components";
+import Invoices from "./pages/invoices";
 
 function App() {
   return (
@@ -55,6 +56,14 @@ function App() {
                     meta: {
                       label: "Create Sale",
                       icon: <ShoppingCart size={20} />
+                    }
+                  },
+                  {
+                    name: "invoices",
+                    list: "/invoices",
+                    meta: {
+                      label: "Invoices",
+                      icon: <ReceiptIcon size={20}/>
                     }
                   },
                   {
@@ -172,6 +181,7 @@ function App() {
 
                     <Route path="/create-sale" element={<CreateSale />} />
                     <Route path="/customers" element={<Customers />} />
+                    <Route path="/invoices" element={<Invoices />} />
                     <Route path="/inventory/ornaments" element={<Ornaments />}/>
                     <Route path="/inventory/categories" element={<Categories />}/>
                     <Route path="/metal-rates" element={<MetalRates />}/>

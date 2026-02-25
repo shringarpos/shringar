@@ -87,3 +87,23 @@ export interface IOrnament {
   created_by?: string | null;
   updated_by?: string | null;
 }
+
+export interface ICustomer {
+  id: string;
+  shop_id: string;
+  customer_code: string;
+  name: string;
+  address: string;
+  phone: string;
+  email?: string | null;
+  alternate_phone?: string | null;
+  /** UUID reference to another customer who referred this customer */
+  reference_by?: string | null;
+  /** Joined referred customer (available when select includes the relation) */
+  referred_customer?: Pick<ICustomer, "id" | "name" | "customer_code"> | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+}

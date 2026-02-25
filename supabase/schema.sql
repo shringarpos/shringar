@@ -265,26 +265,27 @@ create trigger update_making_charges_updated_at before update on public.making_c
 
 -- Customers
 create table public.customers (
-    id            uuid         primary key default uuid_generate_v4(),
-    shop_id       uuid         references public.shops(id) on delete restrict not null,
-    customer_code varchar(20)  unique not null,
-    name          varchar(200) not null,
-    address       text         not null,
-    phone         varchar(20)  not null,
-    email         varchar(100),
-    alternate_phone varchar(20),
-    reference_by  varchar(200),
-    is_active     boolean       default true not null,
+    id               uuid         primary key default uuid_generate_v4(),
+    shop_id          uuid         references public.shops(id) on delete restrict not null,
+    customer_code    varchar(20)  unique not null,
+    name             varchar(200) not null,
+    address          text         not null,
+    phone            varchar(20)  not null,
+    email            varchar(100),
+    alternate_phone  varchar(20),
+    reference_by     uuid         references public.customers(id) on delete set null,
+    is_active        boolean      default true not null,
 
     created_at timestamp with time zone default now() not null,
     updated_at timestamp with time zone default now() not null,
-    created_by uuid            references auth.users(id),
-    updated_by uuid            references auth.users(id)
+    created_by       uuid         references auth.users(id),
+    updated_by       uuid         references auth.users(id)
 );
 
 create index idx_customers_shop_code on public.customers(shop_id, customer_code);
 create index idx_customers_phone on public.customers(phone);
 create index idx_customers_active on public.customers(is_active);
+create index idx_customers_reference_by on public.customers(reference_by);
 
 alter table public.customers enable row level security;
 
