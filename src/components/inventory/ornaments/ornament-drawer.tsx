@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useList, useGetIdentity } from "@refinedev/core";
-import { SaveButton, useSelect } from "@refinedev/antd";
+import { SaveButton, useSelect, useModalForm } from "@refinedev/antd";
 import {
     Alert,
+    Button,
     Col,
     DatePicker,
     Divider,
@@ -16,9 +17,11 @@ import {
     Statistic,
     Typography,
 } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import type { DrawerProps, FormProps } from "antd";
 import dayjs from "dayjs";
 import type { ICategory, IMetalType, IOrnament, IPurityLevel } from "../../../libs/interfaces";
+import { CategoryModal } from "../categories/category-modal";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +68,18 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
 }) => {
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
+
+    // ── Category create modal ─────────────────────────────────────────────────
+    const {
+        modalProps: categoryModalProps,
+        formProps: categoryFormProps,
+        show: showCategoryCreate,
+        close: closeCategoryModal,
+    } = useModalForm<ICategory>({
+        resource: "ornament_categories",
+        action: "create",
+        redirect: false,
+    });
 
     // Watch form values for live calculation
     const form = formProps.form;
@@ -331,6 +346,23 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
                                 showSearch
                                 filterOption={false}
                                 allowClear
+                                dropdownRender={(menu) => (
+                                    <>
+                                        {menu}
+                                        <Divider style={{ margin: "4px 0" }} />
+                                        <div style={{ padding: "4px 8px 6px" }}>
+                                            <Button
+                                                type="dashed"
+                                                icon={<PlusOutlined />}
+                                                block
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => showCategoryCreate()}
+                                            >
+                                                Add New Category
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
                             />
                         </Form.Item>
                     </Col>
@@ -515,6 +547,16 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
                     />
                 )}
             </Form>
+
+            <CategoryModal
+                action="create"
+                modalProps={categoryModalProps}
+                formProps={categoryFormProps}
+                onFinish={async (values) =>
+                    categoryFormProps.onFinish?.({ ...values, shop_id: shopId })
+                }
+                close={closeCategoryModal}
+            />
         </Drawer>
     );
 };

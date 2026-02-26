@@ -56,7 +56,7 @@ export const OrnamentShowDrawer: React.FC<OrnamentShowDrawerProps> = ({
         go({
             to: { resource: "invoices", action: "list" },
             query: {
-                filters: [{ field: "ornament_id", operator: "eq", value: record.id }],
+                filters: [{ field: "invoice_items.ornament_id", operator: "eq", value: record.id }],
             },
             type: "push",
         });
