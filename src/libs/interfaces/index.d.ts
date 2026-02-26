@@ -114,3 +114,49 @@ export interface IOrnamentWithDetails extends IOrnament {
   metal_type?: { id: string; name: string } | null;
   purity_level?: { id: string; display_name: string; purity_value: number } | null;
 }
+
+export interface IInvoice {
+  id: string;
+  shop_id: string;
+  customer_id: string;
+  invoice_number: string;
+  invoice_date: string; // ISO date
+  subtotal_amount_paise: number;
+  total_making_charges_paise: number;
+  discount_amount_paise: number;
+  total_amount_paise: number;
+  notes?: string | null;
+  is_cancelled: boolean;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+  cancelled_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+}
+
+export interface IInvoiceItem {
+  id: string;
+  invoice_id: string;
+  ornament_id: string;
+  item_name: string;
+  weight_mg: number;
+  quantity: number;
+  metal_type_name: string;
+  purity_value?: number | null;
+  purity_display_name?: string | null;
+  rate_per_gram_paise: number;
+  making_charge_per_gram_paise: number;
+  metal_amount_paise: number;
+  making_charge_amount_paise: number;
+  line_total_paise: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** IInvoice with joined customer and items */
+export interface IInvoiceWithDetails extends IInvoice {
+  customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone"> | null;
+  invoice_items?: IInvoiceItem[];
+}

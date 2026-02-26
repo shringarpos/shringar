@@ -18,7 +18,6 @@ import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
 import { Gem, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
-import CreateSale from "./pages/pos";
 import Customers from "./pages/customers";
 import Ornaments from "./pages/inventory/ornaments";
 import Settings from "./pages/settings";
@@ -27,7 +26,10 @@ import { OnboardingGuard } from "./components/onboarding-guard";
 import Categories from "./pages/inventory/categories";
 import MetalRates from "./pages/metal-rates";
 import { Header } from "./components";
+import CreateSale from "./pages/pos";
 import Invoices from "./pages/invoices";
+import InvoiceShow from "./pages/invoices/show";
+import InvoiceEdit from "./pages/invoices/edit";
 
 function App() {
   return (
@@ -61,6 +63,8 @@ function App() {
                   {
                     name: "invoices",
                     list: "/invoices",
+                    show: "/invoices/:id",
+                    edit: "/invoices/:id/edit",
                     meta: {
                       label: "Invoices",
                       icon: <ReceiptIcon size={20}/>
@@ -156,6 +160,7 @@ function App() {
                             Sider={() => (
                               <ThemedSider
                                 render={({ items }) => items}
+                                siderItemsAreCollapsed={false}
                               />
                             )}
                             Header={() => {
@@ -182,6 +187,8 @@ function App() {
                     <Route path="/create-sale" element={<CreateSale />} />
                     <Route path="/customers" element={<Customers />} />
                     <Route path="/invoices" element={<Invoices />} />
+                    <Route path="/invoices/:id" element={<InvoiceShow />} />
+                    <Route path="/invoices/:id/edit" element={<InvoiceEdit />} />
                     <Route path="/inventory/ornaments" element={<Ornaments />}/>
                     <Route path="/inventory/categories" element={<Categories />}/>
                     <Route path="/metal-rates" element={<MetalRates />}/>
