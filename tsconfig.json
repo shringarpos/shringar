@@ -17,6 +17,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"],
+  "include": ["src", "new/invoices", "new/pages/invoices/edit.tsx", "new/pages/invoices/index.tsx", "new/pages/invoices/show.tsx", "src/pages/pos/index.tsx"],
   "exclude": ["node_modules", "dist", "build"]
 }

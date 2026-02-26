@@ -8,24 +8,25 @@
     - [✔] bootstraping the folder structure 
     - [✔] onboarding
     - [✔] settings 
-    - [] start working on modules
+    - [✔] start working on modules
             - [✔] categories
                 - list
                 - create popover
                 - edit popover
             - [✔] daily rates (in header too)
-            - [] customers
+            - [✔] customers
                 - table
                 - create popover
                 - edit popver
-            - [] ornaments
+            - [✔] ornaments
                 - table
                 - create
                 - edit
-            - [] invoices
-            - [] create sale
+            - [✔] invoices
+            - [✔] create sale
             - [] dashboard
     - [] unit testing
     - [] integrations testing
     - [] delivery
+
 
