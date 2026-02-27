@@ -19,6 +19,7 @@ import {
     EditOutlined,
     EyeOutlined,
     FilterOutlined,
+    PlusOutlined,
     ReloadOutlined,
 } from "@ant-design/icons";
 import type { FilterDropdownProps } from "antd/es/table/interface";
@@ -174,6 +175,9 @@ const OrnamentList: React.FC = () => {
 
     // Per-row toggle-loading
     const [loadingToggles, setLoadingToggles] = useState<Record<string, boolean>>({});
+
+    // Per-row quantity-update loading
+    const [loadingQty, setLoadingQty] = useState<Record<string, boolean>>({});
 
     // Toolbar state
     const [searchText, setSearchText] = useState("");
@@ -369,6 +373,31 @@ const OrnamentList: React.FC = () => {
         );
     };
 
+    const handleQtyChange = (record: IOrnamentWithDetails, delta: number) => {
+        const newQty = (record.quantity ?? 0) + delta;
+        if (newQty < 0) return;
+        setLoadingQty((prev) => ({ ...prev, [record.id]: true }));
+        updateOrnament(
+            {
+                resource: "ornaments",
+                id: record.id,
+                values: { quantity: newQty, updated_by: userId },
+                successNotification: () => ({
+                    message: `Quantity updated to ${newQty}`,
+                    type: "success",
+                }),
+            },
+            {
+                onSettled: () =>
+                    setLoadingQty((prev) => {
+                        const next = { ...prev };
+                        delete next[record.id];
+                        return next;
+                    }),
+            }
+        );
+    };
+
     const handleDelete = (record: IOrnamentWithDetails) => {
         modal.confirm({
             title: "Delete ornament?",
@@ -493,7 +522,12 @@ const OrnamentList: React.FC = () => {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}
                     onRow={(record) => ({
-                        style: { cursor: "pointer" },
+                        style: {
+                            cursor: "pointer",
+                            ...(record.quantity <= 2
+                                ? { backgroundColor: "rgba(255, 77, 79, 0.07)" }
+                                : {}),
+                        },
                         onClick: () => setShowRecord(record),
                     })}
                 >
@@ -615,14 +649,36 @@ const OrnamentList: React.FC = () => {
                         key="quantity"
                         dataIndex="quantity"
                         title="Qty"
-                        width={80}
+                        width={130}
                         sorter
                         defaultSortOrder={getDefaultSortOrder("quantity", sorters)}
-                        render={(qty: number) => (
-                            <Tag color={qty === 0 ? "error" : qty <= 2 ? "warning" : "success"}>
-                                {qty} pcs
-                            </Tag>
-                        )}
+                        render={(_: unknown, record: IOrnamentWithDetails) => {
+                            const qty = record.quantity ?? 0;
+                            return (
+                                <Space
+                                    size={4}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{ alignItems: "center" }}
+                                >
+                                    <Tag
+                                        color={qty === 0 ? "error" : qty <= 2 ? "warning" : "success"}
+                                        style={{ margin: 0, marginRight: 20 }}
+                                    >
+                                        {qty} pcs
+                                    </Tag>
+                                    <Tooltip title="Increase">
+                                        <Button
+                                            icon={<PlusOutlined />}
+                                            size="small"
+                                            type="primary"
+                                            loading={!!loadingQty[record.id]}
+                                            onClick={() => handleQtyChange(record, 1)}
+                                            style={{ minWidth: 22, padding: "0 4px" }}
+                                        />
+                                    </Tooltip>
+                                </Space>
+                            );
+                        }}
                     />
 
                     {/* Total Cost + breakdown */}
