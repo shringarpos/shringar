@@ -30,3 +30,5 @@
     - [] delivery
 
 
+1. out of stock (in ornament table)
+2. shop setting (responsive)
