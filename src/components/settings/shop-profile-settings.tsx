@@ -6,6 +6,7 @@ import {
   Button,
   Col,
   Form,
+  Grid,
   Input,
   message,
   Row,
@@ -16,12 +17,15 @@ import { normalizeFile } from "../../libs/normalize";
 import { UploadImageToSupabase } from "../../components/upload-image";
 import { useShopCheck } from "../../hooks/use-shop-check";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 export default function ShopProfileSettings() {
   const { data: identity } = useGetIdentity<{ id: string }>();
   const { shops, isLoading } = useShopCheck();
   const [logoUrl, setLogoUrl] = useState<string | undefined>();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   const { formProps, saveButtonProps, onFinish, query: queryResult} = useForm<IShop>({
     action: "edit",
@@ -68,7 +72,7 @@ export default function ShopProfileSettings() {
     return (
       <div
         style={{
-          minHeight: "100vh",
+          minHeight: "60vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -78,77 +82,36 @@ export default function ShopProfileSettings() {
           <Title level={4}>Loading...</Title>
         </Space>
       </div>
-    )
+    );
   }
 
   return (
-    <div>
+    <div style={{ marginBottom: 20}}>
       <Form
         {...formProps}
         layout="vertical"
         onFinish={handleFinish}
-        size="large"
+        size={isMobile ? "middle" : "large"}
         requiredMark="optional"
       >
-        <Row gutter={[16, 16]}>
-          <Col span={16}>
-            <Row gutter={[16, 16]}>
-              <Col span={15}>
-                <Form.Item
-                  label={<Text strong>Shop Name</Text>}
-                  name={"name"}
-                  rules={[
-                    { required: true, message: "Please enter shop name" },
-                    { max: 200, message: "Name must be 200 characters or less" },
-                  ]}
-                  style={{ marginBottom: 8 }}
-                >
-                  <Input placeholder="Enter your shop name" />
-                </Form.Item>
-              </Col>
-              <Col span={9}>
-                  <Form.Item
-                      label={<Text strong>Shop Code</Text>}
-                      name={"code"}
-                      rules={[
-                        { required: true, message: "Please enter shop code" },
-                        { max: 10, message: "Shop code must be 10 characters or less" },
-                        { min: 2, message: "Shop code must be atleast 2 characters or more" },
-                        {
-                          pattern: /^[0-9A-Za-z]+$/,
-                          message: "Only letters and numbers allowed",
-                        },
-                      ]}
-                      tooltip="Unique identifier for your shop (e.g., SJ)"
-                      style={{ marginBottom: 12 }}
-                  >
-                    <Input
-                      placeholder="e.g., SJ"
-                      style={{ textTransform: "uppercase" }}
-                    />
-                  </Form.Item>
-              </Col>
-            </Row>
-            {/* Address */}
-            <Row gutter={[16, 16]}>
-              <Col span={24}>
-                <Form.Item
-                  label={<Text strong>Address</Text>}
-                  name="address"
-                  rules={[{ required: true, message: "Please enter shop address" }]}
-                  style={{ marginBottom: 12 }}
-                >
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="Enter complete shop address"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          </Col>
-
-          <Col span={8}>
-            <Form.Item label="Logo">
+        {/* ── Identity: Name / Code / Address + Logo ──────── */}
+        <Row gutter={[16, 0]} align="top">
+          {/* Logo — floats to top on mobile */}
+          <Col
+            xs={24}
+            md={8}
+            order={isMobile ? 1 : 2}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: isMobile ? "center" : "flex-start",
+              marginBottom: isMobile ? 16 : 0,
+            }}
+          >
+            <Form.Item
+              label={<Text strong>Shop Logo</Text>}
+              style={{ width: "100%", maxWidth: isMobile ? 260 : "100%" }}
+            >
               <Form.Item
                 name="images"
                 valuePropName="fileList"
@@ -160,20 +123,66 @@ export default function ShopProfileSettings() {
                   uploadText="Click or drag logo"
                   hintText="PNG, JPG, or JPEG"
                   defaultImageUrl={logoUrl}
-                  onUploadSuccess={(url) => {
-                    setLogoUrl(url);
-                  }}
-                  onRemoveSuccess={() => {
-                    setLogoUrl(undefined);
-                  }}
+                  onUploadSuccess={(url) => setLogoUrl(url)}
+                  onRemoveSuccess={() => setLogoUrl(undefined)}
                 />
               </Form.Item>
             </Form.Item>
           </Col>
+
+          {/* Name + Code + Address */}
+          <Col xs={24} md={16} order={isMobile ? 2 : 1}>
+            <Row gutter={[16, 0]}>
+              <Col xs={24} sm={16}>
+                <Form.Item
+                  label={<Text strong>Shop Name</Text>}
+                  name="name"
+                  rules={[
+                    { required: true, message: "Please enter shop name" },
+                    { max: 200, message: "Name must be 200 characters or less" },
+                  ]}
+                >
+                  <Input placeholder="Enter your shop name" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item
+                  label={<Text strong>Shop Code</Text>}
+                  name="code"
+                  rules={[
+                    { required: true, message: "Please enter shop code" },
+                    { max: 10, message: "Shop code must be 10 characters or less" },
+                    { min: 2, message: "Shop code must be at least 2 characters" },
+                    {
+                      pattern: /^[0-9A-Za-z]+$/,
+                      message: "Only letters and numbers allowed",
+                    },
+                  ]}
+                  tooltip="Unique identifier for your shop (e.g., SJ)"
+                >
+                  <Input
+                    placeholder="e.g., SJ"
+                    style={{ textTransform: "uppercase" }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item
+              label={<Text strong>Address</Text>}
+              name="address"
+              rules={[{ required: true, message: "Please enter shop address" }]}
+            >
+              <Input.TextArea
+                rows={isMobile ? 3 : 4}
+                placeholder="Enter complete shop address"
+              />
+            </Form.Item>
+          </Col>
         </Row>
 
-        <Row gutter={[16, 16]}>
-          <Col span={8}>
+        {/* ── Contact ──────────────────────────────────────── */}
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={12} md={8}>
             <Form.Item
               label={<Text strong>Phone Number</Text>}
               name="phone"
@@ -185,13 +194,11 @@ export default function ShopProfileSettings() {
                   message: "Please enter a valid phone number",
                 },
               ]}
-              style={{ marginBottom: 12 }}
             >
               <Input placeholder="e.g., +91 98765 43210" />
             </Form.Item>
           </Col>
-          <Col span={8}>
-            {/* Email (Optional) */}
+          <Col xs={24} sm={12} md={8}>
             <Form.Item
               label={<Text strong>Email</Text>}
               name="email"
@@ -199,13 +206,11 @@ export default function ShopProfileSettings() {
                 { type: "email", message: "Please enter a valid email" },
                 { max: 100, message: "Email must be 100 characters or less" },
               ]}
-              style={{ marginBottom: 12 }}
             >
               <Input placeholder="shop@example.com" />
             </Form.Item>
           </Col>
-          <Col span={8}>
-            {/* GST Number (Optional) */}
+          <Col xs={24} sm={24} md={8}>
             <Form.Item
               label={<Text strong>GST Number</Text>}
               name="gst_number"
@@ -216,7 +221,6 @@ export default function ShopProfileSettings() {
                   message: "Only letters and numbers allowed",
                 },
               ]}
-              style={{ marginBottom: 12 }}
             >
               <Input
                 placeholder="e.g., 22AAAAA0000A1Z5"
@@ -226,19 +230,17 @@ export default function ShopProfileSettings() {
           </Col>
         </Row>
 
-        <Form.Item style={{ marginBottom: 0, marginTop: "32px" }}>
-          <div style={{ textAlign: "right" }}>
-            <Button
-              type="primary"
-              {...saveButtonProps}
-              size="large"
-              style={{
-                minWidth: "200px",
-              }}
-            >
-              Save Changes
-            </Button>
-          </div>
+        {/* ── Save ─────────────────────────────────────────── */}
+        <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Button
+            type="primary"
+            {...saveButtonProps}
+            size="large"
+            block={isMobile}
+            style={isMobile ? undefined : { minWidth: 200, float: "right" }}
+          >
+            Save Changes
+          </Button>
         </Form.Item>
       </Form>
     </div>

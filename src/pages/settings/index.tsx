@@ -7,7 +7,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<"shop" | "making-charges">("making-charges");
 
   return (
-    <div style={{ padding: 40, fontFamily: "sans-serif" }}>
+    <div style={{ padding: "clamp(16px, 4vw, 40px)", fontFamily: "sans-serif" }}>
       
       {/* Tabs */}
       <div
