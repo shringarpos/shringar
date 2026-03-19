@@ -1035,6 +1035,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               {!item.makingConfigured && metal && (
                 <MakingChargePopover
                   metal={metal}
+                  purityLevelId={item.purityLevelId}
                   purityLevel={item.isGold ? (purity ?? null) : null}
                   existingCharge={activeMC}
                   shopId={shopId}

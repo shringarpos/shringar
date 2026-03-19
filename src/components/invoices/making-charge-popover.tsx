@@ -1,4 +1,4 @@
-import { useCreate, useGetIdentity, useUpdate } from "@refinedev/core";
+import { useCreate, useGetIdentity, useList, useUpdate } from "@refinedev/core";
 import { SettingOutlined, WarningOutlined } from "@ant-design/icons";
 import { Button, Form, InputNumber, Popover, Space, Typography } from "antd";
 import React, { useEffect, useState } from "react";
@@ -8,7 +8,8 @@ const { Text } = Typography;
 
 interface MakingChargePopoverProps {
   metal: IMetalType;
-  purityLevel: IPurityLevel | null; // null = silver (don't show purity label)
+  purityLevelId: string;
+  purityLevel: IPurityLevel | null;
   existingCharge?: IMakingCharge;
   shopId: string;
   onSuccess?: (chargePerGramPaise: number) => void;
@@ -18,6 +19,7 @@ interface MakingChargePopoverProps {
 
 export const MakingChargePopover: React.FC<MakingChargePopoverProps> = ({
   metal,
+  purityLevelId,
   purityLevel,
   existingCharge,
   shopId,
@@ -34,6 +36,27 @@ export const MakingChargePopover: React.FC<MakingChargePopoverProps> = ({
   const { mutateAsync: createCharge } = useCreate<IMakingCharge>();
   const { mutateAsync: updateCharge } = useUpdate<IMakingCharge>();
 
+  const { query: puritiesQuery } = useList<IPurityLevel>({
+    resource: "purity_levels",
+    filters: [
+      { field: "metal_type_id", operator: "eq", value: metal.id },
+      { field: "is_active", operator: "eq", value: true },
+    ],
+    pagination: { mode: "off" },
+    queryOptions: { enabled: !!metal.id },
+  });
+
+  const { query: activeChargesQuery } = useList<IMakingCharge>({
+    resource: "making_charges",
+    filters: [
+      { field: "shop_id", operator: "eq", value: shopId },
+      { field: "metal_type_id", operator: "eq", value: metal.id },
+      { field: "is_active", operator: "eq", value: true },
+    ],
+    pagination: { mode: "off" },
+    queryOptions: { enabled: !!shopId && !!metal.id },
+  });
+
   useEffect(() => {
     if (open) {
       form.setFieldValue(
@@ -45,6 +68,8 @@ export const MakingChargePopover: React.FC<MakingChargePopoverProps> = ({
 
   const isGold = metal.name.toUpperCase() === "GOLD";
   const label = isGold && purityLevel ? `${metal.name} ${purityLevel.display_name}` : metal.name;
+  const activeCharges = (activeChargesQuery?.data?.data ?? []) as IMakingCharge[];
+  const activePurities = (puritiesQuery?.data?.data ?? []) as IPurityLevel[];
 
   const handleSave = async () => {
     try {
@@ -52,7 +77,43 @@ export const MakingChargePopover: React.FC<MakingChargePopoverProps> = ({
       const paise = Math.round(values.charge * 100);
       setSaving(true);
 
-      if (existingCharge) {
+      if (!isGold) {
+        const purityIds =
+          activePurities.length > 0
+            ? activePurities.map((p) => p.id)
+            : purityLevelId
+              ? [purityLevelId]
+              : [];
+
+        for (const id of purityIds) {
+          const existing = activeCharges.find((c) => c.purity_level_id === id);
+          if (existing) {
+            await updateCharge({
+              resource: "making_charges",
+              id: existing.id,
+              values: {
+                charge_per_gram_paise: paise,
+                updated_by: userId,
+              },
+            });
+          } else {
+            await createCharge({
+              resource: "making_charges",
+              values: {
+                shop_id: shopId,
+                metal_type_id: metal.id,
+                purity_level_id: id,
+                charge_per_gram_paise: paise,
+                is_active: true,
+                effective_from: new Date().toISOString(),
+                effective_to: null,
+                created_by: userId,
+                updated_by: userId,
+              },
+            });
+          }
+        }
+      } else if (existingCharge) {
         await updateCharge({
           resource: "making_charges",
           id: existingCharge.id,
@@ -62,12 +123,16 @@ export const MakingChargePopover: React.FC<MakingChargePopoverProps> = ({
           },
         });
       } else {
+        if (!purityLevelId) {
+          return;
+        }
+
         await createCharge({
           resource: "making_charges",
           values: {
             shop_id: shopId,
             metal_type_id: metal.id,
-            purity_level_id: purityLevel?.id,
+            purity_level_id: purityLevelId,
             charge_per_gram_paise: paise,
             is_active: true,
             effective_from: new Date().toISOString(),

@@ -1,5 +1,6 @@
 import React from "react";
 import { useList } from "@refinedev/core";
+import { useNavigate } from "react-router";
 import { Card, Skeleton, Tooltip, Typography } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -32,6 +33,7 @@ const calcTrend = (current: number, previous: number) => {
 interface StatCardProps {
   title: string;
   value: string | number;
+  path?: string;
   /** Shown in a ?-tooltip next to the value (e.g. full unabbreviated number) */
   valueTip?: string;
   /** Shown on the ⓘ icon in the title row */
@@ -45,17 +47,40 @@ interface StatCardProps {
 
 const CARD_WIDTH = 200;
 
+type DashboardFilter = {
+  field: string;
+  operator: "eq" | "gte" | "lte";
+  value: string | number | boolean;
+};
+
+const buildFilteredPath = (basePath: string, filters: DashboardFilter[]) => {
+  const params = new URLSearchParams();
+
+  filters.forEach((filter, index) => {
+    params.set(`filters[${index}][field]`, filter.field);
+    params.set(`filters[${index}][operator]`, filter.operator);
+    params.set(`filters[${index}][value]`, String(filter.value));
+  });
+
+  params.set("currentPage", "1");
+
+  return `${basePath}?${params.toString()}`;
+};
+
 const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
+  path,
   valueTip,
   infoTip,
   loading,
   trendValue,
   trendLabel,
 }) => {
+  const navigate = useNavigate();
   const trendUp   = trendValue != null && trendValue > 0;
   const trendDown = trendValue != null && trendValue < 0;
+  const isClickable = !!path && !loading;
 
   const cardTitle = (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
@@ -86,8 +111,14 @@ const StatCard: React.FC<StatCardProps> = ({
     <Card
       size="small"
       title={cardTitle}
-      style={{ width: CARD_WIDTH, flexShrink: 0 }}
+      style={{
+        width: CARD_WIDTH,
+        flexShrink: 0,
+        cursor: isClickable ? "pointer" : "default",
+      }}
       styles={{ header: { minHeight: 36, padding: "0 12px" }, body: { padding: "10px 12px" } }}
+      hoverable={isClickable}
+      onClick={isClickable ? () => navigate(path) : undefined}
     >
       {/* ── Value ─────────────────────────────────────────────────────── */}
       {loading ? (
@@ -255,6 +286,10 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ shopId }) => {
     {
       title: "Today's Revenue",
       value: abbrRs(todayRevenue),
+      path: buildFilteredPath("/invoices", [
+        { field: "invoice_date", operator: "eq", value: today },
+        { field: "is_cancelled", operator: "eq", value: false },
+      ]),
       valueTip: fullRs(todayRevenue),
       trendLabel: `${todayInvoices.length} invoice${todayInvoices.length !== 1 ? "s" : ""} today`,
       infoTip: "Total revenue from non-cancelled invoices raised today",
@@ -262,6 +297,11 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ shopId }) => {
     {
       title: "Monthly Revenue",
       value: abbrRs(monthRevenue),
+      path: buildFilteredPath("/invoices", [
+        { field: "invoice_date", operator: "gte", value: thisMonthStart },
+        { field: "invoice_date", operator: "lte", value: today },
+        { field: "is_cancelled", operator: "eq", value: false },
+      ]),
       valueTip: fullRs(monthRevenue),
       trendValue: revenueTrend,
       trendLabel: "vs last month",
@@ -270,22 +310,37 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ shopId }) => {
     {
       title: "Total Customers",
       value: totalCustomers,
+      path: buildFilteredPath("/customers", [
+        { field: "is_active", operator: "eq", value: true },
+      ]),
       infoTip: "Active customers registered in your shop",
     },
     {
       title: "Active Ornaments",
       value: totalOrnaments,
+      path: buildFilteredPath("/inventory/ornaments", [
+        { field: "is_active", operator: "eq", value: true },
+      ]),
       trendLabel: lowStockCount > 0 ? `${lowStockCount} low stock` : "All stocked",
       infoTip: "Active ornament SKUs in your inventory",
     },
     {
       title: "Low Stock Items",
       value: lowStockCount,
+      path: buildFilteredPath("/inventory/ornaments", [
+        { field: "is_active", operator: "eq", value: true },
+        { field: "quantity", operator: "lte", value: 1 },
+      ]),
       infoTip: "Ornaments with quantity ≤ 1",
     },
     {
       title: "Monthly Invoices",
       value: monthInvoices.length,
+      path: buildFilteredPath("/invoices", [
+        { field: "invoice_date", operator: "gte", value: thisMonthStart },
+        { field: "invoice_date", operator: "lte", value: today },
+        { field: "is_cancelled", operator: "eq", value: false },
+      ]),
       infoTip: "Total invoices raised this calendar month",
     },
   ];

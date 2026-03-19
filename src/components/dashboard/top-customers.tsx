@@ -3,7 +3,6 @@ import { useList } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import { Button, Card, Skeleton, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { TrophyOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import type { ICustomer, IInvoice } from "../../libs/interfaces";
 
