@@ -34,7 +34,7 @@ import {
   Typography,
 } from "antd";
 import dayjs from "dayjs";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { MakingChargePopover } from "./making-charge-popover";
 import type {
@@ -67,11 +67,6 @@ const p2Rs = (p: number) => p / 100;
 /** rupees → paise (for user-typed fields like discount) */
 const rs2P = (rs: number) => Math.round(rs * 100);
 
-function adjustedRate(base24kPaise: number, purityValue: number | null, gold: boolean): number {
-  if (!gold) return base24kPaise;
-  if (!purityValue) return base24kPaise;
-  return Math.round(base24kPaise * (purityValue / 100));
-}
 
 /** All monetary args and return values are in paise. weightG is grams. */
 function calcLine(weightG: number, qty: number, ratePaise: number, makingPaise: number) {
@@ -110,6 +105,98 @@ interface SaleFormProps {
   existingInvoice?: IInvoice & { invoice_items?: IInvoiceItem[]; customer?: ICustomer };
 }
 
+interface SaleDraftFormValues {
+  customer_id?: string;
+  invoice_date?: string;
+  notes?: string;
+  discount?: number;
+}
+
+interface SaleDraftItem {
+  key: string;
+  ornamentId: string;
+  itemName: string;
+  metalTypeName: string;
+  metalTypeId: string;
+  isGold: boolean;
+  purityValue: number | null;
+  purityDisplayName: string | null;
+  purityLevelId: string;
+  weightG: number;
+  quantity: number;
+  ratePerGramPaise: number;
+  makingChargePaise: number;
+  rateConfigured: boolean;
+  makingConfigured: boolean;
+}
+
+interface SaleDraftPayload {
+  version: 1;
+  updatedAt: string;
+  mode: SaleFormMode;
+  contextId: string;
+  formValues: SaleDraftFormValues;
+  items: SaleDraftItem[];
+}
+
+const SALE_DRAFT_VERSION = 1;
+
+const getSaleDraftKey = (userId: string, shopId: string, mode: SaleFormMode, contextId: string) =>
+  `shringar:sale-draft:${userId}:${shopId}:${mode}:${contextId}`;
+
+const hasDraftableContent = (items: SaleItem[], values: Record<string, unknown> | undefined) => {
+  if (items.length > 0) return true;
+  if (!values) return false;
+
+  const customerId = typeof values.customer_id === "string" ? values.customer_id : "";
+  const notes = typeof values.notes === "string" ? values.notes : "";
+  const discount = typeof values.discount === "number" ? values.discount : 0;
+
+  return customerId.length > 0 || notes.trim().length > 0 || discount > 0;
+};
+
+const toDraftItems = (items: SaleItem[]): SaleDraftItem[] =>
+  items.map((item) => ({
+    key: item.key,
+    ornamentId: item.ornamentId,
+    itemName: item.itemName,
+    metalTypeName: item.metalTypeName,
+    metalTypeId: item.metalTypeId,
+    isGold: item.isGold,
+    purityValue: item.purityValue,
+    purityDisplayName: item.purityDisplayName,
+    purityLevelId: item.purityLevelId,
+    weightG: item.weightG,
+    quantity: item.quantity,
+    ratePerGramPaise: item.ratePerGramPaise,
+    makingChargePaise: item.makingChargePaise,
+    rateConfigured: item.rateConfigured,
+    makingConfigured: item.makingConfigured,
+  }));
+
+const parseSaleDraft = (raw: string | null): SaleDraftPayload | null => {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<SaleDraftPayload>;
+    if (
+      parsed.version !== SALE_DRAFT_VERSION ||
+      typeof parsed.updatedAt !== "string" ||
+      typeof parsed.mode !== "string" ||
+      typeof parsed.contextId !== "string" ||
+      !Array.isArray(parsed.items) ||
+      typeof parsed.formValues !== "object" ||
+      parsed.formValues === null
+    ) {
+      return null;
+    }
+
+    return parsed as SaleDraftPayload;
+  } catch {
+    return null;
+  }
+};
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => {
@@ -126,9 +213,14 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
   const [items, setItems] = useState<SaleItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [selectedOrnamentId, setSelectedOrnamentId] = useState<string | undefined>();
+  const watchedValues = Form.useWatch([], form) as Record<string, unknown> | undefined;
+
+  const draftResolvedRef = useRef(false);
+  const restoredFromDraftRef = useRef(false);
 
   const isEdit = mode === "edit";
   const today = dayjs().format("YYYY-MM-DD");
+  const contextId = mode === "create" ? "new" : existingInvoice?.id ?? "pending";
 
   // ── Refine mutation hooks ─────────────────────────────────────────────────
 
@@ -253,9 +345,6 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
       const purityValue = orn.purity_level?.purity_value ?? null;
 
       const todayRate = getTodayRate(orn.metal_type_id);
-      const adjPaise = todayRate
-        ? adjustedRate(todayRate.rate_per_gram_paise, purityValue, gold)
-        : 0;
 
       const mc = getActiveMC(orn.metal_type_id, orn.purity_level_id);
 
@@ -272,7 +361,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
         purityLevelId: orn.purity_level_id,
         weightG: orn.weight_mg / 1000,
         quantity: 1,
-        ratePerGramPaise: adjPaise,
+        ratePerGramPaise: todayRate? todayRate.rate_per_gram_paise : 0,
         makingChargePaise: mc ? mc.charge_per_gram_paise : 0,
         rateConfigured: !!todayRate,
         makingConfigured: !!mc,
@@ -282,11 +371,87 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
     [getTodayRate, getActiveMC],
   );
 
+  // ── Draft restore/autosave ───────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!shopId || !userId) return;
+    if (draftResolvedRef.current) return;
+    // Only skip for edit mode without existingInvoice
+    if (mode === "edit" && !existingInvoice) return;
+    if (typeof window === "undefined") return;
+
+    draftResolvedRef.current = true;
+
+    const draftKey = getSaleDraftKey(userId, shopId, mode, contextId);
+    const draft = parseSaleDraft(window.localStorage.getItem(draftKey));
+    if (!draft) return;
+
+    restoredFromDraftRef.current = true;
+
+    form.setFieldsValue({
+      customer_id: draft.formValues.customer_id,
+      invoice_date: draft.formValues.invoice_date ? dayjs(draft.formValues.invoice_date) : dayjs(),
+      notes: draft.formValues.notes ?? "",
+      discount: draft.formValues.discount ?? 0,
+    });
+
+    setItems(
+      draft.items.map((item) => {
+        const orn = allOrnaments.find((o) => o.id === item.ornamentId);
+        return {
+          ...item,
+          ornament: orn ?? ({} as IOrnamentWithDetails),
+        };
+      }),
+    );
+  }, [allOrnaments, contextId, existingInvoice, form, mode, shopId, userId]);
+
+  useEffect(() => {
+    if (!shopId || !userId) return;
+    if (!draftResolvedRef.current) return;
+    // Only skip for edit mode without existingInvoice
+    if (mode === "edit" && !existingInvoice) return;
+    if (typeof window === "undefined") return;
+
+    const draftKey = getSaleDraftKey(userId, shopId, mode, contextId);
+    if (!hasDraftableContent(items, watchedValues)) {
+      window.localStorage.removeItem(draftKey);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const invoiceDateValue = watchedValues?.invoice_date;
+      const invoiceDate = invoiceDateValue
+        ? dayjs(invoiceDateValue as dayjs.ConfigType).toISOString()
+        : undefined;
+
+      const payload: SaleDraftPayload = {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        mode,
+        contextId,
+        formValues: {
+          customer_id:
+            typeof watchedValues?.customer_id === "string" ? watchedValues.customer_id : undefined,
+          invoice_date: invoiceDate,
+          notes: typeof watchedValues?.notes === "string" ? watchedValues.notes : "",
+          discount: typeof watchedValues?.discount === "number" ? watchedValues.discount : 0,
+        },
+        items: toDraftItems(items),
+      };
+
+      window.localStorage.setItem(draftKey, JSON.stringify(payload));
+    }, 600);
+
+    return () => window.clearTimeout(timeout);
+  }, [contextId, existingInvoice, items, mode, shopId, userId, watchedValues]);
+
   // ── Pre-fill for clone ────────────────────────────────────────────────────
 
   const clonePrefilled = React.useRef(false);
 
   useEffect(() => {
+    if (restoredFromDraftRef.current) return;
     if (clonePrefilled.current) return;
     if (mode === "clone" && existingInvoice && allOrnaments.length > 0) {
       clonePrefilled.current = true;
@@ -314,6 +479,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
   const editPrefilled = React.useRef(false);
 
   useEffect(() => {
+    if (restoredFromDraftRef.current) return;
     if (editPrefilled.current) return;
     if (mode === "edit" && existingInvoice && existingInvoice.invoice_items) {
       editPrefilled.current = true;
@@ -475,6 +641,10 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
       }
 
       notification.success({ message: `Invoice ${invoiceNumber} saved successfully` });
+      if (typeof window !== "undefined") {
+        const draftKey = getSaleDraftKey(userId, shopId, mode, contextId);
+        window.localStorage.removeItem(draftKey);
+      }
       if (addAnother) {
         form.resetFields();
         form.setFieldsValue({ invoice_date: dayjs(), discount: 0 });
@@ -511,6 +681,10 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
         successNotification: false,
         errorNotification: false,
       });
+      if (typeof window !== "undefined") {
+        const draftKey = getSaleDraftKey(userId, shopId, mode, contextId);
+        window.localStorage.removeItem(draftKey);
+      }
       notification.success({ message: "Notes updated" });
       navigate(`/invoices/${existingInvoice.id}`);
     } catch (err: unknown) {
@@ -701,7 +875,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                       setItems((prev) =>
                         prev.map((i) => {
                           if (i.metalTypeId !== item.metalTypeId) return i;
-                          const adj = adjustedRate(base24kPaise, i.purityValue, i.isGold);
+                          const adj = base24kPaise;
                           return { ...i, ratePerGramPaise: adj, rateConfigured: true };
                         }),
                       );

@@ -176,6 +176,7 @@ function App() {
                                 Title={SidebarTitle}
                                 render={({ items }) => items}
                                 siderItemsAreCollapsed={false}
+                                fixed={true}
                               />
                             )}
                             Header={() => {
