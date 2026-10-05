@@ -5,6 +5,7 @@ import {
     DatePicker,
     Drawer,
     Form,
+    Grid,
     Input,
     InputNumber,
     Row,
@@ -46,6 +47,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
     saveButtonProps,
 }) => {
     const { token } = theme.useToken();
+    const screens = Grid.useBreakpoint();
     const form = formProps.form;
 
     // Watch fields for live simple-interest calculation
@@ -117,7 +119,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                     </Space>
                 </div>
             }
-            width={Math.min(580, typeof window !== "undefined" ? window.innerWidth - 32 : 580)}
+            width={screens.sm ? 580 : "100%"}
             destroyOnClose
             styles={{
                 body: {

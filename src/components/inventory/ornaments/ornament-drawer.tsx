@@ -9,6 +9,7 @@ import {
     Divider,
     Drawer,
     Form,
+    Grid,
     Input,
     InputNumber,
     Row,
@@ -66,6 +67,7 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
     shopId,
     saveButtonProps,
 }) => {
+    const screens = Grid.useBreakpoint();
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
 
@@ -278,7 +280,7 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
         <Drawer
             {...drawerProps}
             title={actionTitles[action] ?? "Ornament"}
-            width={680}
+            width={screens.sm ? 680 : "100%"}
             extra={
                 <Space>
                     <SaveButton {...saveButtonProps} htmlType="submit" onClick={() => form?.submit()} />

@@ -6,6 +6,7 @@ import {
     Descriptions,
     Divider,
     Drawer,
+    Grid,
     Popconfirm,
     Row,
     Space,
@@ -35,6 +36,7 @@ export const LoanShowDrawer: React.FC<LoanShowDrawerProps> = ({
     onCloseLoan,
 }) => {
     const { token } = theme.useToken();
+    const screens = Grid.useBreakpoint();
     if (!record) return null;
 
     const isRunning = record.status === "running";
@@ -43,7 +45,7 @@ export const LoanShowDrawer: React.FC<LoanShowDrawerProps> = ({
         <Drawer
             open={open}
             onClose={onClose}
-            width={Math.min(560, typeof window !== "undefined" ? window.innerWidth - 32 : 560)}
+            width={screens.sm ? 560 : "100%"}
             destroyOnClose
             title={
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

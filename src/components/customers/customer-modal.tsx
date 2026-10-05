@@ -5,6 +5,7 @@ import {
     Button,
     Col,
     Form,
+    Grid,
     Input,
     Modal,
     Row,
@@ -41,6 +42,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     shopId,
     excludeCustomerId,
 }) => {
+    const screens = Grid.useBreakpoint();
     const [showQuickCreate, setShowQuickCreate] = useState(false);
     const [quickForm] = Form.useForm();
 
@@ -145,7 +147,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 {...modalProps}
                 title={actionTitles[action] ?? "Customer"}
                 destroyOnHidden
-                width={700}
+                width={screens.sm ? 700 : "96%"}
             >
                 <Form {...formProps} layout="vertical" onFinish={handleFinish}>
                     <Row gutter={[16, 0]}>

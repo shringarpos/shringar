@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Col, Form, Input, Modal, Row, Switch } from "antd";
+import { Col, Form, Grid, Input, Modal, Row, Switch } from "antd";
 import type { FormProps, ModalProps } from "antd";
 import type { ICategory } from "../../../libs/interfaces";
 import { UploadImageToSupabase } from "../../upload-image";
@@ -28,6 +28,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
     onFinish,
     close: _close,
 }) => {
+    const screens = Grid.useBreakpoint();
     const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
 
     // Sync image when modal opens (pre-populate for edit/clone)
@@ -48,6 +49,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
             {...modalProps}
             title={actionTitles[action] ?? "Category"}
             destroyOnHidden
+            width={screens.sm ? 520 : "96%"}
         >
             <Form
                 {...formProps}
