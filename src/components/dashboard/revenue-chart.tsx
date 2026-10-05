@@ -25,19 +25,19 @@ interface RevenueChartProps {
   shopId: string;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, token }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div
       style={{
         borderRadius: 8,
         padding: "8px 14px",
-        background: "rgba(22,22,22,0.92)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: token?.colorBgElevated || "rgba(22,22,22,0.92)",
+        border: `1px solid ${token?.colorBorderSecondary || "rgba(255,255,255,0.08)"}`,
         boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
       }}
     >
-      <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#fff" }}>
+      <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4, color: token?.colorText }}>
         {label}
       </Text>
       {payload.map((entry: any) => (
@@ -51,8 +51,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               display: "inline-block",
             }}
           />
-          <Text style={{ color: "rgba(255,255,255,0.6)" }}>{entry.name}:</Text>
-          <Text strong style={{ color: "#fff" }}>
+          <Text style={{ color: token?.colorTextSecondary }}>{entry.name}:</Text>
+          <Text strong style={{ color: token?.colorText }}>
             {entry.name === "Revenue"
               ? `₹${Number(entry.value).toLocaleString("en-IN")}`
               : entry.value}
@@ -67,6 +67,9 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
   const [range, setRange] = useState<Range>("30d");
   const [chartType, setChartType] = useState<ChartType>("bar");
   const { token } = theme.useToken();
+
+  const isDarkMode = token.colorBgContainer === "#141414" || token.colorBgBase === "#000";
+  const hoverCursorFill = isDarkMode ? "rgba(140, 140, 140, 0.16)" : "rgba(120, 120, 120, 0.12)";
 
   const REVENUE_COLOR = token.colorPrimary;
   const INVOICE_COLOR = token.colorSuccess;
@@ -158,10 +161,10 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
         <ResponsiveContainer width="100%" height={280}>
           {chartType === "bar" ? (
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={token.colorBorderSecondary} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: token.colorTextSecondary }}
                 tickLine={false}
                 axisLine={false}
                 interval={days <= 7 ? 0 : days <= 30 ? 4 : 9}
@@ -169,7 +172,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
               <YAxis
                 yAxisId="revenue"
                 width={yAxisWidth}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: token.colorTextSecondary }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) =>
@@ -184,22 +187,25 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
                 yAxisId="count"
                 orientation="right"
                 width={30}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: token.colorTextSecondary }}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip
+                content={<CustomTooltip token={token} />}
+                cursor={{ fill: hoverCursorFill, radius: 4 }}
+              />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
               <Bar yAxisId="revenue" dataKey="Revenue" fill={REVENUE_COLOR} radius={[20, 4, 0, 0]} maxBarSize={64} />
               <Bar yAxisId="count" dataKey="Invoices" fill={INVOICE_COLOR} radius={[4, 4, 0, 0]} maxBarSize={32} />
             </BarChart>
           ) : (
             <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={token.colorBorderSecondary} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: token.colorTextSecondary }}
                 tickLine={false}
                 axisLine={false}
                 interval={days <= 7 ? 0 : days <= 30 ? 4 : 9}
@@ -207,7 +213,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
               <YAxis
                 yAxisId="revenue"
                 width={yAxisWidth}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: token.colorTextSecondary }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) =>
@@ -222,12 +228,15 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
                 yAxisId="count"
                 orientation="right"
                 width={30}
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: token.colorTextSecondary }}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals={false}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip
+                content={<CustomTooltip token={token} />}
+                cursor={{ stroke: token.colorBorderSecondary, strokeWidth: 1, strokeDasharray: "3 3" }}
+              />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
               <Line
                 yAxisId="revenue"
@@ -246,7 +255,6 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, fill: INVOICE_COLOR }}
-                strokeDasharray="4 2"
               />
             </LineChart>
           )}

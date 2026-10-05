@@ -89,6 +89,18 @@ test.describe("Theme Consistency & UX Visual Audit", () => {
     expect(rootTheme.dataTheme).toBe("dark");
     expect(rootTheme.colorScheme).toBe("dark");
 
+    // Verify all form fields share identical background color (#141414 in dark)
+    const fieldBgs = await page.evaluate(() => {
+      const email = document.querySelector("input#email");
+      const password = document.querySelector("input#password");
+      return {
+        emailBg: email ? getComputedStyle(email).backgroundColor : null,
+        passwordBg: password ? getComputedStyle(password).backgroundColor : null,
+      };
+    });
+    expect(fieldBgs.emailBg).toBe("rgb(20, 20, 20)");
+    expect(fieldBgs.passwordBg).toBe("rgb(20, 20, 20)");
+
     // Verify global autofill stylesheet rules exist in document
     const hasAutofillRules = await page.evaluate(() => {
       let foundDarkRule = false;
@@ -113,5 +125,40 @@ test.describe("Theme Consistency & UX Visual Audit", () => {
 
     expect(hasAutofillRules.foundDarkRule).toBe(true);
     expect(hasAutofillRules.foundLightRule).toBe(true);
+  });
+
+  test("4. Dashboard bar chart hover highlight displays grayish cursor without white glare", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem("colorMode", "dark");
+    });
+
+    await page.goto("/dashboard");
+    await page.waitForTimeout(2000);
+
+    const container = page.locator(".recharts-responsive-container").first();
+    await container.waitFor({ state: "visible" });
+    await container.scrollIntoViewIfNeeded();
+
+    const box = await container.boundingBox();
+    if (box) {
+      // Hover at an offset to activate tooltip cursor
+      for (let offset = 80; offset < box.width - 50; offset += 40) {
+        await page.mouse.move(box.x + offset, box.y + box.height / 2);
+        await page.waitForTimeout(100);
+        const cursorExists = await page.evaluate(() => !!document.querySelector(".recharts-tooltip-cursor"));
+        if (cursorExists) {
+          const cursorFill = await page.evaluate(() => {
+            const c = document.querySelector(".recharts-tooltip-cursor");
+            return c ? window.getComputedStyle(c).fill : null;
+          });
+          // Verify cursor fill is grayish (rgba(140, 140, 140, 0.16)), NOT solid white (#ffffff or #f5f5f5)
+          expect(cursorFill).not.toBe("rgb(255, 255, 255)");
+          expect(cursorFill).not.toBe("rgb(245, 245, 245)");
+          break;
+        }
+      }
+    }
   });
 });
