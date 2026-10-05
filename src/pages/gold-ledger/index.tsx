@@ -83,6 +83,7 @@ export default function GoldLedger() {
     const {
         drawerProps: createDrawerProps,
         formProps: createFormProps,
+        saveButtonProps: createSaveButtonProps,
         show: showCreate,
         close: closeCreate,
     } = useDrawerForm<IGoldLoan>({
@@ -95,6 +96,7 @@ export default function GoldLedger() {
     const {
         drawerProps: editDrawerProps,
         formProps: editFormProps,
+        saveButtonProps: editSaveButtonProps,
         show: showEdit,
         close: closeEdit,
     } = useDrawerForm<IGoldLoan>({
@@ -107,6 +109,7 @@ export default function GoldLedger() {
     const {
         drawerProps: cloneDrawerProps,
         formProps: cloneFormProps,
+        saveButtonProps: cloneSaveButtonProps,
         show: showClone,
         close: closeClone,
     } = useDrawerForm<IGoldLoan>({
@@ -637,6 +640,7 @@ export default function GoldLedger() {
                 action="create"
                 drawerProps={createDrawerProps}
                 formProps={createFormProps}
+                saveButtonProps={createSaveButtonProps}
                 onFinish={handleCreateFinish}
                 close={closeCreate}
             />
@@ -645,6 +649,7 @@ export default function GoldLedger() {
                 action="edit"
                 drawerProps={editDrawerProps}
                 formProps={editFormProps}
+                saveButtonProps={editSaveButtonProps}
                 onFinish={handleEditFinish}
                 close={closeEdit}
             />
@@ -653,6 +658,7 @@ export default function GoldLedger() {
                 action="clone"
                 drawerProps={cloneDrawerProps}
                 formProps={cloneFormProps}
+                saveButtonProps={cloneSaveButtonProps}
                 onFinish={handleCloneFinish}
                 close={closeClone}
             />

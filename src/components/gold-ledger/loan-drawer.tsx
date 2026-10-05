@@ -1,8 +1,11 @@
 import React, { useEffect } from "react";
+import { SaveButton } from "@refinedev/antd";
 import {
+    Alert,
     Button,
     Col,
     DatePicker,
+    Divider,
     Drawer,
     Form,
     Grid,
@@ -11,13 +14,11 @@ import {
     Row,
     Select,
     Space,
-    Tag,
+    Statistic,
     Typography,
-    theme,
 } from "antd";
 import type { DrawerProps, FormProps } from "antd";
 import dayjs from "dayjs";
-import { Banknote, Coins, User } from "lucide-react";
 import type { IGoldLoan } from "../../libs/interfaces";
 
 interface LoanDrawerProps {
@@ -28,13 +29,13 @@ interface LoanDrawerProps {
     onFinish: (values: Partial<IGoldLoan>) => Promise<unknown> | void;
     close: () => void;
     loading?: boolean;
-    saveButtonProps?: React.ComponentProps<typeof Button>;
+    saveButtonProps?: React.ComponentProps<typeof SaveButton>;
 }
 
-const actionTitles: Record<string, { title: string; tag: string; color: string }> = {
-    create: { title: "New Gold Loan", tag: "Create", color: "blue" },
-    edit: { title: "Edit Gold Loan", tag: "Editing", color: "orange" },
-    clone: { title: "Duplicate Gold Loan", tag: "Clone", color: "purple" },
+const actionTitles: Record<string, string> = {
+    create: "New Gold Loan",
+    edit: "Edit Gold Loan",
+    clone: "Duplicate Gold Loan",
 };
 
 export const LoanDrawer: React.FC<LoanDrawerProps> = ({
@@ -43,10 +44,8 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
     formProps,
     onFinish,
     close,
-    loading,
     saveButtonProps,
 }) => {
-    const { token } = theme.useToken();
     const screens = Grid.useBreakpoint();
     const form = formProps.form;
 
@@ -103,49 +102,24 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
         await onFinish(payload);
     };
 
-    const actionInfo = actionTitles[action] || actionTitles.create;
-
     return (
         <Drawer
             {...drawerProps}
-            title={
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <Space size="middle">
-                        <Coins size={20} style={{ color: token.colorPrimary }} />
-                        <Typography.Title level={5} style={{ margin: 0, color: token.colorText }}>
-                            {actionInfo.title}
-                        </Typography.Title>
-                        <Tag color={actionInfo.color}>{actionInfo.tag}</Tag>
-                    </Space>
-                </div>
+            title={actionTitles[action] ?? "Gold Loan"}
+            width={screens.sm ? 680 : "100%"}
+            extra={
+                <Space>
+                    <Button onClick={close}>Cancel</Button>
+                    <SaveButton
+                        {...saveButtonProps}
+                        htmlType="submit"
+                        onClick={() => form?.submit()}
+                    >
+                        {action === "edit" ? "Update Loan" : "Create Loan Record"}
+                    </SaveButton>
+                </Space>
             }
-            width={screens.sm ? 580 : "100%"}
             destroyOnClose
-            styles={{
-                body: {
-                    padding: "20px 24px",
-                    background: token.colorBgLayout,
-                },
-                footer: {
-                    padding: "12px 24px",
-                    borderTop: `1px solid ${token.colorBorderSecondary}`,
-                    background: token.colorBgContainer,
-                },
-            }}
-            footer={
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    <Space>
-                        <Button onClick={close}>Cancel</Button>
-                        <Button
-                            type="primary"
-                            loading={loading || saveButtonProps?.loading}
-                            onClick={() => form?.submit()}
-                        >
-                            {action === "edit" ? "Update Loan" : "Create Loan Record"}
-                        </Button>
-                    </Space>
-                </div>
-            }
         >
             <Form
                 {...formProps}
@@ -159,218 +133,181 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                     status: "running",
                 }}
             >
-                {/* 1. Borrower Information Section */}
-                <div
-                    style={{
-                        background: token.colorBgContainer,
-                        padding: "16px 20px",
-                        borderRadius: token.borderRadiusLG,
-                        border: `1px solid ${token.colorBorderSecondary}`,
-                        marginBottom: 16,
-                    }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-                        <User size={16} style={{ color: token.colorPrimary, marginRight: 8 }} />
-                        <Typography.Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.04em", color: token.colorTextSecondary }}>
-                            Borrower Details
-                        </Typography.Text>
-                    </div>
+                {/* ── Section 1: Borrower Details ───────────────────────── */}
+                <Typography.Title level={5} style={{ marginBottom: 12 }}>
+                    Borrower Details
+                </Typography.Title>
 
-                    <Row gutter={12}>
-                        <Col xs={24} sm={12}>
-                            <Form.Item
-                                name="customer_name"
-                                label="Customer Full Name"
-                                rules={[{ required: true, message: "Enter customer name" }]}
-                            >
-                                <Input placeholder="e.g. Ramesh Sharma" />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                            <Form.Item
-                                name="contact_no"
-                                label="Contact Phone"
-                                rules={[{ required: true, message: "Enter contact phone" }]}
-                            >
-                                <Input placeholder="e.g. 9876543210" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                <Row gutter={[16, 0]}>
+                    <Col xs={24} sm={12}>
+                        <Form.Item
+                            name="customer_name"
+                            label="Customer Full Name"
+                            rules={[{ required: true, message: "Enter customer name" }]}
+                        >
+                            <Input placeholder="e.g. Ramesh Sharma" />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                        <Form.Item
+                            name="contact_no"
+                            label="Contact Phone"
+                            rules={[{ required: true, message: "Enter contact phone" }]}
+                        >
+                            <Input placeholder="e.g. 9876543210" />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                        <Form.Item
+                            name="nominee"
+                            label="Nominee Name"
+                            rules={[{ required: true, message: "Enter nominee name" }]}
+                        >
+                            <Input placeholder="e.g. Suresh Sharma" />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                        <Form.Item
+                            name="loan_date"
+                            label="Date Pledged"
+                            rules={[{ required: true, message: "Select loan date" }]}
+                        >
+                            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
+                        </Form.Item>
+                    </Col>
+                    <Col span={24}>
+                        <Form.Item
+                            name="address"
+                            label="Residential Address"
+                            rules={[{ required: true, message: "Enter customer address" }]}
+                        >
+                            <Input.TextArea rows={2} placeholder="Complete postal address..." />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                    <Row gutter={12}>
-                        <Col xs={24} sm={12}>
-                            <Form.Item
-                                name="nominee"
-                                label="Nominee Name"
-                                rules={[{ required: true, message: "Enter nominee name" }]}
-                            >
-                                <Input placeholder="e.g. Suresh Sharma" />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                            <Form.Item
-                                name="loan_date"
-                                label="Date Pledged"
-                                rules={[{ required: true, message: "Select loan date" }]}
-                            >
-                                <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                <Divider style={{ margin: "8px 0 16px" }} />
 
-                    <Form.Item
-                        name="address"
-                        label="Residential Address"
-                        rules={[{ required: true, message: "Enter customer address" }]}
-                        style={{ marginBottom: 0 }}
-                    >
-                        <Input.TextArea rows={2} placeholder="Complete postal address..." />
-                    </Form.Item>
-                </div>
+                {/* ── Section 2: Pledged Collateral ─────────────────────── */}
+                <Typography.Title level={5} style={{ marginBottom: 12 }}>
+                    Pledged Collateral
+                </Typography.Title>
 
-                {/* 2. Collateral Details Section */}
-                <div
-                    style={{
-                        background: token.colorBgContainer,
-                        padding: "16px 20px",
-                        borderRadius: token.borderRadiusLG,
-                        border: `1px solid ${token.colorBorderSecondary}`,
-                        marginBottom: 16,
-                    }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-                        <Coins size={16} style={{ color: token.colorWarning, marginRight: 8 }} />
-                        <Typography.Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.04em", color: token.colorTextSecondary }}>
-                            Pledged Collateral
-                        </Typography.Text>
-                    </div>
+                <Row gutter={[16, 0]}>
+                    <Col xs={24} sm={12}>
+                        <Form.Item
+                            name="metal_type"
+                            label="Metal Category"
+                            rules={[{ required: true, message: "Select metal category" }]}
+                        >
+                            <Select
+                                options={[
+                                    { label: "Gold", value: "Gold" },
+                                    { label: "Silver", value: "Silver" },
+                                ]}
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                        <Form.Item
+                            name="purity"
+                            label="Purity Standard"
+                            rules={[{ required: true, message: "Select purity standard" }]}
+                        >
+                            <Select
+                                options={
+                                    metalType === "Silver"
+                                        ? [
+                                              { label: "99.9%", value: "99.9%" },
+                                              { label: "92.5%", value: "92.5%" },
+                                              { label: "80%", value: "80%" },
+                                              { label: "Custom", value: "Custom" },
+                                          ]
+                                        : [
+                                              { label: "24K", value: "24K" },
+                                              { label: "22K", value: "22K" },
+                                              { label: "18K", value: "18K" },
+                                              { label: "14K", value: "14K" },
+                                              { label: "Custom", value: "Custom" },
+                                          ]
+                                }
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col span={24}>
+                        <Form.Item
+                            name="ornament_details"
+                            label="Ornament Description & Weight"
+                            rules={[{ required: true, message: "Describe pledged items with weight" }]}
+                        >
+                            <Input.TextArea
+                                rows={2}
+                                placeholder="e.g. Gold Necklace 24.5g, 22K hallmarked, 1 pair earrings"
+                            />
+                        </Form.Item>
+                    </Col>
+                </Row>
 
-                    <Row gutter={12}>
-                        <Col xs={24} sm={12}>
-                            <Form.Item
-                                name="metal_type"
-                                label="Metal Category"
-                                rules={[{ required: true }]}
-                            >
-                                <Select
-                                    options={[
-                                        { label: "Gold", value: "Gold" },
-                                        { label: "Silver", value: "Silver" },
-                                    ]}
-                                />
-                            </Form.Item>
-                        </Col>
+                <Divider style={{ margin: "8px 0 16px" }} />
 
-                        <Col xs={24} sm={12}>
-                            <Form.Item
-                                name="purity"
-                                label="Purity Standard"
-                                rules={[{ required: true, message: "Select purity" }]}
-                            >
-                                <Select
-                                    options={
-                                        metalType === "Silver"
-                                            ? [
-                                                  { label: "99.9%", value: "99.9%" },
-                                                  { label: "92.5%", value: "92.5%" },
-                                                  { label: "80%", value: "80%" },
-                                                  { label: "Custom", value: "Custom" },
-                                              ]
-                                            : [
-                                                  { label: "24K", value: "24K" },
-                                                  { label: "22K", value: "22K" },
-                                                  { label: "18K", value: "18K" },
-                                                  { label: "14K", value: "14K" },
-                                                  { label: "Custom", value: "Custom" },
-                                              ]
-                                    }
-                                />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                {/* ── Section 3: Loan Terms & Interest ──────────────────── */}
+                <Typography.Title level={5} style={{ marginBottom: 12 }}>
+                    Loan Terms & Interest
+                </Typography.Title>
 
-                    <Form.Item
-                        name="ornament_details"
-                        label="Ornament Description & Weight"
-                        rules={[{ required: true, message: "Describe pledged items with weight" }]}
-                        style={{ marginBottom: 0 }}
-                    >
-                        <Input.TextArea
-                            rows={2}
-                            placeholder="e.g. Gold Necklace 24.5g, 22K hallmarked, 1 pair earrings"
-                        />
-                    </Form.Item>
-                </div>
-
-                {/* 3. Financials & Terms Section */}
-                <div
-                    style={{
-                        background: token.colorBgContainer,
-                        padding: "16px 20px",
-                        borderRadius: token.borderRadiusLG,
-                        border: `1px solid ${token.colorBorderSecondary}`,
-                        marginBottom: 16,
-                    }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-                        <Banknote size={16} style={{ color: token.colorSuccess, marginRight: 8 }} />
-                        <Typography.Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.04em", color: token.colorTextSecondary }}>
-                            Loan Terms & Interest
-                        </Typography.Text>
-                    </div>
-
-                    <Row gutter={12}>
-                        <Col xs={24} sm={8}>
-                            <Form.Item
-                                name="loan_amount"
-                                label="Principal (₹)"
-                                rules={[{ required: true, message: "Enter principal" }]}
-                            >
-                                <InputNumber
-                                    style={{ width: "100%" }}
-                                    min={1}
-                                    step={1000}
-                                    placeholder="50000"
-                                    formatter={(val) => `₹ ${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                                    parser={(val) => val!.replace(/₹\s?|(,*)/g, "") as any}
-                                />
-                            </Form.Item>
-                        </Col>
-
-                        <Col xs={24} sm={8}>
-                            <Form.Item
-                                name="duration_months"
-                                label="Duration (Mo)"
-                                rules={[{ required: true, message: "Enter duration" }]}
-                            >
-                                <InputNumber
-                                    style={{ width: "100%" }}
-                                    min={1}
-                                    max={120}
-                                    placeholder="12"
-                                />
-                            </Form.Item>
-                        </Col>
-
-                        <Col xs={24} sm={8}>
-                            <Form.Item
-                                name="interest_rate"
-                                label="Interest Rate (% p.a.)"
-                                rules={[{ required: true, message: "Enter rate" }]}
-                            >
-                                <InputNumber
-                                    style={{ width: "100%" }}
-                                    min={0}
-                                    max={100}
-                                    step={0.5}
-                                    placeholder="18"
-                                />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                <Row gutter={[16, 0]}>
+                    <Col xs={24} sm={8}>
+                        <Form.Item
+                            name="loan_amount"
+                            label="Principal Amount"
+                            rules={[{ required: true, message: "Enter principal" }]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={1}
+                                step={1000}
+                                precision={2}
+                                placeholder="50000"
+                                addonBefore="₹"
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                        <Form.Item
+                            name="duration_months"
+                            label="Duration"
+                            rules={[{ required: true, message: "Enter duration" }]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={1}
+                                max={120}
+                                step={1}
+                                placeholder="12"
+                                addonAfter="mo"
+                            />
+                        </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                        <Form.Item
+                            name="interest_rate"
+                            label="Interest Rate"
+                            rules={[{ required: true, message: "Enter rate" }]}
+                        >
+                            <InputNumber
+                                style={{ width: "100%" }}
+                                min={0}
+                                max={100}
+                                step={0.5}
+                                precision={2}
+                                placeholder="18"
+                                addonAfter="% p.a."
+                            />
+                        </Form.Item>
+                    </Col>
 
                     {action === "edit" && (
-                        <Row gutter={12}>
+                        <>
                             <Col xs={24} sm={12}>
                                 <Form.Item name="status" label="Loan Status">
                                     <Select
@@ -384,51 +321,48 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                             {status === "closed" && (
                                 <Col xs={24} sm={12}>
                                     <Form.Item name="closure_date" label="Closure Date">
-                                        <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
+                                        <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
                                     </Form.Item>
                                 </Col>
                             )}
-                        </Row>
+                        </>
                     )}
+                </Row>
 
-                    {/* Dynamic Calculation Live Box */}
-                    <div
-                        style={{
-                            background: token.colorFillAlter,
-                            borderRadius: token.borderRadius,
-                            border: `1px solid ${token.colorBorderSecondary}`,
-                            padding: "12px 14px",
-                            marginTop: 4,
-                        }}
-                    >
-                        <Row gutter={12}>
-                            <Col span={8}>
-                                <div style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                                    Principal
-                                </div>
-                                <div style={{ fontWeight: 600, fontSize: 14, color: token.colorText }}>
-                                    ₹{Number(loanAmount || 0).toLocaleString("en-IN")}
-                                </div>
+                {/* ── Cost/Interest Summary Alert (matching ornament-drawer style) ── */}
+                <Alert
+                    style={{ marginTop: 8 }}
+                    type="info"
+                    showIcon
+                    message={
+                        <Row gutter={16}>
+                            <Col xs={8}>
+                                <Statistic
+                                    title="Principal"
+                                    value={loanAmount ? Number(loanAmount).toLocaleString("en-IN") : "0"}
+                                    prefix="₹"
+                                    valueStyle={{ fontSize: 14 }}
+                                />
                             </Col>
-                            <Col span={8}>
-                                <div style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                                    Interest ({durationMonths}m @ {interestRate}%)
-                                </div>
-                                <div style={{ fontWeight: 600, fontSize: 14, color: token.colorWarning }}>
-                                    ₹{interestAmount.toLocaleString("en-IN")}
-                                </div>
+                            <Col xs={8}>
+                                <Statistic
+                                    title={`Interest (${durationMonths || 0}m @ ${interestRate || 0}%)`}
+                                    value={interestAmount ? Number(interestAmount).toLocaleString("en-IN") : "0"}
+                                    prefix="₹"
+                                    valueStyle={{ fontSize: 14 }}
+                                />
                             </Col>
-                            <Col span={8}>
-                                <div style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                                    Total Payable
-                                </div>
-                                <div style={{ fontWeight: 700, fontSize: 15, color: token.colorSuccess }}>
-                                    ₹{totalAmount.toLocaleString("en-IN")}
-                                </div>
+                            <Col xs={8}>
+                                <Statistic
+                                    title="Total Payable"
+                                    value={totalAmount ? Number(totalAmount).toLocaleString("en-IN") : "0"}
+                                    prefix="₹"
+                                    valueStyle={{ fontSize: 14, fontWeight: 700 }}
+                                />
                             </Col>
                         </Row>
-                    </div>
-                </div>
+                    }
+                />
             </Form>
         </Drawer>
     );
