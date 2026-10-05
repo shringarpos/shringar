@@ -717,7 +717,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
     }));
 
   return (
-    <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+    <div style={{ maxWidth: 1400, margin: "0 auto", overflowX: "hidden" }}>
       {/* Top bar */}
       <div
         style={{
@@ -725,12 +725,14 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 24,
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
         <Title level={4} style={{ margin: 0 }}>
           {pageTitle}
         </Title>
-        <Space>
+        <Space wrap>
           <Button onClick={() => navigate("/invoices")}>Cancel</Button>
           {!isEdit && (
             <Button loading={saving} onClick={onSaveAndAddAnother}>
@@ -753,7 +755,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
       )}
 
       <Form form={form} layout="vertical" initialValues={{ invoice_date: dayjs(), discount: 0 }}>
-        <Row gutter={24}>
+        <Row gutter={[16, 16]}>
           {/* ── Left (8/12) ── */}
           <Col xs={24} lg={16}>
             {/* Customer / Date / Notes card */}
@@ -1115,8 +1117,8 @@ const ItemCard: React.FC<ItemCardProps> = ({
 
       {/* Row 2: Editable fields */}
       {!isEdit && (
-        <Row gutter={[8, 4]} style={{ marginBottom: 10 }}>
-          <Col xs={6}>
+        <Row gutter={[8, 8]} style={{ marginBottom: 10 }}>
+          <Col xs={12} sm={6}>
             <div
               style={{
                 fontSize: 12,
@@ -1136,7 +1138,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               onChange={(v) => onUpdate({ weightG: v ?? item.weightG })}
             />
           </Col>
-          <Col xs={4}>
+          <Col xs={12} sm={4}>
             <div
               style={{
                 fontSize: 12,
@@ -1156,7 +1158,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               onChange={(v) => onUpdate({ quantity: v ?? 1 })}
             />
           </Col>
-          <Col xs={7}>
+          <Col xs={12} sm={7}>
             <div
               style={{
                 fontSize: 12,
@@ -1197,7 +1199,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               }
             />
           </Col>
-          <Col xs={7}>
+          <Col xs={12} sm={7}>
             <div
               style={{
                 fontSize: 12,
@@ -1234,7 +1236,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
       )}
 
       {/* Row 3: Calculated display */}
-      <div style={{ display: "flex", gap: 12, marginTop: 8, padding: "8px 10px", borderRadius: 6, }}>
+      <div style={{ display: "flex", gap: 12, marginTop: 8, padding: "8px 10px", borderRadius: 6, flexWrap: "wrap" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={{ fontSize: 11, color: "var(--ant-color-text-secondary, #666)" }}>Metal Amount</span>
           <Text>₹{p2Rs(metalAmountPaise).toLocaleString("en-IN")}</Text>
