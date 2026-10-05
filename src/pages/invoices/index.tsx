@@ -504,7 +504,7 @@ const InvoiceList: React.FC = () => {
           <Table.Column<IInvoiceRow>
             key="actions"
             title="Actions"
-            width={120}
+            width={140}
             fixed="right"
             render={(_: unknown, record: IInvoiceRow) => (
               <Space size={4} onClick={(e) => e.stopPropagation()}>

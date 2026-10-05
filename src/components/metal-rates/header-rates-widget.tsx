@@ -23,7 +23,12 @@ const { Text } = Typography;
 // Detect dark mode via colorBgBase token: '#000000' in dark algo, '#ffffff' in light
 function useIsDark() {
   const { token } = useToken();
-  return token.colorBgBase?.toLowerCase().startsWith("#0") ?? false;
+  return (
+    token.colorBgBase?.toLowerCase().startsWith("#0") ||
+    token.colorBgBase?.toLowerCase().startsWith("#1") ||
+    token.colorBgContainer?.toLowerCase().startsWith("#1") ||
+    false
+  );
 }
 
 function metalAccent(name: string, isDark: boolean): string {

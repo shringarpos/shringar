@@ -620,7 +620,7 @@ const CustomerList: React.FC = () => {
                         title="Actions"
                         dataIndex="actions"
                         key="actions"
-                        width={130}
+                        width={140}
                         fixed="right"
                         render={(_: unknown, record: ICustomer) => (
                             <Space
