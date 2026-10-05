@@ -1,15 +1,19 @@
 insert into public.metal_types (id, name) values
   ('00000000-0000-0000-0000-000000000001', 'GOLD'),
-  ('00000000-0000-0000-0000-000000000002', 'SILVER');
+  ('00000000-0000-0000-0000-000000000002', 'SILVER')
+on conflict (id) do nothing;
 
--- gold
+-- gold purity levels
 insert into public.purity_levels (metal_type_id, purity_value, display_name) values
   ('00000000-0000-0000-0000-000000000001', 78, '18K'),
   ('00000000-0000-0000-0000-000000000001', 84, '20K'),
-  ('00000000-0000-0000-0000-000000000001', 92, '22K');
-  ('00000000-0000-0000-0000-000000000001', 99, '24K');
---
+  ('00000000-0000-0000-0000-000000000001', 92, '22K'),
+  ('00000000-0000-0000-0000-000000000001', 99, '24K')
+on conflict (metal_type_id, purity_value) do nothing;
+
+-- silver purity levels
 insert into public.purity_levels (metal_type_id, purity_value, display_name) values
   ('00000000-0000-0000-0000-000000000002', 45, '45%'),
   ('00000000-0000-0000-0000-000000000002', 58, '58%'),
-  ('00000000-0000-0000-0000-000000000002', 68, '68%');
+  ('00000000-0000-0000-0000-000000000002', 68, '68%')
+on conflict (metal_type_id, purity_value) do nothing;
