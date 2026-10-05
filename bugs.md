@@ -465,3 +465,21 @@ All 128 high-resolution screenshots captured during the crawl across Desktop, Ta
   - `invoices-show-mobile-light.png` (demonstrating Bug SHRINGAR-004 mobile layout overflow)
   - `pos-create-mobile-light.png` (demonstrating Bug SHRINGAR-005 sale form overflow)
   - `dashboard-mobile-light.png` (demonstrating Bug SHRINGAR-006 dashboard overflow)
+
+---
+
+## 6. Fix Implementation & Verification Log
+
+All 10 defects identified in this audit report have been resolved, verified with compilation (`tsc && refine build`) and automated Playwright end-to-end tests (`pnpm test:e2e`), and pushed one-by-one to `origin/main`:
+
+| Defect ID | Status | Commit Hash | Conventional Commit Message | Key Changes |
+|---|---|---|---|---|
+| **SHRINGAR-001** | **Resolved** | `b5daf1f` | `fix(routing): add /pos/create redirect to /create-sale` | Added `<Navigate to="/create-sale" replace />` route in `App.tsx` |
+| **SHRINGAR-002** | **Resolved** | `eb7005c` | `fix(settings): resolve active tab contrast and dark mode border colors` | Used `token.colorPrimary` and `token.colorBorderSecondary` in `settings/index.tsx` |
+| **SHRINGAR-003** | **Resolved** | `6dc2c89` | `fix(categories): use theme token for image placeholder in dark mode` | Replaced `#f5f5f5` with `token.colorFillAlter` and `token.colorTextQuaternary` |
+| **SHRINGAR-004** | **Resolved** | `29fb200` | `fix(invoices): eliminate horizontal overflow on invoice details view` | Wrapped root in `overflowX: "hidden"`, wrapped action buttons in `<Space wrap>`, set responsive `Row gutter={[16, 16]}` |
+| **SHRINGAR-005** | **Resolved** | `acef02b` | `fix(pos): resolve mobile layout overflow and action button wrapping` | Added `overflowX: "hidden"`, `<Space wrap>`, responsive `xs={12} sm={6}` grid columns in `ItemCard` |
+| **SHRINGAR-006** | **Resolved** | `2f1fdde` | `fix(dashboard): prevent mobile horizontal overflow on metric cards and tables` | Fluid `flex: "1 1 160px"` stat cards, `scroll={{ x }}` on `RecentInvoices` and `TopCustomers` tables |
+| **SHRINGAR-007** | **Resolved** | `71296cf` | `fix(ui): make all drawers and modals full width on mobile viewports` | `Grid.useBreakpoint()` clamped modal and drawer widths to `100%` on mobile across 5 components |
+| **SHRINGAR-008 & 009** | **Resolved** | `2dc6095` | `fix(tables): adjust actions column width and improve rate ticker dark mode` | Fixed `actions` column widths (140px) pinned right on customer & invoice tables; improved dark theme detection in rate ticker |
+| **SHRINGAR-010** | **Resolved** | `Verified` | All routes verified | Harmonized typography scale (`Title level={4}`), padding, and layout wrappers validated across all viewports |
