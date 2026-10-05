@@ -178,6 +178,7 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
           rowKey="id"
           size="small"
           pagination={false}
+          scroll={{ x: 500 }}
           style={{ fontSize: 13 }}
           onRow={(record) => ({
             style: record.is_cancelled

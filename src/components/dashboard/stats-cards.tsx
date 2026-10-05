@@ -112,8 +112,9 @@ const StatCard: React.FC<StatCardProps> = ({
       size="small"
       title={cardTitle}
       style={{
-        width: CARD_WIDTH,
-        flexShrink: 0,
+        flex: "1 1 160px",
+        minWidth: 150,
+        maxWidth: 240,
         cursor: isClickable ? "pointer" : "default",
       }}
       styles={{ header: { minHeight: 36, padding: "0 12px" }, body: { padding: "10px 12px" } }}

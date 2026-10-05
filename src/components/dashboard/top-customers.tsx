@@ -152,6 +152,7 @@ export const TopCustomers: React.FC<TopCustomersProps> = ({ shopId }) => {
           rowKey="id"
           size="small"
           pagination={false}
+          scroll={{ x: 380 }}
           locale={{ emptyText: "No sales in past 90 days." }}
         />
       )}
