@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { SaveButton } from "@refinedev/antd";
 import {
     Alert,
@@ -30,6 +30,7 @@ interface LoanDrawerProps {
     close: () => void;
     loading?: boolean;
     saveButtonProps?: React.ComponentProps<typeof SaveButton>;
+    initialRecord?: IGoldLoan | null;
 }
 
 const actionTitles: Record<string, string> = {
@@ -45,6 +46,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
     onFinish,
     close,
     saveButtonProps,
+    initialRecord,
 }) => {
     const screens = Grid.useBreakpoint();
     const form = formProps.form;
@@ -60,11 +62,63 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
     const interestAmount = Math.round(((loanAmount * interestRate * durationMonths) / 1200) * 100) / 100;
     const totalAmount = Math.round((Number(loanAmount) + Number(interestAmount)) * 100) / 100;
 
-    // Initialize or format dates on open
+    const recordSource = (initialRecord || formProps.initialValues) as Partial<IGoldLoan> | undefined;
+
+    // Normalised initial values for Ant Design Form
+    const normalisedInitialValues = useMemo(() => {
+        if (!recordSource || Object.keys(recordSource).length === 0) {
+            return {
+                metal_type: "Gold",
+                purity: "22K",
+                duration_months: 12,
+                interest_rate: 18,
+                status: "running",
+                loan_date: action === "create" ? dayjs() : undefined,
+            };
+        }
+
+        return {
+            metal_type: "Gold",
+            purity: "22K",
+            duration_months: 12,
+            interest_rate: 18,
+            ...recordSource,
+            loan_date: action === "clone"
+                ? dayjs()
+                : recordSource.loan_date
+                ? dayjs(recordSource.loan_date)
+                : (action === "create" ? dayjs() : undefined),
+            closure_date: action === "clone"
+                ? null
+                : recordSource.closure_date
+                ? dayjs(recordSource.closure_date)
+                : undefined,
+            status: action === "clone" ? "running" : (recordSource.status || "running"),
+        };
+    }, [recordSource, action]);
+
+    // Live sync whenever drawer opens or record data arrives
     useEffect(() => {
-        if (drawerProps.open && form) {
+        if (!drawerProps.open || !form) return;
+
+        if (recordSource && Object.keys(recordSource).length > 0) {
+            form.setFieldsValue({
+                ...recordSource,
+                loan_date: action === "clone"
+                    ? dayjs()
+                    : recordSource.loan_date
+                    ? dayjs(recordSource.loan_date)
+                    : dayjs(),
+                closure_date: action === "clone"
+                    ? null
+                    : recordSource.closure_date
+                    ? dayjs(recordSource.closure_date)
+                    : undefined,
+                status: action === "clone" ? "running" : (recordSource.status || "running"),
+            });
+        } else if (action === "create") {
             const rawDate = form.getFieldValue("loan_date");
-            if (!rawDate && action === "create") {
+            if (!rawDate) {
                 form.setFieldsValue({
                     loan_date: dayjs(),
                     metal_type: "Gold",
@@ -73,16 +127,9 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                     interest_rate: 18,
                     status: "running",
                 });
-            } else if (rawDate && typeof rawDate === "string") {
-                form.setFieldValue("loan_date", dayjs(rawDate));
-            }
-
-            const rawClosureDate = form.getFieldValue("closure_date");
-            if (rawClosureDate && typeof rawClosureDate === "string") {
-                form.setFieldValue("closure_date", dayjs(rawClosureDate));
             }
         }
-    }, [drawerProps.open, form, action]);
+    }, [drawerProps.open, form, recordSource, action]);
 
     const handleSubmit = async (values: any) => {
         const payload: Partial<IGoldLoan> = {
@@ -125,13 +172,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                 {...formProps}
                 layout="vertical"
                 onFinish={handleSubmit}
-                initialValues={{
-                    metal_type: "Gold",
-                    purity: "22K",
-                    duration_months: 12,
-                    interest_rate: 18,
-                    status: "running",
-                }}
+                initialValues={normalisedInitialValues}
             >
                 {/* ── Section 1: Borrower Details ───────────────────────── */}
                 <Typography.Title level={5} style={{ marginBottom: 12 }}>
@@ -143,7 +184,12 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="customer_name"
                             label="Customer Full Name"
-                            rules={[{ required: true, message: "Enter customer name" }]}
+                            rules={[
+                                { required: true, message: "Enter customer name" },
+                                { whitespace: true, message: "Customer name cannot be empty" },
+                                { min: 2, message: "Name must be at least 2 characters" },
+                                { max: 100, message: "Name must be 100 characters or less" },
+                            ]}
                         >
                             <Input placeholder="e.g. Ramesh Sharma" />
                         </Form.Item>
@@ -152,16 +198,28 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="contact_no"
                             label="Contact Phone"
-                            rules={[{ required: true, message: "Enter contact phone" }]}
+                            rules={[
+                                { required: true, message: "Enter contact phone" },
+                                { whitespace: true, message: "Contact number cannot be empty" },
+                                {
+                                    pattern: /^(?:\+91[- ]?)?[6-9]\d{9}$/,
+                                    message: "Please enter a valid 10-digit mobile number (e.g. 9876543210 or +91 9876543210)",
+                                },
+                            ]}
                         >
-                            <Input placeholder="e.g. 9876543210" />
+                            <Input placeholder="e.g. 9876543210" maxLength={15} />
                         </Form.Item>
                     </Col>
                     <Col xs={24} sm={12}>
                         <Form.Item
                             name="nominee"
                             label="Nominee Name"
-                            rules={[{ required: true, message: "Enter nominee name" }]}
+                            rules={[
+                                { required: true, message: "Enter nominee name" },
+                                { whitespace: true, message: "Nominee name cannot be empty" },
+                                { min: 2, message: "Nominee name must be at least 2 characters" },
+                                { max: 100, message: "Nominee name must be 100 characters or less" },
+                            ]}
                         >
                             <Input placeholder="e.g. Suresh Sharma" />
                         </Form.Item>
@@ -170,7 +228,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="loan_date"
                             label="Date Pledged"
-                            rules={[{ required: true, message: "Select loan date" }]}
+                            rules={[{ required: true, message: "Please select date pledged" }]}
                         >
                             <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
                         </Form.Item>
@@ -179,16 +237,21 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="address"
                             label="Residential Address"
-                            rules={[{ required: true, message: "Enter customer address" }]}
+                            rules={[
+                                { required: true, message: "Enter customer address" },
+                                { whitespace: true, message: "Address cannot be empty" },
+                                { min: 5, message: "Address must be at least 5 characters" },
+                                { max: 500, message: "Address must be 500 characters or less" },
+                            ]}
                         >
-                            <Input.TextArea rows={2} placeholder="Complete postal address..." />
+                            <Input.TextArea rows={2} placeholder="Complete postal address..." maxLength={500} showCount />
                         </Form.Item>
                     </Col>
                 </Row>
 
                 <Divider style={{ margin: "8px 0 16px" }} />
 
-                {/* ── Section 2: Pledged Collateral ─────────────────────── */}
+                {/* ── Section 2: Pledged Collateral ──────────────────────── */}
                 <Typography.Title level={5} style={{ marginBottom: 12 }}>
                     Pledged Collateral
                 </Typography.Title>
@@ -198,7 +261,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="metal_type"
                             label="Metal Category"
-                            rules={[{ required: true, message: "Select metal category" }]}
+                            rules={[{ required: true, message: "Please select metal category" }]}
                         >
                             <Select
                                 options={[
@@ -212,7 +275,7 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="purity"
                             label="Purity Standard"
-                            rules={[{ required: true, message: "Select purity standard" }]}
+                            rules={[{ required: true, message: "Please select purity standard" }]}
                         >
                             <Select
                                 options={
@@ -238,11 +301,18 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="ornament_details"
                             label="Ornament Description & Weight"
-                            rules={[{ required: true, message: "Describe pledged items with weight" }]}
+                            rules={[
+                                { required: true, message: "Please describe pledged items with weight" },
+                                { whitespace: true, message: "Ornament description cannot be empty" },
+                                { min: 3, message: "Please provide descriptive details (min 3 characters)" },
+                                { max: 500, message: "Details must be 500 characters or less" },
+                            ]}
                         >
                             <Input.TextArea
                                 rows={2}
                                 placeholder="e.g. Gold Necklace 24.5g, 22K hallmarked, 1 pair earrings"
+                                maxLength={500}
+                                showCount
                             />
                         </Form.Item>
                     </Col>
@@ -260,11 +330,16 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="loan_amount"
                             label="Principal Amount"
-                            rules={[{ required: true, message: "Enter principal" }]}
+                            rules={[
+                                { required: true, message: "Please enter principal amount" },
+                                { type: "number", min: 100, message: "Principal amount must be at least ₹100" },
+                                { type: "number", max: 100000000, message: "Amount exceeds limit" },
+                            ]}
                         >
                             <InputNumber
                                 style={{ width: "100%" }}
-                                min={1}
+                                min={100}
+                                max={100000000}
                                 step={1000}
                                 precision={2}
                                 placeholder="50000"
@@ -276,7 +351,10 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="duration_months"
                             label="Duration"
-                            rules={[{ required: true, message: "Enter duration" }]}
+                            rules={[
+                                { required: true, message: "Please enter duration" },
+                                { type: "number", min: 1, max: 120, message: "Duration must be between 1 and 120 months" },
+                            ]}
                         >
                             <InputNumber
                                 style={{ width: "100%" }}
@@ -292,11 +370,14 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                         <Form.Item
                             name="interest_rate"
                             label="Interest Rate"
-                            rules={[{ required: true, message: "Enter rate" }]}
+                            rules={[
+                                { required: true, message: "Please enter interest rate" },
+                                { type: "number", min: 0.1, max: 100, message: "Rate must be between 0.1% and 100%" },
+                            ]}
                         >
                             <InputNumber
                                 style={{ width: "100%" }}
-                                min={0}
+                                min={0.1}
                                 max={100}
                                 step={0.5}
                                 precision={2}
@@ -309,7 +390,11 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                     {action === "edit" && (
                         <>
                             <Col xs={24} sm={12}>
-                                <Form.Item name="status" label="Loan Status">
+                                <Form.Item
+                                    name="status"
+                                    label="Loan Status"
+                                    rules={[{ required: true, message: "Please select loan status" }]}
+                                >
                                     <Select
                                         options={[
                                             { label: "Running", value: "running" },
@@ -320,7 +405,11 @@ export const LoanDrawer: React.FC<LoanDrawerProps> = ({
                             </Col>
                             {status === "closed" && (
                                 <Col xs={24} sm={12}>
-                                    <Form.Item name="closure_date" label="Closure Date">
+                                    <Form.Item
+                                        name="closure_date"
+                                        label="Closure Date"
+                                        rules={[{ required: true, message: "Please select closure date for settled loan" }]}
+                                    >
                                         <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" allowClear />
                                     </Form.Item>
                                 </Col>

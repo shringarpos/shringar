@@ -53,6 +53,10 @@ export default function GoldLedger() {
     // Show drawer state
     const [showRecord, setShowRecord] = useState<IGoldLoan | null>(null);
 
+    // Form record state for seamless edit and clone
+    const [editingLoan, setEditingLoan] = useState<IGoldLoan | null>(null);
+    const [cloningLoan, setCloningLoan] = useState<IGoldLoan | null>(null);
+
     // Toolbar filters state
     const [searchText, setSearchText] = useState("");
     const [metalFilter, setMetalFilter] = useState<string>("all");
@@ -173,18 +177,22 @@ export default function GoldLedger() {
         });
     };
 
-    const handleEditFinish = (values: Partial<IGoldLoan>) => {
-        return editFormProps.onFinish?.({
+    const handleEditFinish = async (values: Partial<IGoldLoan>) => {
+        const res = await editFormProps.onFinish?.({
             ...values,
             user_id: userId,
         });
+        setEditingLoan(null);
+        return res;
     };
 
-    const handleCloneFinish = (values: Partial<IGoldLoan>) => {
-        return cloneFormProps.onFinish?.({
+    const handleCloneFinish = async (values: Partial<IGoldLoan>) => {
+        const res = await cloneFormProps.onFinish?.({
             ...values,
             user_id: userId,
         });
+        setCloningLoan(null);
+        return res;
     };
 
     // Quick Settle & Close Loan
@@ -603,14 +611,20 @@ export default function GoldLedger() {
                                     <Button
                                         icon={<EditOutlined />}
                                         size="small"
-                                        onClick={() => showEdit(record.id)}
+                                        onClick={() => {
+                                            setEditingLoan(record);
+                                            showEdit(record.id);
+                                        }}
                                     />
                                 </Tooltip>
                                 <Tooltip title="Clone">
                                     <Button
                                         icon={<CopyOutlined />}
                                         size="small"
-                                        onClick={() => showClone(record.id)}
+                                        onClick={() => {
+                                            setCloningLoan(record);
+                                            showClone(record.id);
+                                        }}
                                     />
                                 </Tooltip>
                                 <Tooltip title="Delete">
@@ -651,7 +665,11 @@ export default function GoldLedger() {
                 formProps={editFormProps}
                 saveButtonProps={editSaveButtonProps}
                 onFinish={handleEditFinish}
-                close={closeEdit}
+                close={() => {
+                    closeEdit();
+                    setEditingLoan(null);
+                }}
+                initialRecord={editingLoan}
             />
 
             <LoanDrawer
@@ -660,7 +678,11 @@ export default function GoldLedger() {
                 formProps={cloneFormProps}
                 saveButtonProps={cloneSaveButtonProps}
                 onFinish={handleCloneFinish}
-                close={closeClone}
+                close={() => {
+                    closeClone();
+                    setCloningLoan(null);
+                }}
+                initialRecord={cloningLoan}
             />
 
             {/* Slide-over Loan Show Details Drawer */}
@@ -671,8 +693,10 @@ export default function GoldLedger() {
                 onEdit={
                     showRecord
                         ? () => {
+                              const rec = showRecord;
                               setShowRecord(null);
-                              showEdit(showRecord.id);
+                              setEditingLoan(rec);
+                              showEdit(rec.id);
                           }
                         : undefined
                 }
