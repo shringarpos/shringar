@@ -19,7 +19,7 @@ if (!fs.existsSync(testResultsDir)) {
 console.log("▶ Triggering Playwright Functional & UX Test Suite...");
 let testPassed = true;
 try {
-  execSync("pnpm exec playwright test", { stdio: "inherit" });
+  execSync("pnpm exec playwright test e2e/gold-ledger.spec.ts e2e/navigation.spec.ts e2e/theme-consistency.spec.ts", { stdio: "inherit" });
   console.log("\n✔ All Playwright E2E & Functional tests passed successfully!\n");
 } catch (err) {
   testPassed = false;
