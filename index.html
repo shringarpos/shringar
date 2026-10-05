@@ -22,6 +22,15 @@
     <title>
       Shringar - All in one Pos, inventory and orders tracking software for your jwellery shop.
     </title>
+    <script>
+      (function() {
+        try {
+          var mode = localStorage.getItem("colorMode") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.setAttribute("data-theme", mode);
+          document.documentElement.style.colorScheme = mode;
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

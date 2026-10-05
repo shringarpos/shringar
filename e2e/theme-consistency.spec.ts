@@ -70,4 +70,48 @@ test.describe("Theme Consistency & UX Visual Audit", () => {
     // Capture light theme dashboard
     await page.screenshot({ path: "e2e/screenshots/08-light-gold-ledger.png", fullPage: true });
   });
+
+  test("3. Form inputs and autofill rules maintain theme consistency in dark and light modes", async ({ page }) => {
+    // Navigate to login page where email and password inputs are present
+    await page.addInitScript(() => {
+      window.localStorage.setItem("colorMode", "dark");
+    });
+    await page.goto("/login");
+    await expect(page.locator("input[type='email'], input#email, input#password").first()).toBeVisible({ timeout: 15000 });
+
+    // Verify dark data-theme and color-scheme are applied
+    const rootTheme = await page.evaluate(() => {
+      return {
+        dataTheme: document.documentElement.getAttribute("data-theme"),
+        colorScheme: document.documentElement.style.colorScheme,
+      };
+    });
+    expect(rootTheme.dataTheme).toBe("dark");
+    expect(rootTheme.colorScheme).toBe("dark");
+
+    // Verify global autofill stylesheet rules exist in document
+    const hasAutofillRules = await page.evaluate(() => {
+      let foundDarkRule = false;
+      let foundLightRule = false;
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          for (const rule of Array.from(sheet.cssRules || [])) {
+            const text = rule.cssText || "";
+            if (text.includes("data-theme=\"dark\"") && text.includes("-webkit-autofill")) {
+              foundDarkRule = true;
+            }
+            if (text.includes("-webkit-autofill") && text.includes("box-shadow")) {
+              foundLightRule = true;
+            }
+          }
+        } catch {
+          // Ignore cross-origin stylesheets if any
+        }
+      }
+      return { foundDarkRule, foundLightRule };
+    });
+
+    expect(hasAutofillRules.foundDarkRule).toBe(true);
+    expect(hasAutofillRules.foundLightRule).toBe(true);
+  });
 });

@@ -1,0 +1,94 @@
+/**
+ * Global Theme & Autofill Normalization for Shringar POS
+ * Eliminates browser user-agent white glare on autofilled form inputs
+ * ensuring consistent dark/light mode appearance across all inputs, modals,
+ * drawers, and cards.
+ */
+
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ── Light Mode Autofill ──────────────────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active,
+:autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.88) !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+  caret-color: rgba(0, 0, 0, 0.88) !important;
+  transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+}
+
+/* Light mode affix wrapper syncing */
+.ant-input-affix-wrapper:has(input:-webkit-autofill) {
+  background-color: #ffffff !important;
+}
+
+/* ── Dark Mode Autofill ───────────────────────────────────────────────── */
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus,
+[data-theme="dark"] input:-webkit-autofill:active,
+[data-theme="dark"] textarea:-webkit-autofill,
+[data-theme="dark"] textarea:-webkit-autofill:hover,
+[data-theme="dark"] textarea:-webkit-autofill:focus,
+[data-theme="dark"] textarea:-webkit-autofill:active,
+[data-theme="dark"] select:-webkit-autofill,
+[data-theme="dark"] select:-webkit-autofill:hover,
+[data-theme="dark"] select:-webkit-autofill:focus,
+[data-theme="dark"] select:-webkit-autofill:active,
+[data-theme="dark"] :autofill {
+  -webkit-box-shadow: 0 0 0 1000px #141414 inset !important;
+  box-shadow: 0 0 0 1000px #141414 inset !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+}
+
+[data-theme="dark"] .ant-input-affix-wrapper:has(input:-webkit-autofill) {
+  background-color: #141414 !important;
+}
+
+/* ── Dark Mode Modals, Drawers & Elevated Cards ───────────────────────── */
+[data-theme="dark"] .ant-modal-content input:-webkit-autofill,
+[data-theme="dark"] .ant-drawer-content input:-webkit-autofill,
+[data-theme="dark"] .ant-card input:-webkit-autofill,
+[data-theme="dark"] .ant-modal-content textarea:-webkit-autofill,
+[data-theme="dark"] .ant-drawer-content textarea:-webkit-autofill,
+[data-theme="dark"] .ant-card textarea:-webkit-autofill,
+[data-theme="dark"] .ant-modal-content select:-webkit-autofill,
+[data-theme="dark"] .ant-drawer-content select:-webkit-autofill,
+[data-theme="dark"] .ant-card select:-webkit-autofill,
+[data-theme="dark"] .ant-modal-content :autofill,
+[data-theme="dark"] .ant-drawer-content :autofill,
+[data-theme="dark"] .ant-card :autofill {
+  -webkit-box-shadow: 0 0 0 1000px #1f1f1f inset !important;
+  box-shadow: 0 0 0 1000px #1f1f1f inset !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.85) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  caret-color: #ffffff !important;
+}
+
+[data-theme="dark"] .ant-modal-content .ant-input-affix-wrapper:has(input:-webkit-autofill),
+[data-theme="dark"] .ant-drawer-content .ant-input-affix-wrapper:has(input:-webkit-autofill),
+[data-theme="dark"] .ant-card .ant-input-affix-wrapper:has(input:-webkit-autofill) {
+  background-color: #1f1f1f !important;
+}

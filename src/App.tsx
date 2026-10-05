@@ -4,6 +4,7 @@ import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 import { GoogleOutlined } from "@ant-design/icons"
 import { AuthPage, ErrorComponent, ThemedLayout, ThemedSider, useNotificationProvider } from "@refinedev/antd";
 import "@refinedev/antd/dist/reset.css";
+import "./index.css";
 
 import routerProvider, {
   CatchAllNavigate,

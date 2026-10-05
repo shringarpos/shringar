@@ -16,21 +16,35 @@ export const ColorModeContext = createContext<ColorModeContextType>(
   {} as ColorModeContextType
 );
 
+const applyThemeToDocument = (themeMode: string) => {
+  if (typeof document !== "undefined") {
+    document.documentElement.setAttribute("data-theme", themeMode);
+    document.documentElement.style.colorScheme = themeMode;
+    if (document.body) {
+      document.body.setAttribute("data-theme", themeMode);
+      document.body.style.colorScheme = themeMode;
+    }
+  }
+};
+
 export const ColorModeContextProvider: React.FC<PropsWithChildren> = ({
   children,
 }) => {
   const colorModeFromLocalStorage = localStorage.getItem("colorMode");
-  const isSystemPreferenceDark = window?.matchMedia(
+  const isSystemPreferenceDark = window?.matchMedia?.(
     "(prefers-color-scheme: dark)"
-  ).matches;
+  )?.matches;
 
   const systemPreference = isSystemPreferenceDark ? "dark" : "light";
-  const [mode, setMode] = useState(
-    colorModeFromLocalStorage || systemPreference
-  );
+  const [mode, setMode] = useState(() => {
+    const initial = colorModeFromLocalStorage || systemPreference;
+    applyThemeToDocument(initial);
+    return initial;
+  });
 
   useEffect(() => {
     window.localStorage.setItem("colorMode", mode);
+    applyThemeToDocument(mode);
   }, [mode]);
 
   const setColorMode = () => {
