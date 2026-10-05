@@ -30,3 +30,8 @@ _.ntvs_
 _.njsproj
 _.sln
 \*.sw?
+
+# Test output
+/playwright-report
+/test-results
+/e2e/screenshots

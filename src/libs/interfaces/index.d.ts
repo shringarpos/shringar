@@ -11,7 +11,7 @@ export interface IShop {
     created_at: string;
     updated_at: string;
     created_by?: string;
-    updated_by?; string;
+    updated_by?: string;
 }
 
 export interface IMetalType {
@@ -159,4 +159,27 @@ export interface IInvoiceItem {
 export interface IInvoiceWithDetails extends IInvoice {
   customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone"> | null;
   invoice_items?: IInvoiceItem[];
+}
+
+/** Standalone Gold / Silver Loan in Gold Ledger (independent from POS tables, strictly scoped to user_id) */
+export interface IGoldLoan {
+  id: string;
+  user_id: string;
+  customer_name: string;
+  contact_no: string;
+  address: string;
+  nominee: string;
+  metal_type: "Gold" | "Silver";
+  purity: string;
+  ornament_details: string;
+  loan_date: string;
+  closure_date?: string | null;
+  loan_amount: number;
+  duration_months: number;
+  interest_rate: number;
+  interest_amount: number;
+  total_amount: number;
+  status: "running" | "closed";
+  created_at: string;
+  updated_at: string;
 }

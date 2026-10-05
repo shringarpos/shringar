@@ -16,7 +16,7 @@ import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { Gem, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
+import { Coins, FileText, Gem, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
 import Customers from "./pages/customers";
 import Ornaments from "./pages/inventory/ornaments";
@@ -30,6 +30,8 @@ import CreateSale from "./pages/pos";
 import Invoices from "./pages/invoices";
 import InvoiceShow from "./pages/invoices/show";
 import InvoiceEdit from "./pages/invoices/edit";
+import GoldLedger from "./pages/gold-ledger";
+import GoldLedgerReports from "./pages/gold-ledger/reports";
 
 const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
   return (
@@ -126,6 +128,31 @@ function App() {
                     }
                   },
                   {
+                    name: "gold_ledger",
+                    meta: {
+                      icon: <Coins size={20}/>,
+                      label: "Gold Ledger"
+                    }
+                  },
+                  {
+                    name: "gold_loans",
+                    list: "/gold-ledger",
+                    meta: {
+                      label: "Loans",
+                      icon: <Coins size={20} />,
+                      parent: "gold_ledger"
+                    }
+                  },
+                  {
+                    name: "gold_ledger_reports",
+                    list: "/gold-ledger/reports",
+                    meta: {
+                      label: "Reports",
+                      icon: <FileText size={20} />,
+                      parent: "gold_ledger"
+                    }
+                  },
+                  {
                     name: "settings",
                     list: "/settings",
                     meta: {
@@ -208,6 +235,8 @@ function App() {
                     <Route path="/inventory/ornaments" element={<Ornaments />}/>
                     <Route path="/inventory/categories" element={<Categories />}/>
                     <Route path="/metal-rates" element={<MetalRates />}/>
+                    <Route path="/gold-ledger" element={<GoldLedger />} />
+                    <Route path="/gold-ledger/reports" element={<GoldLedgerReports />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>
 
@@ -285,9 +314,3 @@ function App() {
 }
 
 export default App;
-
-
-
-
-
-
