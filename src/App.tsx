@@ -12,7 +12,7 @@ import routerProvider, {
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
 import { App as AntdApp } from "antd";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
@@ -228,6 +228,7 @@ function App() {
                     </Route>
 
                     <Route path="/create-sale" element={<CreateSale />} />
+                    <Route path="/pos/create" element={<Navigate to="/create-sale" replace />} />
                     <Route path="/customers" element={<Customers />} />
                     <Route path="/invoices" element={<Invoices />} />
                     <Route path="/invoices/:id" element={<InvoiceShow />} />
