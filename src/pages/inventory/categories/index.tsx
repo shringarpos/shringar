@@ -18,6 +18,7 @@ import {
     Tag,
     Tooltip,
     Typography,
+    theme,
 } from "antd";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -303,6 +304,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     onToggle,
     onCardClick,
 }) => {
+    const { token } = theme.useToken();
     const coverImage = record.image_url ? (
         <img
             alt={record.name}
@@ -313,13 +315,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <div
             style={{
                 height: 160,
-                background: "#f5f5f5",
+                background: token.colorFillAlter,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
             }}
         >
-            <AppstoreOutlined style={{ fontSize: 48, color: "#bfbfbf" }} />
+            <AppstoreOutlined style={{ fontSize: 48, color: token.colorTextQuaternary }} />
         </div>
     );
 
