@@ -219,7 +219,7 @@ export default function InvoiceShow() {
   }
 
   return (
-    <>
+    <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
       {/* Header */}
       <div
         style={{
@@ -227,9 +227,11 @@ export default function InvoiceShow() {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 16,
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
-        <Space>
+        <Space wrap>
           <Button
             icon={<ArrowLeftOutlined />}
             type="text"
@@ -249,7 +251,7 @@ export default function InvoiceShow() {
           )}
         </Space>
 
-        <Space>
+        <Space wrap>
           <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
             Print
           </Button>
@@ -293,7 +295,7 @@ export default function InvoiceShow() {
         />
       )}
 
-      <Row gutter={24}>
+      <Row gutter={[16, 16]}>
         {/* Left — Details */}
         <Col xs={24} lg={16}>
           {/* Invoice meta */}
@@ -448,6 +450,6 @@ export default function InvoiceShow() {
         onConfirm={handleCancelConfirm}
         onCancel={() => setCancelModalOpen(false)}
       />
-    </>
+    </div>
   );
 }
