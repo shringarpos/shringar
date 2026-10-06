@@ -6,6 +6,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
   message,
   theme,
@@ -14,6 +15,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   CopyOutlined,
+  LinkOutlined,
   MailOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
@@ -87,7 +89,13 @@ export default function AccessRequestsSettings() {
   const copyApprovalLink = (approvalToken: string) => {
     const link = `${window.location.origin}/approve-access?token=${approvalToken}`;
     navigator.clipboard.writeText(link);
-    message.success("Direct approval link copied to clipboard!");
+    message.success("1-Click approval link copied to clipboard!");
+  };
+
+  const copyActivationLink = (approvalToken: string) => {
+    const link = `${window.location.origin}/activate?token=${approvalToken}`;
+    navigator.clipboard.writeText(link);
+    message.success("Showroom activation link copied to clipboard!");
   };
 
   const columns = [
@@ -128,8 +136,8 @@ export default function AccessRequestsSettings() {
         <div>
           <Text>{val}</Text>
           {record.notes && (
-            <div style={{ fontSize: 12, color: token.colorTextSecondary, maxWidth: 200 }}>
-              Notes: {record.notes}
+            <div style={{ fontSize: 12, color: token.colorTextSecondary, maxWidth: 220 }}>
+              {record.notes}
             </div>
           )}
         </div>
@@ -184,25 +192,39 @@ export default function AccessRequestsSettings() {
           )}
 
           {record.status === "approved" && (
-            <Button
-              size="small"
-              icon={<MailOutlined />}
-              href={`mailto:${record.email}?subject=${encodeURIComponent(
-                "Your Shringar POS Access Request Has Been Approved!"
-              )}&body=${encodeURIComponent(
-                `Hello ${record.full_name},\n\nYour access request for ${record.shop_name} has been approved.\n\nYou can now set your password and complete your registration at:\n${window.location.origin}/register\n\nBest regards,\nSahil Khude\nShringar POS Administrator`
-              )}`}
-            >
-              Email Invite
-            </Button>
+            <>
+              <Tooltip title="Copy Showroom Activation Link">
+                <Button
+                  size="small"
+                  icon={<LinkOutlined />}
+                  onClick={() => copyActivationLink(record.approval_token)}
+                >
+                  Activation Link
+                </Button>
+              </Tooltip>
+              <Button
+                size="small"
+                icon={<MailOutlined />}
+                href={`mailto:${record.email}?subject=${encodeURIComponent(
+                  "Your Shringar POS Access Request Has Been Approved!"
+                )}&body=${encodeURIComponent(
+                  `Hello ${record.full_name},\n\nYour access request for ${record.shop_name} has been approved.\n\nYou can set your password and activate your showroom workspace at:\n${window.location.origin}/activate?token=${record.approval_token}\n\nBest regards,\nShringar POS Team`
+                )}`}
+              >
+                Email
+              </Button>
+            </>
           )}
 
-          <Button
-            size="small"
-            icon={<CopyOutlined />}
-            onClick={() => copyApprovalLink(record.approval_token)}
-            title="Copy 1-Click Approval Link"
-          />
+          {record.status === "pending" && (
+            <Tooltip title="Copy 1-Click Admin Approval Link">
+              <Button
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={() => copyApprovalLink(record.approval_token)}
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -212,27 +234,30 @@ export default function AccessRequestsSettings() {
     <Card
       title={
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              Access Requests & User Approvals
-            </Title>
-            <Text type="secondary" style={{ fontSize: 13 }}>
-              Control who can register and create accounts in Shringar POS. Administrator:{" "}
-              <Text strong>{ADMIN_EMAIL}</Text>
-            </Text>
-          </div>
+          <Title level={4} style={{ margin: 0 }}>
+            Showroom Access Requests
+          </Title>
           <Button icon={<ReloadOutlined />} onClick={fetchRequests} loading={loading}>
             Refresh
           </Button>
         </div>
       }
+      style={{ borderRadius: 12 }}
     >
+      <div style={{ marginBottom: 16 }}>
+        <Text type="secondary">
+          Review and approve jewelry showroom onboarding requests. Approved applicants receive a
+          secure link to set their password and activate their showroom.
+        </Text>
+      </div>
+
       <Table
         dataSource={requests}
         columns={columns}
         rowKey="id"
         loading={loading}
         pagination={{ pageSize: 10 }}
+        size="middle"
       />
     </Card>
   );

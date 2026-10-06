@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   Descriptions,
@@ -15,6 +14,7 @@ import {
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
+  CopyOutlined,
   HomeOutlined,
   MailOutlined,
   SafetyCertificateOutlined,
@@ -58,9 +58,11 @@ export default function ApproveAccessPage() {
         let query = supabaseClient.from("access_requests").select("*");
 
         if (tokenParam) {
-          query = query.eq("approval_token", tokenParam);
+          query = query.eq("approval_token", tokenParam.trim());
         } else if (emailParam) {
-          query = query.ilike("email", emailParam.toLowerCase().trim()).order("created_at", { ascending: false });
+          query = query
+            .ilike("email", emailParam.toLowerCase().trim())
+            .order("created_at", { ascending: false });
         } else {
           setLoading(false);
           return;
@@ -107,6 +109,13 @@ export default function ApproveAccessPage() {
     }
   };
 
+  const copyActivationLink = () => {
+    if (!request) return;
+    const link = `${window.location.origin}/activate?token=${request.approval_token}`;
+    navigator.clipboard.writeText(link);
+    message.success("Showroom activation link copied to clipboard!");
+  };
+
   const statusTag = (st: string) => {
     switch (st) {
       case "approved":
@@ -148,7 +157,7 @@ export default function ApproveAccessPage() {
             Access Request Approval
           </Title>
           <Text type="secondary">
-            Shringar POS Administrative Gatekeeper ({ADMIN_EMAIL})
+            Shringar POS Showroom Access Control
           </Text>
         </div>
 
@@ -171,39 +180,60 @@ export default function ApproveAccessPage() {
           />
         ) : (
           <div>
-            {actionDone === "approved" ? (
+            {actionDone === "approved" || request.status === "approved" ? (
               <Result
                 status="success"
-                title="Access Approved!"
+                title="Showroom Access Approved!"
                 subTitle={
                   <div>
                     <Paragraph>
-                      User <Text strong>{request.email}</Text> is now authorized to complete their account setup.
+                      <Text strong>{request.email}</Text> ({request.shop_name}) is now authorized to activate their showroom account.
                     </Paragraph>
-                    <Paragraph type="secondary" style={{ fontSize: 13 }}>
-                      You can send them an email notifying them that their request is approved:
-                    </Paragraph>
+                    <div
+                      style={{
+                        background: token.colorFillAlter,
+                        padding: "12px 16px",
+                        borderRadius: 8,
+                        marginTop: 12,
+                        textAlign: "left",
+                        border: `1px solid ${token.colorBorderSecondary}`,
+                      }}
+                    >
+                      <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+                        Unique Activation URL:
+                      </Text>
+                      <Text code copyable style={{ fontSize: 13, wordBreak: "break-all" }}>
+                        {`${window.location.origin}/activate?token=${request.approval_token}`}
+                      </Text>
+                    </div>
                   </div>
                 }
                 extra={[
                   <Button
-                    key="notify"
+                    key="copy"
                     type="primary"
+                    icon={<CopyOutlined />}
+                    onClick={copyActivationLink}
+                  >
+                    Copy Activation Link
+                  </Button>,
+                  <Button
+                    key="notify"
                     icon={<MailOutlined />}
                     href={`mailto:${request.email}?subject=${encodeURIComponent(
-                      "Your Shringar POS Access Request Has Been Approved!"
+                      `Your Shringar POS Access Request Has Been Approved!`
                     )}&body=${encodeURIComponent(
-                      `Hello ${request.full_name},\n\nGreat news! Your access request for ${request.shop_name} has been approved.\n\nYou can now set your password and access Shringar POS at:\n${window.location.origin}/register\n\nWelcome aboard!\n\nBest regards,\nSahil Khude\nShringar POS Administrator`
+                      `Hello ${request.full_name},\n\nGreat news! Your access request for ${request.shop_name} has been approved.\n\nYou can set your password and activate your showroom workspace using this link:\n${window.location.origin}/activate?token=${request.approval_token}\n\nWelcome aboard!\n\nBest regards,\nShringar POS Team`
                     )}`}
                   >
-                    Notify User via Email
+                    Send Email to Applicant
                   </Button>,
                   <Link key="login" to="/login">
-                    <Button>Back to App</Button>
+                    <Button>Back to Sign In</Button>
                   </Link>,
                 ]}
               />
-            ) : actionDone === "rejected" ? (
+            ) : actionDone === "rejected" || request.status === "rejected" ? (
               <Result
                 status="info"
                 title="Access Request Rejected"
@@ -223,20 +253,20 @@ export default function ApproveAccessPage() {
                   style={{ marginBottom: 20 }}
                   labelStyle={{ width: 140, fontWeight: 600 }}
                 >
-                  <Descriptions.Item label="Applicant Name">
+                  <Descriptions.Item label="Showroom Name">
+                    <Text strong>{request.shop_name}</Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Owner / Manager">
                     {request.full_name}
                   </Descriptions.Item>
                   <Descriptions.Item label="Email">
-                    <Text strong copyable>{request.email}</Text>
+                    <Text copyable>{request.email}</Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="Phone">
-                    {request.phone}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Shop & City">
-                    {request.shop_name}
+                    <Text copyable>{request.phone}</Text>
                   </Descriptions.Item>
                   {request.notes && (
-                    <Descriptions.Item label="Notes">
+                    <Descriptions.Item label="Details / Notes">
                       {request.notes}
                     </Descriptions.Item>
                   )}
@@ -248,51 +278,28 @@ export default function ApproveAccessPage() {
                   </Descriptions.Item>
                 </Descriptions>
 
-                {request.status === "pending" ? (
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<CheckCircleOutlined />}
-                      loading={actionLoading}
-                      onClick={() => handleUpdateStatus("approved")}
-                      style={{ flex: 1, backgroundColor: token.colorSuccess }}
-                    >
-                      Approve Access
-                    </Button>
-                    <Button
-                      danger
-                      size="large"
-                      icon={<CloseCircleOutlined />}
-                      loading={actionLoading}
-                      onClick={() => handleUpdateStatus("rejected")}
-                      style={{ flex: 1 }}
-                    >
-                      Reject Request
-                    </Button>
-                  </div>
-                ) : request.status === "approved" ? (
-                  <Alert
-                    type="success"
-                    showIcon
-                    message="Already Approved"
-                    description={`This user is already approved and can register at ${window.location.origin}/register.`}
-                  />
-                ) : request.status === "registered" ? (
-                  <Alert
-                    type="info"
-                    showIcon
-                    message="Account Active"
-                    description="This user has already completed registration and can log in."
-                  />
-                ) : (
-                  <Alert
-                    type="error"
-                    showIcon
-                    message="Rejected"
-                    description="This request was rejected."
-                  />
-                )}
+                <Space style={{ width: "100%", justifyContent: "center" }} size="middle">
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<CheckCircleOutlined />}
+                    loading={actionLoading}
+                    onClick={() => handleUpdateStatus("approved")}
+                    style={{ background: token.colorSuccess, borderColor: token.colorSuccess }}
+                  >
+                    Approve Showroom Access
+                  </Button>
+
+                  <Button
+                    danger
+                    size="large"
+                    icon={<CloseCircleOutlined />}
+                    loading={actionLoading}
+                    onClick={() => handleUpdateStatus("rejected")}
+                  >
+                    Reject Request
+                  </Button>
+                </Space>
               </div>
             )}
           </div>

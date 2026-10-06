@@ -36,6 +36,7 @@ import GoldLedgerReports from "./pages/gold-ledger/reports";
 import DesignGallery from "./pages/design-gallery";
 import AlbumShow from "./pages/design-gallery/album-show";
 import RequestAccessPage from "./pages/auth/request-access";
+import ActivateAccountPage from "./pages/auth/activate-account";
 import ApproveAccessPage from "./pages/auth/approve-access";
 
 const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
@@ -44,9 +45,11 @@ const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
         src={collapsed ? "/logo_icon.png" : "/logo.png"}
         alt="Shringar"
         style={{
-          width: collapsed ? 40 : 130,
+          width: collapsed ? "32px" : "120px",
           height: "auto",
-          objectFit: "contain",
+          transition: "all 0.3s ease",
+          display: "block",
+          margin: "0 auto",
         }}
       />
   );
@@ -61,24 +64,40 @@ function App() {
             <DevtoolsProvider>
               <Refine
                 dataProvider={dataProvider}
-                authProvider={authProvider}
-                routerProvider={routerProvider}
                 notificationProvider={useNotificationProvider}
+                routerProvider={routerProvider}
+                authProvider={authProvider}
                 resources={[
                   {
                     name: "dashboard",
                     list: "/",
                     meta: {
                       label: "Dashboard",
-                      icon: <LayoutGrid className="w-4 h-4"/>,
+                      icon: <LayoutGrid className="w-4 h-4" />,
                     },
                   },
                   {
-                    name: "pos",
-                    list: "/pos",
+                    name: "sales",
+                    list: "/sales/new",
                     meta: {
-                      label: "Point of Sale",
-                      icon: <ShoppingCart className="w-4 h-4"/>,
+                      label: "New Sale",
+                      icon: <ShoppingCart className="w-4 h-4" />,
+                    },
+                  },
+                  {
+                    name: "customers",
+                    list: "/customers",
+                    meta: {
+                      label: "Customers",
+                      icon: <Users className="w-4 h-4" />,
+                    },
+                  },
+                  {
+                    name: "gold_ledger",
+                    list: "/gold-ledger",
+                    meta: {
+                      label: "Gold Ledger",
+                      icon: <Coins className="w-4 h-4" />,
                     },
                   },
                   {
@@ -88,15 +107,7 @@ function App() {
                     edit: "/invoices/edit/:id",
                     meta: {
                       label: "Invoices",
-                      icon: <ReceiptIcon className="w-4 h-4"/>,
-                    },
-                  },
-                  {
-                    name: "customers",
-                    list: "/customers",
-                    meta: {
-                      label: "Customers",
-                      icon: <Users className="w-4 h-4" />,
+                      icon: <ReceiptIcon className="w-4 h-4" />,
                     },
                   },
                   {
@@ -113,14 +124,6 @@ function App() {
                     meta: {
                       label: "Categories",
                       icon: <List className="w-4 h-4" />,
-                    },
-                  },
-                  {
-                    name: "gold_ledger",
-                    list: "/gold-ledger",
-                    meta: {
-                      label: "Gold Ledger",
-                      icon: <Coins className="w-4 h-4" />,
                     },
                   },
                   {
@@ -172,9 +175,8 @@ function App() {
                             Sider={(props) => (
                               <ThemedSider
                                 {...props}
-                                Title={({ collapsed }) => (
-                                  <SidebarTitle collapsed={collapsed} />
-                                )}
+                                Title={SidebarTitle}
+                                fixed
                               />
                             )}
                           >
@@ -185,7 +187,7 @@ function App() {
                     }
                   >
                     <Route index element={<Dashboard />} />
-                    <Route path="/pos" element={<CreateSale />} />
+                    <Route path="/sales/new" element={<CreateSale />} />
                     <Route path="/invoices">
                       <Route index element={<Invoices />} />
                       <Route path="show/:id" element={<InvoiceShow />} />
@@ -250,9 +252,9 @@ function App() {
                           registerLink={
                             <div style={{ marginTop: 12, textAlign: "center" }}>
                               <Typography.Text style={{ fontSize: 13 }} type="secondary">
-                                Need an account?{" "}
+                                Don't have an account?{" "}
                                 <Link to="/register" style={{ fontWeight: 600 }}>
-                                  Request Access (Invite Only)
+                                  Request Access
                                 </Link>
                               </Typography.Text>
                             </div>
@@ -275,6 +277,9 @@ function App() {
                       }
                     />
                     <Route path="/register" element={<RequestAccessPage />} />
+                    <Route path="/request-access" element={<RequestAccessPage />} />
+                    <Route path="/activate" element={<ActivateAccountPage />} />
+                    <Route path="/accept-invite" element={<ActivateAccountPage />} />
                     <Route path="/approve-access" element={<ApproveAccessPage />} />
                     <Route
                       path="/forgot-passoword"
@@ -299,14 +304,12 @@ function App() {
                     <Route path="*" element={<ErrorComponent />} />
                   </Route>
                 </Routes>
+
                 <RefineKbar />
                 <UnsavedChangesNotifier />
-                <DocumentTitleHandler
-                  handler={({ autoGeneratedTitle }) =>
-                    autoGeneratedTitle.replace(/\brefine\b/gi, "Shringar")
-                  }
-                />
+                <DocumentTitleHandler />
               </Refine>
+              <DevtoolsPanel />
             </DevtoolsProvider>
           </AntdApp>
         </ColorModeContextProvider>

@@ -69,7 +69,7 @@ const authProvider: AuthProvider = {
       });
 
       if (error) {
-        let errorMsg = "Account creation is restricted to approved requests. Please contact sahilkhude11@gmail.com.";
+        let errorMsg = "Account creation is restricted to approved invitations. Please request access to continue.";
         try {
           if ((error as any).context) {
             const body = await (error as any).context.json();

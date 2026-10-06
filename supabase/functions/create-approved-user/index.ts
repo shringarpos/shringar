@@ -43,8 +43,8 @@ serve(async (req) => {
         JSON.stringify({
           error:
             request?.status === "pending"
-              ? "Access request is pending approval by sahilkhude11@gmail.com"
-              : "Account creation is restricted to approved users.",
+              ? "Your access request is currently pending review by the onboarding team."
+              : "Account creation is restricted to approved invitations.",
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
