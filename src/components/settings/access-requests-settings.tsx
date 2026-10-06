@@ -26,9 +26,9 @@ const { Title, Text } = Typography;
 interface IAccessRequest {
   id: string;
   email: string;
-  full_name: string;
-  phone: string;
-  shop_name: string;
+  full_name?: string;
+  phone?: string;
+  shop_name?: string;
   notes?: string;
   status: "pending" | "approved" | "rejected" | "registered";
   created_at: string;
@@ -92,10 +92,10 @@ export default function AccessRequestsSettings() {
     message.success("1-Click approval link copied to clipboard!");
   };
 
-  const copyActivationLink = (approvalToken: string) => {
-    const link = `${window.location.origin}/activate?token=${approvalToken}`;
+  const copyCreationLink = (approvalToken: string) => {
+    const link = `${window.location.origin}/create-account?token=${approvalToken}`;
     navigator.clipboard.writeText(link);
-    message.success("Showroom activation link copied to clipboard!");
+    message.success("Account creation link copied to clipboard!");
   };
 
   const columns = [
@@ -114,30 +114,19 @@ export default function AccessRequestsSettings() {
       ),
     },
     {
-      title: "Applicant",
+      title: "Applicant Email",
       key: "applicant",
       render: (_: any, record: IAccessRequest) => (
         <div>
-          <Text strong>{record.full_name}</Text>
-          <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
-            {record.email}
-          </div>
-          <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
-            {record.phone}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Shop & City",
-      dataIndex: "shop_name",
-      key: "shop_name",
-      render: (val: string, record: IAccessRequest) => (
-        <div>
-          <Text>{val}</Text>
-          {record.notes && (
-            <div style={{ fontSize: 12, color: token.colorTextSecondary, maxWidth: 220 }}>
-              {record.notes}
+          <Text strong copyable>{record.email}</Text>
+          {record.full_name && (
+            <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
+              {record.full_name}
+            </div>
+          )}
+          {record.shop_name && (
+            <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
+              {record.shop_name}
             </div>
           )}
         </div>
@@ -193,22 +182,22 @@ export default function AccessRequestsSettings() {
 
           {record.status === "approved" && (
             <>
-              <Tooltip title="Copy Showroom Activation Link">
+              <Tooltip title="Copy Account Creation Link">
                 <Button
                   size="small"
                   icon={<LinkOutlined />}
-                  onClick={() => copyActivationLink(record.approval_token)}
+                  onClick={() => copyCreationLink(record.approval_token)}
                 >
-                  Activation Link
+                  Invite Link
                 </Button>
               </Tooltip>
               <Button
                 size="small"
                 icon={<MailOutlined />}
                 href={`mailto:${record.email}?subject=${encodeURIComponent(
-                  "Your Shringar POS Access Request Has Been Approved!"
+                  "Your Shringar POS Account Creation Link"
                 )}&body=${encodeURIComponent(
-                  `Hello ${record.full_name},\n\nYour access request for ${record.shop_name} has been approved.\n\nYou can set your password and activate your showroom workspace at:\n${window.location.origin}/activate?token=${record.approval_token}\n\nBest regards,\nShringar POS Team`
+                  `Hello,\n\nYour access request for Shringar POS has been approved!\n\nClick the link below to set your password and access your account:\n${window.location.origin}/create-account?token=${record.approval_token}\n\n(No email verification needed - you will be logged in directly!)\n\nBest regards,\nSahil Khude\nShringar POS`
                 )}`}
               >
                 Email
@@ -246,8 +235,7 @@ export default function AccessRequestsSettings() {
     >
       <div style={{ marginBottom: 16 }}>
         <Text type="secondary">
-          Review and approve jewelry showroom onboarding requests. Approved applicants receive a
-          secure link to set their password and activate their showroom.
+          Review access requests. When you approve an applicant, an invitation link is generated allowing them to set their password and enter the app directly without email verification.
         </Text>
       </div>
 

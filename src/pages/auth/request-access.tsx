@@ -5,23 +5,17 @@ import {
   Form,
   Input,
   Result,
-  Select,
-  Space,
   Tag,
   Typography,
   message,
   theme,
 } from "antd";
 import {
+  ArrowLeftOutlined,
   CheckCircleOutlined,
-  GoldOutlined,
-  KeyOutlined,
   LockOutlined,
   MailOutlined,
-  PhoneOutlined,
   SendOutlined,
-  ShopOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router";
 import { supabaseClient } from "../../providers/supabase-client";
@@ -30,24 +24,15 @@ const { Title, Text, Paragraph } = Typography;
 
 export default function RequestAccessPage() {
   const [submitting, setSubmitting] = useState(false);
-  const [submittedData, setSubmittedData] = useState<{
-    email: string;
-    fullName: string;
-    shopName: string;
-  } | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
-  const handleRequestSubmit = async (values: {
-    fullName: string;
-    email: string;
-    phone: string;
-    shopName: string;
-    businessType?: string;
-    notes?: string;
-  }) => {
+  const ADMIN_EMAIL = "sahilkhude11@gmail.com";
+
+  const handleRequestSubmit = async (values: { email: string }) => {
     setSubmitting(true);
     try {
       const normalizedEmail = values.email.toLowerCase().trim();
@@ -63,41 +48,26 @@ export default function RequestAccessPage() {
 
       if (existing) {
         if (existing.status === "approved") {
-          message.info("Your email is already approved! Please proceed to activate your account.");
-          navigate(`/activate?token=${existing.approval_token}`);
+          message.info("Your email is already approved! You can create your account now.");
+          navigate(`/create-account?token=${existing.approval_token}`);
           return;
         } else if (existing.status === "registered") {
           message.info("An account with this email already exists. Please log in.");
           navigate("/login");
           return;
         } else if (existing.status === "pending") {
-          setSubmittedData({
-            email: normalizedEmail,
-            fullName: values.fullName,
-            shopName: values.shopName,
-          });
+          setSubmittedEmail(normalizedEmail);
           return;
         }
       }
 
-      // Generate a unique token for backend approval workflow
+      // Generate a unique approval token
       const approvalToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-
-      const notesContent = [
-        values.businessType ? `Type: ${values.businessType}` : null,
-        values.notes ? `Notes: ${values.notes}` : null,
-      ]
-        .filter(Boolean)
-        .join(" | ");
 
       const { error: insertErr } = await supabaseClient
         .from("access_requests")
         .insert({
           email: normalizedEmail,
-          full_name: values.fullName.trim(),
-          phone: values.phone.trim(),
-          shop_name: values.shopName.trim(),
-          notes: notesContent || null,
           status: "pending",
           approval_token: approvalToken,
         });
@@ -106,13 +76,30 @@ export default function RequestAccessPage() {
         throw insertErr;
       }
 
-      setSubmittedData({
-        email: normalizedEmail,
-        fullName: values.fullName,
-        shopName: values.shopName,
-      });
+      setSubmittedEmail(normalizedEmail);
 
-      message.success("Invitation request submitted successfully!");
+      // Trigger notification email to Sahil
+      const approvalUrl = `${window.location.origin}/approve-access?token=${approvalToken}`;
+      const emailSubject = encodeURIComponent(`[Access Request] Shringar POS - ${normalizedEmail}`);
+      const emailBody = encodeURIComponent(
+        `Hello Sahil,\n\nA new user has requested access to Shringar POS:\n\n` +
+        `• Email: ${normalizedEmail}\n\n` +
+        `To approve this user and send their account creation link, click here:\n${approvalUrl}\n\n` +
+        `Regards,\nShringar POS Access System`
+      );
+
+      const mailtoLink = `mailto:${ADMIN_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
+      try {
+        const mailAnchor = document.createElement("a");
+        mailAnchor.href = mailtoLink;
+        mailAnchor.target = "_blank";
+        mailAnchor.rel = "noopener noreferrer";
+        mailAnchor.click();
+      } catch (_) {
+        // Mailto trigger fallback
+      }
+
+      message.success("Access request sent!");
     } catch (err: any) {
       console.error("Error submitting access request:", err);
       message.error(err.message || "Failed to submit request. Please try again.");
@@ -135,9 +122,9 @@ export default function RequestAccessPage() {
       <Card
         style={{
           width: "100%",
-          maxWidth: 500,
-          boxShadow: "0 12px 36px rgba(0,0,0,0.06)",
-          borderRadius: 20,
+          maxWidth: 440,
+          boxShadow: "0 10px 32px rgba(0,0,0,0.06)",
+          borderRadius: 16,
           border: `1px solid ${token.colorBorderSecondary}`,
         }}
       >
@@ -155,25 +142,21 @@ export default function RequestAccessPage() {
             Shringar POS
           </Title>
           <div style={{ marginTop: 6 }}>
-            <Tag color="gold" icon={<LockOutlined />} style={{ padding: "3px 10px", borderRadius: 12 }}>
-              Private Early Access
+            <Tag color="gold" icon={<LockOutlined />} style={{ padding: "2px 10px", borderRadius: 12 }}>
+              Invite Only
             </Tag>
           </div>
-          <Paragraph type="secondary" style={{ fontSize: 13, marginTop: 10, marginBottom: 0 }}>
-            Modern Cloud Billing, Gold Ledger (Girvi), and Digital Catalog engineered for Indian jewelers.
-          </Paragraph>
         </div>
 
-        {submittedData ? (
-          /* Success Screen */
+        {submittedEmail ? (
+          /* Clean 2-Step Feedback */
           <Result
             status="success"
-            title="Invitation Request Received"
+            title="Access Request Sent!"
             subTitle={
               <div style={{ textAlign: "center", marginTop: 8 }}>
-                <Paragraph style={{ fontSize: 14 }}>
-                  Thank you, <Text strong>{submittedData.fullName}</Text>! We have received your
-                  onboarding request for <Text strong>{submittedData.shopName}</Text>.
+                <Paragraph style={{ fontSize: 14, color: token.colorTextSecondary }}>
+                  We've received your request for <Text strong>{submittedEmail}</Text>.
                 </Paragraph>
                 <div
                   style={{
@@ -185,15 +168,12 @@ export default function RequestAccessPage() {
                     textAlign: "left",
                   }}
                 >
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    Our team reviews all jewelry store onboarding requests to ensure personalized
-                    setup and priority support. You will receive an invitation link at:
+                  <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4 }}>
+                    What happens next?
                   </Text>
-                  <div style={{ marginTop: 6 }}>
-                    <Text strong style={{ fontSize: 14, color: token.colorPrimary }}>
-                      {submittedData.email}
-                    </Text>
-                  </div>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Once Sahil approves your request, you will receive an invitation email with a direct link to create your account. You won't need to verify your email and can start using the app immediately.
+                  </Text>
                 </div>
               </div>
             }
@@ -205,40 +185,19 @@ export default function RequestAccessPage() {
                 block
                 onClick={() => navigate("/login")}
               >
-                Return to Sign In
-              </Button>,
-              <Button
-                key="another"
-                type="link"
-                size="middle"
-                block
-                onClick={() => {
-                  setSubmittedData(null);
-                  form.resetFields();
-                }}
-              >
-                Submit another showroom request
+                Back to Sign In
               </Button>,
             ]}
           />
         ) : (
-          /* Request Access Form */
+          /* Ultra-Clean Single Email Field */
           <div>
-            <div
-              style={{
-                background: token.colorFillAlter,
-                padding: "14px 16px",
-                borderRadius: 12,
-                marginBottom: 20,
-                border: `1px solid ${token.colorBorderSecondary}`,
-              }}
-            >
-              <Text strong style={{ fontSize: 13, display: "block", marginBottom: 2 }}>
-                Request Showroom Onboarding
-              </Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                We onboard jewelry showrooms with dedicated assistance. Provide your showroom
-                details below to receive your invitation.
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <Title level={4} style={{ margin: "0 0 6px" }}>
+                Request Access
+              </Title>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Account creation is currently invite-only. Enter your email to request an invitation.
               </Text>
             </div>
 
@@ -246,63 +205,24 @@ export default function RequestAccessPage() {
               form={form}
               layout="vertical"
               onFinish={handleRequestSubmit}
-              requiredMark="optional"
+              requiredMark={false}
             >
               <Form.Item
-                label="Full Name (Owner / Manager)"
-                name="fullName"
-                rules={[{ required: true, message: "Please enter your full name" }]}
-              >
-                <Input prefix={<UserOutlined />} placeholder="e.g. Ramesh Patil" size="large" />
-              </Form.Item>
-
-              <Form.Item
-                label="Showroom Business Email"
                 name="email"
                 rules={[
-                  { required: true, message: "Please enter your email" },
-                  { type: "email", message: "Please enter a valid email" },
+                  { required: true, message: "Please enter your email address" },
+                  { type: "email", message: "Please enter a valid email address" },
                 ]}
               >
-                <Input prefix={<MailOutlined />} placeholder="e.g. contact@jewellers.com" size="large" />
-              </Form.Item>
-
-              <Form.Item
-                label="Mobile / WhatsApp Number"
-                name="phone"
-                rules={[{ required: true, message: "Please enter your contact number" }]}
-              >
-                <Input prefix={<PhoneOutlined />} placeholder="e.g. +91 98220 12345" size="large" />
-              </Form.Item>
-
-              <Form.Item
-                label="Jewelry Showroom Name & City"
-                name="shopName"
-                rules={[{ required: true, message: "Please enter showroom name and city" }]}
-              >
-                <Input prefix={<ShopOutlined />} placeholder="e.g. Mahalaxmi Jewellers, Kolhapur" size="large" />
-              </Form.Item>
-
-              <Form.Item label="Primary Business Category" name="businessType" initialValue="retail">
-                <Select
+                <Input
+                  prefix={<MailOutlined style={{ color: token.colorTextTertiary }} />}
+                  placeholder="Enter your email address"
                   size="large"
-                  options={[
-                    { label: "Retail Showroom (Gold, Silver & Diamond)", value: "retail" },
-                    { label: "Wholesale & Bullion Trading", value: "wholesale" },
-                    { label: "Jewelry Manufacturer / Workshop", value: "manufacturing" },
-                    { label: "Artisan & Traditional Goldsmith", value: "artisan" },
-                  ]}
+                  autoFocus
                 />
               </Form.Item>
 
-              <Form.Item label="Specific Requirements (Optional)" name="notes">
-                <Input.TextArea
-                  rows={2}
-                  placeholder="e.g. Girvi ledger management, barcode printing, multi-counter billing..."
-                />
-              </Form.Item>
-
-              <Form.Item style={{ marginBottom: 16 }}>
+              <Form.Item style={{ marginBottom: 12 }}>
                 <Button
                   type="primary"
                   htmlType="submit"
@@ -312,42 +232,26 @@ export default function RequestAccessPage() {
                   block
                   style={{ height: 44, borderRadius: 10, fontWeight: 600 }}
                 >
-                  Request Early Access Invitation
+                  Request Access
                 </Button>
               </Form.Item>
-
-              <div style={{ textAlign: "center", marginBottom: 8 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  🔒 Applications are reviewed within 24 hours. Your details are kept confidential.
-                </Text>
-              </div>
             </Form>
           </div>
         )}
 
-        {/* Footer Links */}
+        {/* Footer */}
         <div
           style={{
-            marginTop: 20,
+            marginTop: 16,
             borderTop: `1px solid ${token.colorBorderSecondary}`,
             paddingTop: 16,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 8,
+            textAlign: "center",
           }}
         >
           <Text type="secondary" style={{ fontSize: 13 }}>
             Already have an account?{" "}
             <Link to="/login" style={{ color: token.colorPrimary, fontWeight: 600 }}>
               Sign In
-            </Link>
-          </Text>
-
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Received an invitation link?{" "}
-            <Link to="/activate" style={{ color: token.colorPrimary, fontWeight: 600 }}>
-              Activate Account
             </Link>
           </Text>
         </div>

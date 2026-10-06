@@ -27,10 +27,9 @@ const { Title, Text, Paragraph } = Typography;
 interface IAccessRequest {
   id: string;
   email: string;
-  full_name: string;
-  phone: string;
-  shop_name: string;
-  notes?: string;
+  full_name?: string;
+  phone?: string;
+  shop_name?: string;
   status: "pending" | "approved" | "rejected" | "registered";
   created_at: string;
   approved_at?: string;
@@ -109,11 +108,11 @@ export default function ApproveAccessPage() {
     }
   };
 
-  const copyActivationLink = () => {
+  const copyCreationLink = () => {
     if (!request) return;
-    const link = `${window.location.origin}/activate?token=${request.approval_token}`;
+    const link = `${window.location.origin}/create-account?token=${request.approval_token}`;
     navigator.clipboard.writeText(link);
-    message.success("Showroom activation link copied to clipboard!");
+    message.success("Account creation link copied to clipboard!");
   };
 
   const statusTag = (st: string) => {
@@ -145,8 +144,8 @@ export default function ApproveAccessPage() {
       <Card
         style={{
           width: "100%",
-          maxWidth: 600,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+          maxWidth: 540,
+          boxShadow: "0 10px 32px rgba(0,0,0,0.06)",
           borderRadius: 16,
           borderColor: token.colorBorderSecondary,
         }}
@@ -157,7 +156,7 @@ export default function ApproveAccessPage() {
             Access Request Approval
           </Title>
           <Text type="secondary">
-            Shringar POS Showroom Access Control
+            Sahil Khude Admin Gatekeeper
           </Text>
         </div>
 
@@ -183,11 +182,11 @@ export default function ApproveAccessPage() {
             {actionDone === "approved" || request.status === "approved" ? (
               <Result
                 status="success"
-                title="Showroom Access Approved!"
+                title="Access Approved!"
                 subTitle={
                   <div>
                     <Paragraph>
-                      <Text strong>{request.email}</Text> ({request.shop_name}) is now authorized to activate their showroom account.
+                      User <Text strong>{request.email}</Text> is now authorized to create their account.
                     </Paragraph>
                     <div
                       style={{
@@ -199,37 +198,39 @@ export default function ApproveAccessPage() {
                         border: `1px solid ${token.colorBorderSecondary}`,
                       }}
                     >
-                      <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-                        Unique Activation URL:
+                      <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
+                        Direct Account Creation Link:
                       </Text>
                       <Text code copyable style={{ fontSize: 13, wordBreak: "break-all" }}>
-                        {`${window.location.origin}/activate?token=${request.approval_token}`}
+                        {`${window.location.origin}/create-account?token=${request.approval_token}`}
                       </Text>
                     </div>
                   </div>
                 }
                 extra={[
                   <Button
-                    key="copy"
+                    key="email"
                     type="primary"
-                    icon={<CopyOutlined />}
-                    onClick={copyActivationLink}
-                  >
-                    Copy Activation Link
-                  </Button>,
-                  <Button
-                    key="notify"
+                    size="large"
                     icon={<MailOutlined />}
                     href={`mailto:${request.email}?subject=${encodeURIComponent(
-                      `Your Shringar POS Access Request Has Been Approved!`
+                      "Your Shringar POS Account Creation Link"
                     )}&body=${encodeURIComponent(
-                      `Hello ${request.full_name},\n\nGreat news! Your access request for ${request.shop_name} has been approved.\n\nYou can set your password and activate your showroom workspace using this link:\n${window.location.origin}/activate?token=${request.approval_token}\n\nWelcome aboard!\n\nBest regards,\nShringar POS Team`
+                      `Hello,\n\nYour access request for Shringar POS has been approved!\n\nClick the link below to set your password and access your account immediately:\n${window.location.origin}/create-account?token=${request.approval_token}\n\n(No email verification needed - you will be logged in directly!)\n\nWelcome aboard,\nSahil Khude\nShringar POS`
                     )}`}
                   >
-                    Send Email to Applicant
+                    Send Email to User
+                  </Button>,
+                  <Button
+                    key="copy"
+                    size="large"
+                    icon={<CopyOutlined />}
+                    onClick={copyCreationLink}
+                  >
+                    Copy Link
                   </Button>,
                   <Link key="login" to="/login">
-                    <Button>Back to Sign In</Button>
+                    <Button size="large">Sign In</Button>
                   </Link>,
                 ]}
               />
@@ -253,24 +254,20 @@ export default function ApproveAccessPage() {
                   style={{ marginBottom: 20 }}
                   labelStyle={{ width: 140, fontWeight: 600 }}
                 >
-                  <Descriptions.Item label="Showroom Name">
-                    <Text strong>{request.shop_name}</Text>
+                  <Descriptions.Item label="Applicant Email">
+                    <Text copyable strong>{request.email}</Text>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Owner / Manager">
-                    {request.full_name}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Email">
-                    <Text copyable>{request.email}</Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Phone">
-                    <Text copyable>{request.phone}</Text>
-                  </Descriptions.Item>
-                  {request.notes && (
-                    <Descriptions.Item label="Details / Notes">
-                      {request.notes}
+                  {request.full_name && (
+                    <Descriptions.Item label="Name">
+                      {request.full_name}
                     </Descriptions.Item>
                   )}
-                  <Descriptions.Item label="Submitted On">
+                  {request.shop_name && (
+                    <Descriptions.Item label="Shop">
+                      {request.shop_name}
+                    </Descriptions.Item>
+                  )}
+                  <Descriptions.Item label="Requested At">
                     {new Date(request.created_at).toLocaleString()}
                   </Descriptions.Item>
                   <Descriptions.Item label="Current Status">
@@ -287,7 +284,7 @@ export default function ApproveAccessPage() {
                     onClick={() => handleUpdateStatus("approved")}
                     style={{ background: token.colorSuccess, borderColor: token.colorSuccess }}
                   >
-                    Approve Showroom Access
+                    Approve Request & Send Link
                   </Button>
 
                   <Button

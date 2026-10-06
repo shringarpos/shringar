@@ -6,7 +6,6 @@ import {
   Form,
   Input,
   Result,
-  Space,
   Spin,
   Tag,
   Typography,
@@ -19,7 +18,6 @@ import {
   LockOutlined,
   MailOutlined,
   SafetyCertificateOutlined,
-  ShopOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { supabaseClient } from "../../providers/supabase-client";
@@ -30,77 +28,86 @@ const { Title, Text, Paragraph } = Typography;
 interface IAccessRequest {
   id: string;
   email: string;
-  full_name: string;
-  phone: string;
-  shop_name: string;
   status: "pending" | "approved" | "rejected" | "registered";
   approval_token: string;
 }
 
-export default function ActivateAccountPage() {
+export default function CreateAccountPage() {
   const [searchParams] = useSearchParams();
   const tokenParam = searchParams.get("token");
-  const emailParam = searchParams.get("email");
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [request, setRequest] = useState<IAccessRequest | null>(null);
-  const [manualEmail, setManualEmail] = useState("");
 
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const { mutate: login } = useLogin();
   const [form] = Form.useForm();
-  const [manualForm] = Form.useForm();
+  const [lookupForm] = Form.useForm();
 
-  const fetchRequestDetails = async (queryToken?: string, queryEmail?: string) => {
+  const fetchRequestByToken = async (tokenStr: string) => {
     setLoading(true);
     try {
-      let query = supabaseClient.from("access_requests").select("*");
+      const { data, error } = await supabaseClient
+        .from("access_requests")
+        .select("id, email, status, approval_token")
+        .eq("approval_token", tokenStr.trim())
+        .limit(1)
+        .maybeSingle();
 
-      if (queryToken) {
-        query = query.eq("approval_token", queryToken.trim());
-      } else if (queryEmail) {
-        query = query
-          .ilike("email", queryEmail.toLowerCase().trim())
-          .order("created_at", { ascending: false });
-      } else {
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await query.limit(1).maybeSingle();
       if (error) throw error;
       setRequest(data);
     } catch (err: any) {
-      console.error("Error loading invitation:", err);
-      message.error("Unable to load invitation details. Please try again.");
+      console.error("Error loading access request:", err);
+      message.error("Could not load invitation details.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (tokenParam || emailParam) {
-      fetchRequestDetails(tokenParam || undefined, emailParam || undefined);
+    if (tokenParam) {
+      fetchRequestByToken(tokenParam);
     } else {
       setLoading(false);
     }
-  }, [tokenParam, emailParam]);
+  }, [tokenParam]);
 
-  const handleManualEmailCheck = async (values: { email: string }) => {
-    setManualEmail(values.email);
-    await fetchRequestDetails(undefined, values.email);
+  const handleLookupByEmail = async (values: { email: string }) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from("access_requests")
+        .select("id, email, status, approval_token")
+        .ilike("email", values.email.toLowerCase().trim())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        message.warning("No invitation found for this email. Please request access first.");
+        setRequest(null);
+      } else {
+        setRequest(data);
+      }
+    } catch (err: any) {
+      console.error("Error checking email:", err);
+      message.error("Failed to check email status.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleActivate = async (values: { password: string }) => {
+  const handleCreateAccount = async (values: { password: string }) => {
     if (!request) return;
 
     setSubmitting(true);
     try {
       const normalizedEmail = request.email.toLowerCase().trim();
 
-      // Call backend edge function
+      // Invoke backend edge function to create confirmed user
       const { data, error } = await supabaseClient.functions.invoke("create-approved-user", {
         body: {
           email: normalizedEmail,
@@ -109,7 +116,7 @@ export default function ActivateAccountPage() {
       });
 
       if (error) {
-        let errorMsg = "Failed to activate account. Please check your invitation status.";
+        let errorMsg = "Failed to create account. Please ensure your access request has been approved.";
         try {
           if ((error as any).context) {
             const body = await (error as any).context.json();
@@ -119,7 +126,7 @@ export default function ActivateAccountPage() {
         throw new Error(errorMsg);
       }
 
-      message.success("Account activated successfully! Logging you in...");
+      message.success("Account created successfully! Logging you in...");
 
       // Automatically sign in with credentials
       login({
@@ -127,8 +134,8 @@ export default function ActivateAccountPage() {
         password: values.password,
       });
     } catch (err: any) {
-      console.error("Activation error:", err);
-      message.error(err.message || "Failed to activate account.");
+      console.error("Account creation error:", err);
+      message.error(err.message || "Failed to create account.");
     } finally {
       setSubmitting(false);
     }
@@ -148,10 +155,10 @@ export default function ActivateAccountPage() {
       <Card
         style={{
           width: "100%",
-          maxWidth: 480,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+          maxWidth: 440,
+          boxShadow: "0 10px 32px rgba(0,0,0,0.06)",
           borderRadius: 16,
-          borderColor: token.colorBorderSecondary,
+          border: `1px solid ${token.colorBorderSecondary}`,
         }}
       >
         {/* Brand Header */}
@@ -167,57 +174,59 @@ export default function ActivateAccountPage() {
           <Title level={3} style={{ margin: "4px 0 2px" }}>
             Shringar POS
           </Title>
-          <Tag color="gold" icon={<SafetyCertificateOutlined />}>
-            Invitation Activation
-          </Tag>
+          <div style={{ marginTop: 6 }}>
+            <Tag color="green" icon={<SafetyCertificateOutlined />}>
+              Approved Invitation
+            </Tag>
+          </div>
         </div>
 
         {loading ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <Spin size="large" />
             <div style={{ marginTop: 16 }}>
-              <Text type="secondary">Verifying your invitation details...</Text>
+              <Text type="secondary">Verifying your invitation...</Text>
             </div>
           </div>
         ) : request ? (
-          /* Render based on status */
           request.status === "approved" ? (
-            /* Ready to Activate Form */
+            /* Approved: Set Password and Launch App */
             <div>
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <Title level={4} style={{ margin: "0 0 6px" }}>
+                  Create Your Account
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  Your request has been approved! Set your password to get started immediately.
+                </Text>
+              </div>
+
               <div
                 style={{
                   background: token.colorFillAlter,
-                  padding: "16px",
-                  borderRadius: 12,
+                  padding: "12px 16px",
+                  borderRadius: 8,
                   marginBottom: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                   border: `1px solid ${token.colorBorderSecondary}`,
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <ShopOutlined style={{ fontSize: 20, color: token.colorPrimary }} />
-                  <Text strong style={{ fontSize: 16 }}>
-                    {request.shop_name}
-                  </Text>
-                </div>
-                <Paragraph style={{ margin: 0, fontSize: 13 }} type="secondary">
-                  Welcome aboard, <Text strong>{request.full_name}</Text>! Your invitation has been
-                  approved. Set your account password to activate your showroom workspace.
-                </Paragraph>
+                <MailOutlined style={{ color: token.colorPrimary, fontSize: 16 }} />
+                <Text strong style={{ fontSize: 14 }}>
+                  {request.email}
+                </Text>
               </div>
 
-              <Form form={form} layout="vertical" onFinish={handleActivate} requiredMark="optional">
-                <Form.Item label="Showroom Email">
-                  <Input
-                    prefix={<MailOutlined />}
-                    value={request.email}
-                    disabled
-                    size="large"
-                    style={{ background: token.colorBgContainerDisabled }}
-                  />
-                </Form.Item>
-
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleCreateAccount}
+                requiredMark={false}
+              >
                 <Form.Item
-                  label="Create Password"
+                  label="Password"
                   name="password"
                   rules={[
                     { required: true, message: "Please create a password" },
@@ -225,9 +234,10 @@ export default function ActivateAccountPage() {
                   ]}
                 >
                   <Input.Password
-                    prefix={<LockOutlined />}
+                    prefix={<LockOutlined style={{ color: token.colorTextTertiary }} />}
                     placeholder="Enter at least 6 characters"
                     size="large"
+                    autoFocus
                   />
                 </Form.Item>
 
@@ -248,13 +258,13 @@ export default function ActivateAccountPage() {
                   ]}
                 >
                   <Input.Password
-                    prefix={<LockOutlined />}
+                    prefix={<LockOutlined style={{ color: token.colorTextTertiary }} />}
                     placeholder="Confirm your password"
                     size="large"
                   />
                 </Form.Item>
 
-                <Form.Item style={{ marginBottom: 12, marginTop: 24 }}>
+                <Form.Item style={{ marginBottom: 12, marginTop: 20 }}>
                   <Button
                     type="primary"
                     htmlType="submit"
@@ -262,21 +272,27 @@ export default function ActivateAccountPage() {
                     icon={<CheckCircleOutlined />}
                     loading={submitting}
                     block
+                    style={{ height: 44, borderRadius: 10, fontWeight: 600 }}
                   >
-                    Activate Store & Launch POS
+                    Create Account & Launch POS
                   </Button>
                 </Form.Item>
               </Form>
+
+              <div style={{ textAlign: "center", marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  ✓ Instant activation: No email verification needed.
+                </Text>
+              </div>
             </div>
           ) : request.status === "registered" ? (
             /* Already Registered */
             <Result
               status="info"
-              title="Account Already Activated"
+              title="Account Already Created"
               subTitle={
                 <span>
-                  The account for <Text strong>{request.email}</Text> ({request.shop_name}) is
-                  already active. You can log in directly.
+                  The account for <Text strong>{request.email}</Text> has already been created. You can log in directly.
                 </span>
               }
               extra={
@@ -286,28 +302,27 @@ export default function ActivateAccountPage() {
               }
             />
           ) : request.status === "pending" ? (
-            /* Pending Approval */
+            /* Pending Review */
             <Result
               status="warning"
-              title="Application In Review"
+              title="Request Pending Approval"
               subTitle={
                 <span>
-                  Your request for <Text strong>{request.shop_name}</Text> is currently under review
-                  by our onboarding team. You will receive an invitation link once verified.
+                  The access request for <Text strong>{request.email}</Text> is currently awaiting approval. You will receive an invitation link once approved.
                 </span>
               }
-              extra={[
+              extra={
                 <Button key="login" onClick={() => navigate("/login")}>
                   Back to Sign In
-                </Button>,
-              ]}
+                </Button>
+              }
             />
           ) : (
             /* Rejected */
             <Result
               status="error"
-              title="Application Not Approved"
-              subTitle="This invitation request was not approved. Please reach out to our team for assistance."
+              title="Request Not Approved"
+              subTitle="This invitation request was not approved. Please contact us for support."
               extra={
                 <Link to="/register">
                   <Button type="primary">Submit New Request</Button>
@@ -316,26 +331,25 @@ export default function ActivateAccountPage() {
             />
           )
         ) : (
-          /* No Token or Manual Lookup */
+          /* Missing or Invalid Token: Simple Email Check */
           <div>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <KeyOutlined style={{ fontSize: 28, color: token.colorPrimary, marginBottom: 8 }} />
               <Title level={4} style={{ margin: "4px 0" }}>
-                Activate Your Account
+                Create Account
               </Title>
               <Text type="secondary" style={{ fontSize: 13 }}>
-                Enter the email address you used to request access to verify your invitation.
+                Enter the email address you used to request access.
               </Text>
             </div>
 
             <Form
-              form={manualForm}
+              form={lookupForm}
               layout="vertical"
-              onFinish={handleManualEmailCheck}
-              requiredMark="optional"
+              onFinish={handleLookupByEmail}
+              requiredMark={false}
             >
               <Form.Item
-                label="Registered Business Email"
                 name="email"
                 rules={[
                   { required: true, message: "Please enter your email" },
@@ -343,22 +357,22 @@ export default function ActivateAccountPage() {
                 ]}
               >
                 <Input
-                  prefix={<MailOutlined />}
-                  placeholder="e.g. store@jewellers.com"
+                  prefix={<MailOutlined style={{ color: token.colorTextTertiary }} />}
+                  placeholder="Enter your email"
                   size="large"
                 />
               </Form.Item>
 
               <Form.Item style={{ marginBottom: 12 }}>
                 <Button type="primary" htmlType="submit" size="large" block>
-                  Check Invitation Status
+                  Continue
                 </Button>
               </Form.Item>
             </Form>
 
             <div style={{ textAlign: "center", marginTop: 12 }}>
               <Text type="secondary" style={{ fontSize: 13 }}>
-                Don't have an invitation yet?{" "}
+                Don't have an invitation?{" "}
                 <Link to="/register" style={{ fontWeight: 600 }}>
                   Request Access
                 </Link>

@@ -36,7 +36,7 @@ import GoldLedgerReports from "./pages/gold-ledger/reports";
 import DesignGallery from "./pages/design-gallery";
 import AlbumShow from "./pages/design-gallery/album-show";
 import RequestAccessPage from "./pages/auth/request-access";
-import ActivateAccountPage from "./pages/auth/activate-account";
+import CreateAccountPage from "./pages/auth/create-account";
 import ApproveAccessPage from "./pages/auth/approve-access";
 
 const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
@@ -278,8 +278,9 @@ function App() {
                     />
                     <Route path="/register" element={<RequestAccessPage />} />
                     <Route path="/request-access" element={<RequestAccessPage />} />
-                    <Route path="/activate" element={<ActivateAccountPage />} />
-                    <Route path="/accept-invite" element={<ActivateAccountPage />} />
+                    <Route path="/create-account" element={<CreateAccountPage />} />
+                    <Route path="/activate" element={<CreateAccountPage />} />
+                    <Route path="/accept-invite" element={<CreateAccountPage />} />
                     <Route path="/approve-access" element={<ApproveAccessPage />} />
                     <Route
                       path="/forgot-passoword"

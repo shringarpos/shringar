@@ -50,14 +50,17 @@ serve(async (req) => {
       );
     }
 
-    // 2. Create user with confirmed email
+    // 2. Create user with confirmed email (no verification needed)
+    const displayName = request.full_name || normalizedEmail.split("@")[0];
+    const shopName = request.shop_name || "Jewelry Store";
+
     const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
       email: normalizedEmail,
       password: password,
       email_confirm: true,
       user_metadata: {
-        name: request.full_name,
-        shop_name: request.shop_name,
+        name: displayName,
+        shop_name: shopName,
         email_verified: true,
       },
     });
