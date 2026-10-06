@@ -183,3 +183,26 @@ export interface IGoldLoan {
   created_at: string;
   updated_at: string;
 }
+
+/** Design Gallery Album (Category-based design lookbook) */
+export interface IDesignAlbum {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string | null;
+  cover_image_url?: string | null;
+  photos_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Design Gallery Photo */
+export interface IDesignPhoto {
+  id: string;
+  album_id: string;
+  user_id: string;
+  image_url: string;
+  storage_path: string;
+  title?: string | null;
+  created_at: string;
+}
