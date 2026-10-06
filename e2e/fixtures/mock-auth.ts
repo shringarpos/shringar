@@ -222,6 +222,49 @@ export const MOCK_MAKING_CHARGES = [
   },
 ];
 
+
+export const MOCK_DESIGN_ALBUMS = [
+  {
+    id: "album-1",
+    user_id: MOCK_USER.id,
+    name: "Solitaire & Engagement Rings",
+    description: "Classic solitaire and pave diamond ring references",
+    cover_image_url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=500",
+    created_at: "2026-09-01T10:00:00Z",
+    updated_at: "2026-09-01T10:00:00Z",
+  },
+  {
+    id: "album-2",
+    user_id: MOCK_USER.id,
+    name: "Antique Temple Necklaces",
+    description: "Traditional South Indian temple choker patterns",
+    cover_image_url: null,
+    created_at: "2026-09-02T10:00:00Z",
+    updated_at: "2026-09-02T10:00:00Z",
+  },
+];
+
+export const MOCK_DESIGN_PHOTOS = [
+  {
+    id: "photo-1",
+    album_id: "album-1",
+    user_id: MOCK_USER.id,
+    image_url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=500",
+    storage_path: "album-1/ring-1.jpg",
+    title: "Classic 6-Prong Solitaire",
+    created_at: "2026-09-01T11:00:00Z",
+  },
+  {
+    id: "photo-2",
+    album_id: "album-1",
+    user_id: MOCK_USER.id,
+    image_url: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=500",
+    storage_path: "album-1/ring-2.jpg",
+    title: "Halo Diamond Band",
+    created_at: "2026-09-01T12:00:00Z",
+  },
+];
+
 export const MOCK_GOLD_LOANS = [
   {
     id: "loan-1",
@@ -344,6 +387,12 @@ export async function setupAuthenticatedContext(
   const loansData = isArray
     ? [...options]
     : [...((options as any)?.loans ?? MOCK_GOLD_LOANS)];
+  const albumsData = (!isArray && (options as any)?.albums !== undefined)
+    ? [...((options as any).albums)]
+    : [...MOCK_DESIGN_ALBUMS];
+  const photosData = (!isArray && (options as any)?.photos !== undefined)
+    ? [...((options as any).photos)]
+    : [...MOCK_DESIGN_PHOTOS];
   const chosenColorMode = (!isArray && (options as any)?.colorMode) || "light";
 
   const customersData = [...MOCK_CUSTOMERS];
@@ -480,6 +529,16 @@ export async function setupAuthenticatedContext(
   // Mock Making Charges
   await page.route("**/rest/v1/making_charges*", async (route) => {
     await handleRestResource(route, MOCK_MAKING_CHARGES);
+  });
+
+  // Mock Design Albums
+  await page.route("**/rest/v1/design_albums*", async (route) => {
+    await handleRestResource(route, albumsData);
+  });
+
+  // Mock Design Photos
+  await page.route("**/rest/v1/design_photos*", async (route) => {
+    await handleRestResource(route, photosData);
   });
 
   // Mock Gold Loans
