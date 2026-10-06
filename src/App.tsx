@@ -17,7 +17,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { Coins, FileText, Gem, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
+import { Coins, FileText, Gem, Images, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
 import Customers from "./pages/customers";
 import Ornaments from "./pages/inventory/ornaments";
@@ -33,6 +33,7 @@ import InvoiceShow from "./pages/invoices/show";
 import InvoiceEdit from "./pages/invoices/edit";
 import GoldLedger from "./pages/gold-ledger";
 import GoldLedgerReports from "./pages/gold-ledger/reports";
+import DesignGallery from "./pages/design-gallery";
 
 const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
   return (
@@ -154,6 +155,14 @@ function App() {
                     }
                   },
                   {
+                    name: "design_gallery",
+                    list: "/design-gallery",
+                    meta: {
+                      label: "Design Gallery",
+                      icon: <Images size={20} />
+                    }
+                  },
+                  {
                     name: "settings",
                     list: "/settings",
                     meta: {
@@ -239,6 +248,7 @@ function App() {
                     <Route path="/metal-rates" element={<MetalRates />}/>
                     <Route path="/gold-ledger" element={<GoldLedger />} />
                     <Route path="/gold-ledger/reports" element={<GoldLedgerReports />} />
+                    <Route path="/design-gallery" element={<DesignGallery />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>
 
