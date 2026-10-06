@@ -140,7 +140,7 @@ export default function AlbumShow() {
     };
 
     return (
-        <div style={{ padding: "0 4px" }}>
+        <div style={{ padding: "0 4px", maxWidth: "100%", overflowX: "hidden" }}>
             {/* Breadcrumb Navigation */}
             <Breadcrumb
                 style={{ marginBottom: 16 }}
@@ -189,7 +189,7 @@ export default function AlbumShow() {
                     )}
                 </div>
 
-                <Space size={12}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                     <Button
                         icon={<PlayCircleOutlined />}
                         disabled={photos.length === 0}
@@ -207,7 +207,7 @@ export default function AlbumShow() {
                     >
                         Upload Designs
                     </Button>
-                </Space>
+                </div>
             </div>
 
             {/* Empty State */}

@@ -133,7 +133,7 @@ export default function DesignGallery() {
     );
 
     return (
-        <div style={{ padding: "0 4px" }}>
+        <div style={{ padding: "0 4px", maxWidth: "100%", overflowX: "hidden" }}>
             {/* Header Section */}
             <div
                 style={{
@@ -145,8 +145,8 @@ export default function DesignGallery() {
                     marginBottom: 24,
                 }}
             >
-                <div>
-                    <Space size={8} align="center">
+                <div style={{ minWidth: 260, flex: "1 1 auto" }}>
+                    <Space size={8} align="center" wrap>
                         <Typography.Title level={3} style={{ margin: 0 }}>
                             Design Gallery
                         </Typography.Title>
@@ -159,14 +159,14 @@ export default function DesignGallery() {
                     </Typography.Text>
                 </div>
 
-                <Space size={12}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                     <Input
                         placeholder="Search albums..."
                         prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
                         allowClear
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
-                        style={{ width: 220 }}
+                        style={{ minWidth: 150, maxWidth: 220, flex: "1 1 auto" }}
                     />
                     <Button
                         type="primary"
@@ -175,7 +175,7 @@ export default function DesignGallery() {
                     >
                         Create Album
                     </Button>
-                </Space>
+                </div>
             </div>
 
             {/* Empty State */}
@@ -183,7 +183,7 @@ export default function DesignGallery() {
                 <Card
                     style={{
                         textAlign: "center",
-                        padding: "48px 24px",
+                        padding: "36px 16px",
                         borderRadius: 12,
                         background: token.colorBgContainer,
                         border: `1px dashed ${token.colorBorder}`,
@@ -194,19 +194,19 @@ export default function DesignGallery() {
                             <div
                                 style={{
                                     display: "inline-flex",
-                                    padding: 24,
+                                    padding: 20,
                                     borderRadius: "50%",
                                     background: token.colorFillTertiary,
                                     color: token.colorWarning,
                                     marginBottom: 16,
                                 }}
                             >
-                                <Images size={48} strokeWidth={1.5} />
+                                <Images size={44} strokeWidth={1.5} />
                             </div>
                         }
-                        imageStyle={{ height: 96 }}
+                        imageStyle={{ height: 84 }}
                         description={
-                            <div style={{ maxWidth: 460, margin: "0 auto" }}>
+                            <div style={{ maxWidth: 420, margin: "0 auto" }}>
                                 <Typography.Title level={4} style={{ marginBottom: 8 }}>
                                     No Design Albums Yet
                                 </Typography.Title>
@@ -234,7 +234,7 @@ export default function DesignGallery() {
             )}
 
             {/* Albums Grid */}
-            <Row gutter={[20, 20]}>
+            <Row gutter={[16, 16]}>
                 {filteredAlbums.map((album: IDesignAlbum) => {
                     const count = photoCountMap[album.id] || 0;
                     return (

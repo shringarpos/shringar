@@ -620,6 +620,96 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
           });
         }
 
+
+        // ==========================================
+        // 12. DESIGN GALLERY (/design-gallery and /design-gallery/:id)
+        // ==========================================
+        await page.goto("/design-gallery");
+        await expect(page.locator("h3:has-text('Design Gallery')").first()).toBeVisible({ timeout: 15000 });
+        await page.waitForTimeout(600);
+
+        await inspectHorizontalOverflow(page, "/design-gallery", vp.name, theme, "Design Gallery Hub");
+        await inspectThemeBleed(page, "/design-gallery", vp.name, theme, "Design Gallery Hub");
+
+        await page.screenshot({
+          path: path.join(screenshotsDir, `design-gallery-${vp.name}-${theme}.png`),
+          fullPage: vp.name === "mobile",
+        });
+
+        // Open "Create Album" modal
+        const createAlbumBtn = page.locator("button:has-text('Create Album'), button:has-text('Create First Album')").first();
+        if (await createAlbumBtn.isVisible()) {
+          await createAlbumBtn.click();
+          await page.waitForTimeout(400);
+
+          await inspectOverlayBounds(page, "/design-gallery", vp.name, theme, "Create Album Modal");
+          await inspectThemeBleed(page, "/design-gallery", vp.name, theme, "Create Album Modal");
+
+          await page.screenshot({
+            path: path.join(screenshotsDir, `create-album-modal-${vp.name}-${theme}.png`),
+          });
+
+          // Close modal
+          const modalCancel = page.locator(".ant-modal-close, .ant-modal-footer button").first();
+          if (await modalCancel.isVisible()) {
+            await modalCancel.click();
+            await page.waitForTimeout(300);
+          }
+        }
+
+        // Navigate to Album Detail View (/design-gallery/album-1)
+        const openAlbumBtn = page.locator(".ant-card button:has-text('Open')").first();
+        if (await openAlbumBtn.isVisible()) {
+          await openAlbumBtn.click();
+          await page.waitForTimeout(600);
+
+          await inspectHorizontalOverflow(page, "/design-gallery/album-1", vp.name, theme, "Album Detail Show");
+          await inspectThemeBleed(page, "/design-gallery/album-1", vp.name, theme, "Album Detail Show");
+
+          await page.screenshot({
+            path: path.join(screenshotsDir, `album-show-${vp.name}-${theme}.png`),
+            fullPage: vp.name === "mobile",
+          });
+
+          // Open Upload Designs Modal
+          const uploadBtn = page.locator("button:has-text('Upload Designs')").first();
+          if (await uploadBtn.isVisible()) {
+            await uploadBtn.click();
+            await page.waitForTimeout(400);
+
+            await inspectOverlayBounds(page, "/design-gallery/album-1", vp.name, theme, "Upload Designs Modal");
+            await inspectThemeBleed(page, "/design-gallery/album-1", vp.name, theme, "Upload Designs Modal");
+
+            await page.screenshot({
+              path: path.join(screenshotsDir, `upload-designs-modal-${vp.name}-${theme}.png`),
+            });
+
+            // Close upload modal
+            const closeUpload = page.locator(".ant-modal-close").first();
+            if (await closeUpload.isVisible()) {
+              await closeUpload.click();
+              await page.waitForTimeout(300);
+            }
+          }
+
+          // Launch Customer Presentation Mode
+          const presentBtn = page.locator("button:has-text('Customer Presentation')").first();
+          if (await presentBtn.isVisible()) {
+            await presentBtn.click();
+            await page.waitForTimeout(500);
+
+            const previewOps = page.locator(".ant-image-preview-operations");
+            if (await previewOps.isVisible()) {
+              await inspectThemeBleed(page, "/design-gallery/album-1", vp.name, theme, "Customer Presentation Mode");
+              await page.screenshot({
+                path: path.join(screenshotsDir, `presentation-mode-${vp.name}-${theme}.png`),
+              });
+              await page.keyboard.press("Escape");
+              await page.waitForTimeout(300);
+            }
+          }
+        }
+
         // ==========================================
         // 11. AUTH / LOGIN (/login)
         // ==========================================
