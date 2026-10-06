@@ -34,6 +34,7 @@ import InvoiceEdit from "./pages/invoices/edit";
 import GoldLedger from "./pages/gold-ledger";
 import GoldLedgerReports from "./pages/gold-ledger/reports";
 import DesignGallery from "./pages/design-gallery";
+import AlbumShow from "./pages/design-gallery/album-show";
 
 const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
   return (
@@ -249,6 +250,7 @@ function App() {
                     <Route path="/gold-ledger" element={<GoldLedger />} />
                     <Route path="/gold-ledger/reports" element={<GoldLedgerReports />} />
                     <Route path="/design-gallery" element={<DesignGallery />} />
+                    <Route path="/design-gallery/:id" element={<AlbumShow />} />
                     <Route path="/settings" element={<Settings />} />
                   </Route>
 
