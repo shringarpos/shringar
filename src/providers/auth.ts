@@ -61,19 +61,44 @@ const authProvider: AuthProvider = {
   },
   register: async ({ email, password }) => {
     try {
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
+      const normalizedEmail = (email || "").toLowerCase().trim();
+
+      // Guard: Invoke backend function which strictly enforces access approval
+      const { data, error } = await supabaseClient.functions.invoke("create-approved-user", {
+        body: { email: normalizedEmail, password },
       });
 
       if (error) {
+        let errorMsg = "Account creation is restricted to approved requests. Please contact sahilkhude11@gmail.com.";
+        try {
+          if ((error as any).context) {
+            const body = await (error as any).context.json();
+            if (body?.error) errorMsg = body.error;
+          }
+        } catch (_) {}
+
         return {
           success: false,
-          error,
+          error: {
+            name: "Registration Restricted",
+            message: errorMsg,
+          },
         };
       }
 
-      if (data) {
+      if (data?.success) {
+        const { error: loginError } = await supabaseClient.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+
+        if (loginError) {
+          return {
+            success: true,
+            redirectTo: "/login",
+          };
+        }
+
         return {
           success: true,
           redirectTo: "/",

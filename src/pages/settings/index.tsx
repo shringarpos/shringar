@@ -1,10 +1,11 @@
 import ShopProfileSettings from "../../components/settings/shop-profile-settings";
 import MakingChargesSettings from "../../components/settings/making-charges-settings";
+import AccessRequestsSettings from "../../components/settings/access-requests-settings";
 import { useState } from "react";
 import { theme } from "antd";
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<"shop" | "making-charges">("making-charges");
+  const [activeTab, setActiveTab] = useState<"shop" | "making-charges" | "access-requests">("making-charges");
   const { token } = theme.useToken();
 
   return (
@@ -30,11 +31,18 @@ export default function Settings() {
           onClick={() => setActiveTab("shop")}
           token={token}
         />
+        <TabItem
+          label="Access Requests"
+          active={activeTab === "access-requests"}
+          onClick={() => setActiveTab("access-requests")}
+          token={token}
+        />
       </div>
 
       {/* Content */}
       {activeTab === "shop" && <ShopProfileSettings />}
       {activeTab === "making-charges" && <MakingChargesSettings />}
+      {activeTab === "access-requests" && <AccessRequestsSettings />}
     </div>
   );
 }

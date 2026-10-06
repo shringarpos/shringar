@@ -12,8 +12,8 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { App as AntdApp } from "antd";
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
+import { App as AntdApp, Typography } from "antd";
+import { BrowserRouter, Link, Navigate, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
 import { dataProvider } from "./providers/data";
@@ -35,6 +35,8 @@ import GoldLedger from "./pages/gold-ledger";
 import GoldLedgerReports from "./pages/gold-ledger/reports";
 import DesignGallery from "./pages/design-gallery";
 import AlbumShow from "./pages/design-gallery/album-show";
+import RequestAccessPage from "./pages/auth/request-access";
+import ApproveAccessPage from "./pages/auth/approve-access";
 
 const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
   return (
@@ -65,163 +67,116 @@ function App() {
                 resources={[
                   {
                     name: "dashboard",
-                    list: "/dashboard",
+                    list: "/",
                     meta: {
                       label: "Dashboard",
-                      icon: <Gem size={20}/>
+                      icon: <LayoutGrid className="w-4 h-4"/>,
                     },
                   },
                   {
-                    name: "create-sale",
-                    list: "/create-sale",
+                    name: "pos",
+                    list: "/pos",
                     meta: {
-                      label: "Create Sale",
-                      icon: <ShoppingCart size={20} />
-                    }
+                      label: "Point of Sale",
+                      icon: <ShoppingCart className="w-4 h-4"/>,
+                    },
                   },
                   {
                     name: "invoices",
                     list: "/invoices",
-                    show: "/invoices/:id",
-                    edit: "/invoices/:id/edit",
+                    show: "/invoices/show/:id",
+                    edit: "/invoices/edit/:id",
                     meta: {
                       label: "Invoices",
-                      icon: <ReceiptIcon size={20}/>
-                    }
-                  },
-                  {
-                    name: "inventory",
-                    meta: {
-                      icon: <LayoutGrid size={20}/>,
-                      label: "Inventory"
-                    }
-                  },
-                  {
-                    name: "ornaments",
-                    list: "/inventory/ornaments",
-                    meta: {
-                      label: "Ornaments",
-                      icon: <Gem size={20} />,
-                      parent: "inventory"
-                    }
-                  },
-                  {
-                    name: "ornament_categories",
-                    list: "/inventory/categories",
-                    meta: {
-                      label: "Categories",
-                      icon: <List size={20} />,
-                      parent: "inventory"
-                    }
+                      icon: <ReceiptIcon className="w-4 h-4"/>,
+                    },
                   },
                   {
                     name: "customers",
                     list: "/customers",
                     meta: {
                       label: "Customers",
-                      icon: <Users size={20} />
-                    }
+                      icon: <Users className="w-4 h-4" />,
+                    },
                   },
                   {
-                    name: "ornament_rates",
-                    list: "/metal-rates",
+                    name: "ornaments",
+                    list: "/ornaments",
                     meta: {
-                      label: "Metal Rates",
-                      icon: <TrendingUp size={20} />
-                    }
+                      label: "Ornaments",
+                      icon: <Gem className="w-4 h-4" />,
+                    },
+                  },
+                  {
+                    name: "categories",
+                    list: "/categories",
+                    meta: {
+                      label: "Categories",
+                      icon: <List className="w-4 h-4" />,
+                    },
                   },
                   {
                     name: "gold_ledger",
-                    meta: {
-                      icon: <Coins size={20}/>,
-                      label: "Gold Ledger"
-                    }
-                  },
-                  {
-                    name: "gold_loans",
                     list: "/gold-ledger",
                     meta: {
-                      label: "Loans",
-                      icon: <Coins size={20} />,
-                      parent: "gold_ledger"
-                    }
+                      label: "Gold Ledger",
+                      icon: <Coins className="w-4 h-4" />,
+                    },
                   },
                   {
-                    name: "gold_ledger_reports",
-                    list: "/gold-ledger/reports",
+                    name: "metal_rates",
+                    list: "/metal-rates",
                     meta: {
-                      label: "Reports",
-                      icon: <FileText size={20} />,
-                      parent: "gold_ledger"
-                    }
+                      label: "Metal Rates",
+                      icon: <TrendingUp className="w-4 h-4" />,
+                    },
                   },
                   {
                     name: "design_gallery",
                     list: "/design-gallery",
+                    show: "/design-gallery/:id",
                     meta: {
                       label: "Design Gallery",
-                      icon: <Images size={20} />
-                    }
+                      icon: <Images className="w-4 h-4" />,
+                    },
                   },
                   {
                     name: "settings",
                     list: "/settings",
                     meta: {
                       label: "Settings",
-                      icon: <SettingsIcon size={20} />
-                    }
-                  },
-                  {
-                    name: "shops",
-                    meta: {
-                      hide: true,
-                      icon: <Store size={20} />
+                      icon: <SettingsIcon className="w-4 h-4" />,
                     },
                   },
                 ]}
                 options={{
                   syncWithLocation: true,
                   warnWhenUnsavedChanges: true,
+                  projectId: "wD1V28-b80cO4-Wl06kS",
+                  title: {
+                    icon: <SidebarTitle collapsed={false}/>,
+                    text: "",
+                  },
                 }}
               >
                 <Routes>
-
-                  {/* Onboarding Route */}
                   <Route
                     element={
                       <Authenticated
-                        key={"onboarding"}
-                        fallback={<CatchAllNavigate to="/login"/>}
-                      >
-                        <Outlet />
-                      </Authenticated>
-                    }
-                  >
-                    <Route path="/onboarding/shop-setup" element={<ShopSetup />} />
-                  </Route>
-
-                  {/* Main Routes */}
-                  <Route
-                    element={
-                      <Authenticated
-                        key={"authenticated-routes"}
-                        fallback={<CatchAllNavigate to="/login"/>}
+                        key="authenticated-inner"
+                        fallback={<CatchAllNavigate to="/login" />}
                       >
                         <OnboardingGuard>
                           <ThemedLayout
-                            Sider={() => (
+                            Header={Header}
+                            Sider={(props) => (
                               <ThemedSider
-                                Title={SidebarTitle}
-                                render={({ items }) => items}
-                                siderItemsAreCollapsed={false}
-                                fixed={true}
+                                {...props}
+                                Title={({ collapsed }) => (
+                                  <SidebarTitle collapsed={collapsed} />
+                                )}
                               />
                             )}
-                            Header={() => {
-                              return (
-                                <Header />
-                              );
-                            }}
                           >
                             <Outlet />
                           </ThemedLayout>
@@ -229,37 +184,60 @@ function App() {
                       </Authenticated>
                     }
                   >
-                    <Route
-                      index
-                      element={<NavigateToResource resource="dashboard" />}
-                    />
-
-                    <Route path="/dashboard">
-                      <Route index element={<Dashboard />}/>
+                    <Route index element={<Dashboard />} />
+                    <Route path="/pos" element={<CreateSale />} />
+                    <Route path="/invoices">
+                      <Route index element={<Invoices />} />
+                      <Route path="show/:id" element={<InvoiceShow />} />
+                      <Route path="edit/:id" element={<InvoiceEdit />} />
                     </Route>
-
-                    <Route path="/create-sale" element={<CreateSale />} />
-                    <Route path="/pos/create" element={<Navigate to="/create-sale" replace />} />
-                    <Route path="/customers" element={<Customers />} />
-                    <Route path="/invoices" element={<Invoices />} />
-                    <Route path="/invoices/:id" element={<InvoiceShow />} />
-                    <Route path="/invoices/:id/edit" element={<InvoiceEdit />} />
-                    <Route path="/inventory/ornaments" element={<Ornaments />}/>
-                    <Route path="/inventory/categories" element={<Categories />}/>
-                    <Route path="/metal-rates" element={<MetalRates />}/>
-                    <Route path="/gold-ledger" element={<GoldLedger />} />
-                    <Route path="/gold-ledger/reports" element={<GoldLedgerReports />} />
-                    <Route path="/design-gallery" element={<DesignGallery />} />
-                    <Route path="/design-gallery/:id" element={<AlbumShow />} />
-                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/customers">
+                      <Route index element={<Customers />} />
+                    </Route>
+                    <Route path="/ornaments">
+                      <Route index element={<Ornaments />} />
+                    </Route>
+                    <Route path="/categories">
+                      <Route index element={<Categories />} />
+                    </Route>
+                    <Route path="/metal-rates">
+                      <Route index element={<MetalRates />} />
+                    </Route>
+                    <Route path="/gold-ledger">
+                      <Route index element={<GoldLedger />} />
+                      <Route path="reports" element={<GoldLedgerReports />} />
+                    </Route>
+                    <Route path="/design-gallery">
+                      <Route index element={<DesignGallery />} />
+                      <Route path=":id" element={<AlbumShow />} />
+                    </Route>
+                    <Route path="/settings">
+                      <Route index element={<Settings />} />
+                    </Route>
                   </Route>
 
-                {/* Auth Routes  */}
-
+                  {/* Public Setup Route */}
                   <Route
                     element={
-                      <Authenticated key={"auth-pages"} fallback={<Outlet />}>
-                        <NavigateToResource resource="dashboard"/>
+                      <Authenticated
+                        key="setup-route"
+                        fallback={<CatchAllNavigate to="/login" />}
+                      >
+                        <Outlet />
+                      </Authenticated>
+                    }
+                  >
+                    <Route path="/setup" element={<ShopSetup />} />
+                  </Route>
+
+                  {/* Public Auth Routes */}
+                  <Route
+                    element={
+                      <Authenticated
+                        key="authenticated-outer"
+                        fallback={<Outlet />}
+                      >
+                        <NavigateToResource />
                       </Authenticated>
                     }
                   >
@@ -269,6 +247,16 @@ function App() {
                         <AuthPage
                           type="login"
                           title="Shringar POS"
+                          registerLink={
+                            <div style={{ marginTop: 12, textAlign: "center" }}>
+                              <Typography.Text style={{ fontSize: 13 }} type="secondary">
+                                Need an account?{" "}
+                                <Link to="/register" style={{ fontWeight: 600 }}>
+                                  Request Access (Invite Only)
+                                </Link>
+                              </Typography.Text>
+                            </div>
+                          }
                           providers={[
                             {
                               name: "google",
@@ -286,7 +274,8 @@ function App() {
                         />
                       }
                     />
-                    <Route path="/register" element={<AuthPage title="Shringar POS" type="register" />}/>
+                    <Route path="/register" element={<RequestAccessPage />} />
+                    <Route path="/approve-access" element={<ApproveAccessPage />} />
                     <Route
                       path="/forgot-passoword"
                       element={<AuthPage title="Shringar POS" type="forgotPassword" />}
@@ -318,7 +307,6 @@ function App() {
                   }
                 />
               </Refine>
-              <DevtoolsPanel />
             </DevtoolsProvider>
           </AntdApp>
         </ColorModeContextProvider>
