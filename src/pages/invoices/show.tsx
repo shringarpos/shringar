@@ -16,6 +16,7 @@ import {
   Col,
   Descriptions,
   Divider,
+  Grid,
   Row,
   Skeleton,
   Space,
@@ -33,6 +34,7 @@ import { supabaseClient } from "../../../src/providers/supabase-client";
 import { formatRateDisplay } from "../../components/metal-rates/utils";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,12 +45,13 @@ interface InvoiceDetail extends IInvoice {
   invoice_items?: IInvoiceItem[];
 }
 
-// ─── component ────────────────────────────────────────────────────────────────
+// ─── component ───────────────────────────────────────────────────────────────
 
 export default function InvoiceShow() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { notification } = App.useApp();
+  const screens = useBreakpoint();
 
   const { data: identity } = useGetIdentity<{ id: string }>();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,7 +60,7 @@ export default function InvoiceShow() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const { query } = useShow<InvoiceDetail>({
     resource: "invoices",
@@ -70,7 +73,7 @@ export default function InvoiceShow() {
   const { data, isLoading: loading } = query;
   const invoice = data?.data ?? null;
 
-  // ── Cancel ────────────────────────────────────────────────────────────────
+  // ── Cancel ─────────────────────────────────────────────────────────────────
 
   const { mutateAsync: updateInvoice } = useUpdate<IInvoice>();
 
@@ -142,13 +145,6 @@ export default function InvoiceShow() {
       ),
     },
     {
-      title: "Weight",
-      dataIndex: "weight_mg",
-      key: "weight",
-      align: "right",
-      render: (mg: number) => <Text>{(mg / 1000).toFixed(3)} g</Text>,
-    },
-    {
       title: "Qty",
       dataIndex: "quantity",
       key: "quantity",
@@ -196,7 +192,7 @@ export default function InvoiceShow() {
     },
   ];
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -249,26 +245,20 @@ export default function InvoiceShow() {
               Active
             </Tag>
           )}
+          <Tag color={invoice.payment_status === "PAID" ? "success" : invoice.payment_status === "PARTIAL" ? "warning" : "error"}>
+            {invoice.payment_status}
+          </Tag>
         </Space>
 
         <Space wrap>
-          <Button icon={<PrinterOutlined />} onClick={() => window.print()}>
-            Print
-          </Button>
-          <DownloadInvoiceButton invoice={invoice} label="Download PDF" />
-          <Button
-            icon={<CopyOutlined />}
-            onClick={() => navigate(`/create-sale?clone=${invoice.id}`)}
-          >
-            Clone
-          </Button>
+          <DownloadInvoiceButton invoiceId={invoice.id} />
           {!invoice.is_cancelled && (
             <>
               <Button
-                icon={<EditOutlined />}
-                onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
+                icon={<CopyOutlined />}
+                onClick={() => navigate(`/sales/new?clone=${invoice.id}`)}
               >
-                Edit Notes
+                Clone / Re-order
               </Button>
               <Button
                 danger
@@ -339,16 +329,49 @@ export default function InvoiceShow() {
             </Descriptions>
           </Card>
 
-          {/* Items table */}
+          {/* Items card: on mobile, card list; on desktop, Table */}
           <Card title={`Items (${invoice.invoice_items?.length ?? 0})`}>
-            <Table<IInvoiceItem>
-              dataSource={invoice.invoice_items ?? []}
-              columns={itemColumns}
-              rowKey="id"
-              pagination={false}
-              size="small"
-              scroll={{ x: 700 }}
-            />
+            {!screens.md ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {invoice.invoice_items?.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      backgroundColor: "#f9fafb",
+                      border: "1px solid #f0f0f0",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <Text strong>{item.item_name}</Text>
+                      <Text strong style={{ color: "#1677ff" }}>
+                        ₹{p2Rs(item.line_total_paise)}
+                      </Text>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666" }}>
+                      <span>
+                        {item.net_weight_grams}g ({item.purity_display_name || item.metal_type_name})
+                      </span>
+                      <span>Qty: {item.quantity}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#888", marginTop: 4 }}>
+                      <span>Rate: {formatRateDisplay(item.rate_per_gram_paise, item.metal_type_name)}</span>
+                      <span>Making: ₹{(item.making_charge_per_gram_paise / 100).toFixed(2)}/g</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Table<IInvoiceItem>
+                dataSource={invoice.invoice_items ?? []}
+                columns={itemColumns}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                scroll={{ x: 700 }}
+              />
+            )}
           </Card>
         </Col>
 
@@ -408,47 +431,52 @@ export default function InvoiceShow() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                marginBottom: 8,
               }}
             >
-              <Text strong style={{ fontSize: 16 }}>
-                Total
+              <Text strong style={{ fontSize: 15 }}>
+                Total (incl. GST)
               </Text>
-              <Text
-                strong
-                style={{
-                  fontSize: 22,
-                  color: invoice.is_cancelled ? "#ff4d4f" : "#389e0d",
-                  textDecoration: invoice.is_cancelled ? "line-through" : undefined,
-                }}
-              >
+              <Text strong style={{ fontSize: 17, color: "#1677ff" }}>
                 ₹{p2Rs(invoice.total_amount_paise)}
               </Text>
             </div>
 
-            {invoice.is_cancelled && (
-              <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 4 }}>
-                Invoice cancelled — amount voided
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <Text type="secondary">Paid Amount</Text>
+              <Text strong style={{ color: "#52c41a" }}>
+                ₹{p2Rs(invoice.paid_amount_paise)}
               </Text>
+            </div>
+
+            {invoice.balance_amount_paise > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <Text type="secondary">Balance Due</Text>
+                <Text strong style={{ color: "#ff4d4f" }}>
+                  ₹{p2Rs(invoice.balance_amount_paise)}
+                </Text>
+              </div>
             )}
 
-            <Divider style={{ margin: "16px 0 8px" }} />
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              Created {dayjs(invoice.created_at).format("D MMM YYYY HH:mm")}
-            </Text>
-            <br />
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              Updated {dayjs(invoice.updated_at).format("D MMM YYYY HH:mm")}
-            </Text>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+              <Text type="secondary">Payment Mode</Text>
+              <Tag>{invoice.payment_method}</Tag>
+            </div>
           </Card>
         </Col>
       </Row>
 
+      {/* Cancel Modal */}
       <CancelInvoiceModal
         open={cancelModalOpen}
+        invoiceId={invoice.id}
         invoiceNumber={invoice.invoice_number}
-        loading={cancelling}
-        onConfirm={handleCancelConfirm}
-        onCancel={() => setCancelModalOpen(false)}
+        userRole="admin"
+        onClose={() => setCancelModalOpen(false)}
+        onSuccess={() => {
+          setCancelModalOpen(false);
+          query.refetch();
+        }}
       />
     </div>
   );
