@@ -1,22 +1,22 @@
 import React, { useContext } from "react";
-import { Drawer, Typography, Avatar, Switch, Button, theme, Space, Divider } from "antd";
-import { useNavigate, useLocation } from "react-router";
-import { useGetIdentity, useList, useLogout } from "@refinedev/core";
+import { Drawer, Avatar, Typography, Button, Switch, Space, theme } from "antd";
 import {
   Users,
   Gem,
   List,
   TrendingUp,
   Images,
-  SettingsIcon,
+  Settings as SettingsIcon,
   LogOut,
-  ChevronRight,
-  Sun,
   Moon,
+  Sun,
+  ChevronRight,
 } from "lucide-react";
+import { useGetIdentity, useLogout, useList } from "@refinedev/core";
+import { useNavigate, useLocation } from "react-router";
 import { ColorModeContext } from "../../contexts/color-mode";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface MoreMenuDrawerProps {
   open: boolean;
@@ -26,11 +26,7 @@ interface MoreMenuDrawerProps {
 interface IUser {
   id: string;
   email?: string;
-  user_metadata?: {
-    full_name?: string;
-    name?: string;
-    avatar_url?: string;
-  };
+  user_metadata?: { full_name?: string; name?: string; avatar_url?: string };
 }
 
 interface IShop {
@@ -45,6 +41,7 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
   const navigate = useNavigate();
   const location = useLocation();
   const { mode, setMode } = useContext(ColorModeContext);
+  const isDark = mode === "dark";
   const { data: user } = useGetIdentity<IUser>();
   const { mutate: logout } = useLogout();
 
@@ -125,7 +122,7 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
       styles={{
         body: {
           padding: "16px 20px 32px",
-          background: token.colorBgLayout,
+          background: isDark ? "#09090b" : "#f1f5f9",
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           display: "flex",
@@ -144,7 +141,7 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
             width: 36,
             height: 4,
             borderRadius: 2,
-            backgroundColor: token.colorBorder,
+            backgroundColor: isDark ? "#3f3f46" : "#cbd5e1",
           }}
         />
       </div>
@@ -156,10 +153,11 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
           alignItems: "center",
           gap: 12,
           padding: "14px 16px",
-          backgroundColor: token.colorBgElevated,
+          backgroundColor: isDark ? "#141414" : "#ffffff",
           borderRadius: 14,
-          border: `1px solid ${token.colorBorderSecondary}`,
+          border: isDark ? "1px solid #27272a" : "1px solid #e2e8f0",
           marginBottom: 16,
+          boxShadow: isDark ? "0 2px 8px rgba(0,0,0,0.4)" : "0 1px 3px rgba(0,0,0,0.03)",
         }}
       >
         <Avatar
@@ -176,24 +174,44 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
           {avatarFallback}
         </Avatar>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <Text strong style={{ fontSize: 15, display: "block" }} ellipsis>
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: isDark ? "#f8fafc" : "#0f172a",
+              display: "block",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {shop?.name || displayName}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 12, display: "block" }} ellipsis>
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              color: isDark ? "#94a3b8" : "#64748b",
+              display: "block",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {shop?.code ? `Shop Code: ${shop.code} • ` : ""}
             {user?.email}
-          </Text>
+          </span>
         </div>
       </div>
 
       {/* Menu List */}
       <div
         style={{
-          backgroundColor: token.colorBgElevated,
+          backgroundColor: isDark ? "#141414" : "#ffffff",
           borderRadius: 14,
-          border: `1px solid ${token.colorBorderSecondary}`,
+          border: isDark ? "1px solid #27272a" : "1px solid #e2e8f0",
           overflow: "hidden",
           marginBottom: 16,
+          boxShadow: isDark ? "0 2px 8px rgba(0,0,0,0.4)" : "0 1px 3px rgba(0,0,0,0.03)",
         }}
       >
         {menuItems.map((item, idx) => {
@@ -211,7 +229,11 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
                   justifyContent: "space-between",
                   padding: "12px 16px",
                   cursor: "pointer",
-                  backgroundColor: isActive ? token.colorPrimaryBg : "transparent",
+                  backgroundColor: isActive
+                    ? isDark
+                      ? "rgba(37, 99, 235, 0.22)"
+                      : token.colorPrimaryBg
+                    : "transparent",
                   transition: "background-color 0.15s ease",
                   userSelect: "none",
                   WebkitTapHighlightColor: "transparent",
@@ -223,8 +245,12 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
                       width: 36,
                       height: 36,
                       borderRadius: 10,
-                      backgroundColor: isActive ? token.colorPrimary : token.colorFillAlter,
-                      color: isActive ? "#fff" : token.colorPrimary,
+                      backgroundColor: isActive
+                        ? token.colorPrimary
+                        : isDark
+                          ? "rgba(37, 99, 235, 0.18)"
+                          : "rgba(37, 99, 235, 0.08)",
+                      color: isActive ? "#fff" : isDark ? "#60a5fa" : token.colorPrimary,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -233,28 +259,34 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
                     <Icon size={18} />
                   </div>
                   <div>
-                    <Text
-                      strong
+                    <span
                       style={{
                         fontSize: 14,
-                        color: isActive ? token.colorPrimary : token.colorText,
+                        fontWeight: 600,
+                        color: isActive
+                          ? isDark
+                            ? "#60a5fa"
+                            : token.colorPrimary
+                          : isDark
+                            ? "#f8fafc"
+                            : "#0f172a",
                         display: "block",
                       }}
                     >
                       {item.label}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    </span>
+                    <span style={{ fontSize: 11, color: isDark ? "#94a3b8" : "#64748b", display: "block" }}>
                       {item.subtitle}
-                    </Text>
+                    </span>
                   </div>
                 </div>
-                <ChevronRight size={16} style={{ color: token.colorTextQuaternary }} />
+                <ChevronRight size={16} style={{ color: isDark ? "#71717a" : "#94a3b8" }} />
               </div>
               {idx < menuItems.length - 1 && (
                 <div
                   style={{
                     height: 1,
-                    backgroundColor: token.colorBorderSecondary,
+                    backgroundColor: isDark ? "#27272a" : "#f1f5f9",
                     marginLeft: 64,
                   }}
                 />
@@ -271,19 +303,22 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
           alignItems: "center",
           justifyContent: "space-between",
           padding: "12px 16px",
-          backgroundColor: token.colorBgElevated,
+          backgroundColor: isDark ? "#141414" : "#ffffff",
           borderRadius: 14,
-          border: `1px solid ${token.colorBorderSecondary}`,
+          border: isDark ? "1px solid #27272a" : "1px solid #e2e8f0",
           marginBottom: 16,
+          boxShadow: isDark ? "0 2px 8px rgba(0,0,0,0.4)" : "0 1px 3px rgba(0,0,0,0.03)",
         }}
       >
         <Space align="center" size="middle">
           {mode === "dark" ? (
-            <Moon size={18} style={{ color: token.colorPrimary }} />
+            <Moon size={18} style={{ color: "#60a5fa" }} />
           ) : (
-            <Sun size={18} style={{ color: token.colorPrimary }} />
+            <Sun size={18} style={{ color: "#eab308" }} />
           )}
-          <Text style={{ fontSize: 14 }}>Dark Theme</Text>
+          <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a" }}>
+            Dark Theme
+          </span>
         </Space>
         <Switch
           checked={mode === "dark"}

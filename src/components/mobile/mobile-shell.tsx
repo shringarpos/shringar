@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useLocation } from "react-router";
 import { Grid, Layout, theme, Avatar, Typography } from "antd";
 import { ThemedLayout, ThemedSider } from "@refinedev/antd";
@@ -7,6 +7,7 @@ import { BottomNavBar } from "./bottom-nav-bar";
 import { MoreMenuDrawer } from "./more-menu-drawer";
 import { MobileMetalRatesBar } from "../metal-rates/mobile-metal-rates-bar";
 import { useGetIdentity, useList } from "@refinedev/core";
+import { ColorModeContext } from "../../contexts/color-mode";
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -20,6 +21,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
   const screens = useBreakpoint();
   const location = useLocation();
   const { token } = theme.useToken();
+  const { mode } = useContext(ColorModeContext);
+  const isDark = mode === "dark";
   const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: user } = useGetIdentity<{
@@ -72,7 +75,8 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
     <div
       style={{
         minHeight: "100vh",
-        backgroundColor: "#f8fafc",
+        backgroundColor: isDark ? "#000000" : "#f1f5f9",
+        color: isDark ? "#f8fafc" : "#0f172a",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -87,15 +91,15 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
             zIndex: 990,
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
-            backgroundColor: "rgba(255, 255, 255, 0.92)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+            backgroundColor: isDark ? "rgba(0, 0, 0, 0.88)" : "rgba(255, 255, 255, 0.92)",
+            boxShadow: isDark ? "0 1px 4px rgba(0,0,0,0.5)" : "0 1px 4px rgba(0,0,0,0.04)",
           }}
         >
           {/* Top App Bar */}
           <header
             data-testid="mobile-top-bar"
             style={{
-              borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
+              borderBottom: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
               padding: "10px 16px",
               display: "flex",
               alignItems: "center",
@@ -122,7 +126,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
                   style={{
                     fontSize: 16,
                     fontWeight: 700,
-                    color: "#0f172a",
+                    color: isDark ? "#f8fafc" : "#0f172a",
                     display: "block",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -136,7 +140,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
                   <span
                     style={{
                       fontSize: 11,
-                      color: "#64748b",
+                      color: isDark ? "#94a3b8" : "#64748b",
                       fontWeight: 600,
                       display: "block",
                       overflow: "hidden",

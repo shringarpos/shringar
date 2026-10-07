@@ -1,52 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router";
 import { useCreate, useGetIdentity, useList } from "@refinedev/core";
-import {
-  Form,
-  Input,
-  Button,
-  Typography,
-  theme,
-  Select,
-  notification,
-} from "antd";
-import {
-  ArrowLeft,
-  User,
-  Phone,
-  MapPin,
-  FileText,
-  Save,
-  CreditCard,
-} from "lucide-react";
+import { Form, Input, Button, Typography, notification, theme, Select } from "antd";
+import { ArrowLeft, User, Phone, MapPin, FileText, Save, Check } from "lucide-react";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import type { ICustomer } from "../../libs/interfaces";
+import { ColorModeContext } from "../../contexts/color-mode";
 
-const { Text, Title } = Typography;
+const { Title, Text } = Typography;
 
 export const MobileCustomerForm: React.FC = () => {
-  const { token } = theme.useToken();
   const navigate = useNavigate();
-  const [form] = Form.useForm();
+  const { token } = theme.useToken();
+  const { mode } = useContext(ColorModeContext);
+  const isDark = mode === "dark";
+
+  const themeStyles = {
+    pageBg: isDark ? "#000000" : "#f1f5f9",
+    headerBg: isDark ? "rgba(0, 0, 0, 0.88)" : "rgba(255, 255, 255, 0.90)",
+    headerBorder: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
+    cardBg: isDark ? "#141414" : "#ffffff",
+    cardBorder: isDark ? "1px solid #27272a" : "1px solid #e2e8f0",
+    cardShadow: isDark ? "0 2px 8px rgba(0,0,0,0.4)" : "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
+    textPrimary: isDark ? "#f8fafc" : "#0f172a",
+    textSecondary: isDark ? "#94a3b8" : "#64748b",
+    labelColor: isDark ? "#f1f5f9" : "#1e293b",
+    dockBg: isDark ? "rgba(0, 0, 0, 0.92)" : "rgba(255, 255, 255, 0.92)",
+    dockBorder: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
+    buttonSecondaryBg: isDark ? "#27272a" : "#f1f5f9",
+    buttonSecondaryColor: isDark ? "#f8fafc" : "#334155",
+    buttonSecondaryBorder: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+  };
+
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
   const { data: identity } = useGetIdentity<{ id: string }>();
   const userId = identity?.id;
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Referral customer options
-  const { query: refQuery } = useList<ICustomer>({
-    resource: "customers",
-    filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
-    pagination: { pageSize: 50 },
-  });
-  const referralList = refQuery?.data?.data ?? [];
+  const [form] = Form.useForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { mutateAsync: createCustomer } = useCreate();
 
+  // Load existing customers for reference selector
+  const { query: referralQuery } = useList<ICustomer>({
+    resource: "customers",
+    filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
+    pagination: { mode: "off" },
+    sorters: [{ field: "name", order: "asc" }],
+  });
+  const referralList = referralQuery?.data?.data ?? [];
+
   const handleSubmit = async (values: any) => {
     if (!shopId) {
-      notification.error({ message: "No active shop found" });
+      notification.error({ message: "Shop information not available" });
       return;
     }
 
@@ -57,23 +64,22 @@ export const MobileCustomerForm: React.FC = () => {
         values: {
           name: values.name.trim(),
           phone: values.phone?.trim() || null,
-          alternate_phone: values.alternate_phone?.trim() || null,
           email: values.email?.trim() || null,
           address: values.address?.trim() || null,
-          pan_number: values.pan_number?.trim() || null,
-          gst_number: values.gst_number?.trim() || null,
+          pan_number: values.pan_number?.trim()?.toUpperCase() || null,
+          gst_number: values.gst_number?.trim()?.toUpperCase() || null,
           notes: values.notes?.trim() || null,
           reference_by: values.reference_by || null,
           shop_id: shopId,
           created_by: userId,
-          is_active: true,
+          updated_by: userId,
         },
       });
 
-      notification.success({ message: `Customer "${values.name}" created successfully` });
+      notification.success({ message: "Client added to directory successfully" });
       navigate("/customers");
     } catch (err: any) {
-      notification.error({ message: err?.message || "Failed to create customer" });
+      notification.error({ message: err?.message || "Failed to create client" });
     } finally {
       setIsSubmitting(false);
     }
@@ -86,7 +92,8 @@ export const MobileCustomerForm: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         minHeight: "100vh",
-        backgroundColor: "#f8fafc",
+        backgroundColor: themeStyles.pageBg,
+        color: themeStyles.textPrimary,
         paddingBottom: "calc(100px + env(safe-area-inset-bottom, 16px))",
       }}
     >
@@ -98,13 +105,13 @@ export const MobileCustomerForm: React.FC = () => {
           zIndex: 50,
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
-          backgroundColor: "rgba(255, 255, 255, 0.90)",
-          borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
+          backgroundColor: themeStyles.headerBg,
+          borderBottom: themeStyles.headerBorder,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "10px 16px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+          boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.4)" : "0 1px 3px rgba(0,0,0,0.03)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -116,24 +123,24 @@ export const MobileCustomerForm: React.FC = () => {
               width: 38,
               height: 38,
               borderRadius: 19,
-              border: "1px solid rgba(15, 23, 42, 0.12)",
-              backgroundColor: "#ffffff",
+              border: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.12)",
+              backgroundColor: isDark ? "#18181b" : "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#0f172a",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              color: themeStyles.textPrimary,
+              boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 2px rgba(0,0,0,0.04)",
               transition: "transform 0.1s ease",
             }}
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
           </button>
           <div>
-            <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.3px" }}>
+            <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: themeStyles.textPrimary, letterSpacing: "-0.3px" }}>
               Add New Client
             </Title>
-            <Text style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+            <Text style={{ fontSize: 11, color: themeStyles.textSecondary, fontWeight: 500 }}>
               Directory & Ledger Profile
             </Text>
           </div>
@@ -168,11 +175,11 @@ export const MobileCustomerForm: React.FC = () => {
         {/* ── Card 1: Contact Details ── */}
         <div
           style={{
-            backgroundColor: "#ffffff",
+            backgroundColor: themeStyles.cardBg,
             borderRadius: 18,
             padding: "16px",
-            border: "1px solid rgba(15, 23, 42, 0.08)",
-            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
+            border: themeStyles.cardBorder,
+            boxShadow: themeStyles.cardShadow,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -181,8 +188,8 @@ export const MobileCustomerForm: React.FC = () => {
                 width: 28,
                 height: 28,
                 borderRadius: 8,
-                backgroundColor: "rgba(37, 99, 235, 0.12)",
-                color: "#2563eb",
+                backgroundColor: isDark ? "rgba(37, 99, 235, 0.2)" : "rgba(37, 99, 235, 0.12)",
+                color: isDark ? "#60a5fa" : "#2563eb",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -190,68 +197,64 @@ export const MobileCustomerForm: React.FC = () => {
             >
               <User size={15} strokeWidth={2.5} />
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary, letterSpacing: "0.02em" }}>
               PRIMARY CONTACT
             </span>
           </div>
 
           <Form.Item
-            label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Full Name</span>}
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Full Name</span>}
             name="name"
-            rules={[{ required: true, message: "Customer name is required" }]}
+            rules={[{ required: true, message: "Please enter customer full name" }]}
             style={{ marginBottom: 14 }}
           >
             <Input
-              placeholder="e.g. Ramesh Chandra Verma"
-              style={{ height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
+              placeholder="e.g. Anand Vardhan Sharma"
+              style={{ height: 48, borderRadius: 14, fontSize: 15 }}
             />
           </Form.Item>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Form.Item
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Phone (WhatsApp)</span>}
-              name="phone"
-              rules={[{ required: true, message: "Phone number required" }]}
-              style={{ marginBottom: 14 }}
-            >
-              <Input
-                placeholder="10-digit number"
-                inputMode="tel"
-                prefix={<Phone size={15} color="#64748b" style={{ marginRight: 6 }} />}
-                style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Alternate Phone</span>}
-              name="alternate_phone"
-              style={{ marginBottom: 14 }}
-            >
-              <Input
-                placeholder="Optional"
-                inputMode="tel"
-                style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
-              />
-            </Form.Item>
-          </div>
-
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Email Address</span>} name="email" style={{ marginBottom: 0 }}>
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Phone Number</span>}
+            name="phone"
+            rules={[
+              {
+                pattern: /^[0-9+\s-]{8,15}$/,
+                message: "Please enter a valid phone number",
+              },
+            ]}
+            style={{ marginBottom: 14 }}
+          >
             <Input
-              placeholder="Optional email for invoices"
-              inputMode="email"
-              style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
+              placeholder="10-digit mobile number"
+              type="tel"
+              prefix={<Phone size={16} style={{ color: "#94a3b8", marginRight: 4 }} />}
+              style={{ height: 48, borderRadius: 14, fontSize: 15 }}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Email Address (Optional)</span>}
+            name="email"
+            rules={[{ type: "email", message: "Please enter a valid email" }]}
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              placeholder="client@example.com"
+              type="email"
+              style={{ height: 48, borderRadius: 14, fontSize: 15 }}
             />
           </Form.Item>
         </div>
 
-        {/* ── Card 2: Address & Identity ── */}
+        {/* ── Card 2: Address & Legal Tax IDs ── */}
         <div
           style={{
-            backgroundColor: "#ffffff",
+            backgroundColor: themeStyles.cardBg,
             borderRadius: 18,
             padding: "16px",
-            border: "1px solid rgba(15, 23, 42, 0.08)",
-            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
+            border: themeStyles.cardBorder,
+            boxShadow: themeStyles.cardShadow,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -260,8 +263,8 @@ export const MobileCustomerForm: React.FC = () => {
                 width: 28,
                 height: 28,
                 borderRadius: 8,
-                backgroundColor: "rgba(5, 150, 105, 0.12)",
-                color: "#059669",
+                backgroundColor: isDark ? "rgba(5, 150, 105, 0.2)" : "rgba(5, 150, 105, 0.12)",
+                color: isDark ? "#34d399" : "#059669",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -269,35 +272,35 @@ export const MobileCustomerForm: React.FC = () => {
             >
               <MapPin size={15} strokeWidth={2.5} />
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary, letterSpacing: "0.02em" }}>
               ADDRESS & TAX / ID
             </span>
           </div>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Postal Address</span>} name="address" style={{ marginBottom: 14 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Postal Address</span>} name="address" style={{ marginBottom: 14 }}>
             <Input.TextArea
               rows={2}
               placeholder="Street, City, Pincode"
-              style={{ borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
+              style={{ borderRadius: 14, fontSize: 14 }}
             />
           </Form.Item>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>PAN Number</span>} name="pan_number" style={{ marginBottom: 0 }}>
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>PAN Number</span>} name="pan_number" style={{ marginBottom: 0 }}>
               <Input
                 placeholder="ABCDE1234F"
                 autoCapitalize="characters"
                 autoCorrect="off"
-                style={{ height: 48, borderRadius: 14, fontSize: 14, textTransform: "uppercase", border: "1px solid rgba(15, 23, 42, 0.12)", fontFamily: "monospace" }}
+                style={{ height: 48, borderRadius: 14, fontSize: 14, textTransform: "uppercase", fontFamily: "monospace" }}
               />
             </Form.Item>
 
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>GSTIN</span>} name="gst_number" style={{ marginBottom: 0 }}>
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>GSTIN</span>} name="gst_number" style={{ marginBottom: 0 }}>
               <Input
                 placeholder="Optional GSTIN"
                 autoCapitalize="characters"
                 autoCorrect="off"
-                style={{ height: 48, borderRadius: 14, fontSize: 14, textTransform: "uppercase", border: "1px solid rgba(15, 23, 42, 0.12)", fontFamily: "monospace" }}
+                style={{ height: 48, borderRadius: 14, fontSize: 14, textTransform: "uppercase", fontFamily: "monospace" }}
               />
             </Form.Item>
           </div>
@@ -306,11 +309,11 @@ export const MobileCustomerForm: React.FC = () => {
         {/* ── Card 3: Referral & Notes ── */}
         <div
           style={{
-            backgroundColor: "#ffffff",
+            backgroundColor: themeStyles.cardBg,
             borderRadius: 18,
             padding: "16px",
-            border: "1px solid rgba(15, 23, 42, 0.08)",
-            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
+            border: themeStyles.cardBorder,
+            boxShadow: themeStyles.cardShadow,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -319,8 +322,8 @@ export const MobileCustomerForm: React.FC = () => {
                 width: 28,
                 height: 28,
                 borderRadius: 8,
-                backgroundColor: "rgba(124, 58, 237, 0.12)",
-                color: "#7c3aed",
+                backgroundColor: isDark ? "rgba(124, 58, 237, 0.2)" : "rgba(124, 58, 237, 0.12)",
+                color: isDark ? "#c084fc" : "#7c3aed",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -328,12 +331,12 @@ export const MobileCustomerForm: React.FC = () => {
             >
               <FileText size={15} strokeWidth={2.5} />
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary, letterSpacing: "0.02em" }}>
               REFERRAL & NOTES
             </span>
           </div>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Referred By (Optional)</span>} name="reference_by" style={{ marginBottom: 14 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Referred By (Optional)</span>} name="reference_by" style={{ marginBottom: 14 }}>
             <Select
               allowClear
               showSearch
@@ -349,11 +352,11 @@ export const MobileCustomerForm: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Private Notes</span>} name="notes" style={{ marginBottom: 0 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Private Notes</span>} name="notes" style={{ marginBottom: 0 }}>
             <Input.TextArea
               rows={2}
               placeholder="Family jeweler history, ring size, preferences..."
-              style={{ borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
+              style={{ borderRadius: 14, fontSize: 14 }}
             />
           </Form.Item>
         </div>
@@ -369,11 +372,11 @@ export const MobileCustomerForm: React.FC = () => {
           zIndex: 60,
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          backgroundColor: "rgba(255, 255, 255, 0.92)",
-          borderTop: "1px solid rgba(15, 23, 42, 0.08)",
+          backgroundColor: themeStyles.dockBg,
+          borderTop: themeStyles.dockBorder,
           padding: "12px 16px",
           paddingBottom: "max(env(safe-area-inset-bottom), 14px)",
-          boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
+          boxShadow: isDark ? "0 -4px 20px rgba(0,0,0,0.5)" : "0 -4px 20px rgba(0,0,0,0.06)",
           display: "flex",
           gap: 12,
         }}
@@ -386,9 +389,9 @@ export const MobileCustomerForm: React.FC = () => {
             fontWeight: 700,
             fontSize: 14,
             flex: 1,
-            backgroundColor: "#f1f5f9",
-            color: "#334155",
-            border: "1px solid rgba(15, 23, 42, 0.08)",
+            backgroundColor: themeStyles.buttonSecondaryBg,
+            color: themeStyles.buttonSecondaryColor,
+            border: themeStyles.buttonSecondaryBorder,
           }}
         >
           Cancel
@@ -406,10 +409,10 @@ export const MobileCustomerForm: React.FC = () => {
             fontSize: 15,
             flex: 2,
             backgroundColor: "#2563eb",
-            boxShadow: "0 3px 12px rgba(37, 99, 235, 0.35)",
+            boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)",
           }}
         >
-          Save Client
+          Add Client
         </Button>
       </div>
     </div>

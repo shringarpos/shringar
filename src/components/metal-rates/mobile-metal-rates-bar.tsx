@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Drawer, Form, InputNumber, Button, Typography, theme, message, Space } from "antd";
 import { TrendingUp, Edit3, ArrowRight } from "lucide-react";
 import { useList, useCreate, useUpdate, useGetIdentity } from "@refinedev/core";
@@ -7,11 +7,14 @@ import dayjs from "dayjs";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import type { IMetalRate, IMetalType } from "../../libs/interfaces";
 import { formatRateDisplay, displayToPaise, paiseToDisplay, rateUnit } from "./utils";
+import { ColorModeContext } from "../../contexts/color-mode";
 
 const { Text, Title } = Typography;
 
 export const MobileMetalRatesBar: React.FC = () => {
   const { token } = theme.useToken();
+  const { mode } = useContext(ColorModeContext);
+  const isDark = mode === "dark";
   const navigate = useNavigate();
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
@@ -142,8 +145,8 @@ export const MobileMetalRatesBar: React.FC = () => {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "7px 16px",
-          backgroundColor: "#ffffff",
-          borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
+          backgroundColor: isDark ? "#000000" : "#ffffff",
+          borderBottom: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
           cursor: "pointer",
           userSelect: "none",
           WebkitTapHighlightColor: "transparent",
@@ -158,14 +161,14 @@ export const MobileMetalRatesBar: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              backgroundColor: "rgba(217, 119, 6, 0.12)",
+              backgroundColor: isDark ? "rgba(217, 119, 6, 0.22)" : "rgba(217, 119, 6, 0.12)",
               padding: "3px 10px",
               borderRadius: 8,
-              border: "1px solid rgba(217, 119, 6, 0.25)",
+              border: isDark ? "1px solid rgba(217, 119, 6, 0.45)" : "1px solid rgba(217, 119, 6, 0.25)",
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#b45309", letterSpacing: "0.03em" }}>GOLD</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#fbbf24" : "#b45309", letterSpacing: "0.03em" }}>GOLD</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>
               {goldRate && goldMetal
                 ? formatRateDisplay(goldRate.rate_per_gram_paise, goldMetal.name)
                 : <span style={{ color: "#d97706", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
@@ -178,17 +181,17 @@ export const MobileMetalRatesBar: React.FC = () => {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              backgroundColor: "rgba(71, 85, 105, 0.12)",
+              backgroundColor: isDark ? "rgba(148, 163, 184, 0.22)" : "rgba(71, 85, 105, 0.12)",
               padding: "3px 10px",
               borderRadius: 8,
-              border: "1px solid rgba(71, 85, 105, 0.25)",
+              border: isDark ? "1px solid rgba(148, 163, 184, 0.45)" : "1px solid rgba(71, 85, 105, 0.25)",
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#334155", letterSpacing: "0.03em" }}>SILVER</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#cbd5e1" : "#334155", letterSpacing: "0.03em" }}>SILVER</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>
               {silverRate && silverMetal
                 ? formatRateDisplay(silverRate.rate_per_gram_paise, silverMetal.name)
-                : <span style={{ color: "#475569", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
+                : <span style={{ color: isDark ? "#94a3b8" : "#475569", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
             </span>
           </div>
         </div>
@@ -202,8 +205,8 @@ export const MobileMetalRatesBar: React.FC = () => {
             gap: 4,
             padding: "3px 10px",
             borderRadius: 8,
-            backgroundColor: "rgba(37, 99, 235, 0.1)",
-            color: "#1d4ed8",
+            backgroundColor: isDark ? "rgba(37, 99, 235, 0.25)" : "rgba(37, 99, 235, 0.1)",
+            color: isDark ? "#60a5fa" : "#1d4ed8",
             fontWeight: 700,
             fontSize: 11,
             flexShrink: 0,
@@ -222,13 +225,23 @@ export const MobileMetalRatesBar: React.FC = () => {
         placement="bottom"
         height="auto"
         styles={{
-          body: { padding: "16px 20px 28px" },
-          header: { borderBottom: "1px solid rgba(15, 23, 42, 0.08)", padding: "14px 20px" },
+          body: {
+            padding: "16px 20px 28px",
+            backgroundColor: isDark ? "#121214" : "#ffffff",
+            color: isDark ? "#f8fafc" : "#0f172a",
+          },
+          header: {
+            borderBottom: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
+            backgroundColor: isDark ? "#18181b" : "#ffffff",
+            padding: "14px 20px",
+          },
         }}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <TrendingUp size={18} color="#2563eb" />
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Today's Metal Rates</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>
+              Today's Metal Rates
+            </span>
           </div>
         }
       >
@@ -237,7 +250,7 @@ export const MobileMetalRatesBar: React.FC = () => {
             <Form.Item
               name="gold_rate"
               label={
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? "#f1f5f9" : "#1e293b" }}>
                   Gold Rate ({rateUnit(goldMetal.name)})
                 </span>
               }
@@ -247,7 +260,16 @@ export const MobileMetalRatesBar: React.FC = () => {
               <InputNumber
                 placeholder="e.g. 7200"
                 min={0}
-                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 16, fontWeight: 600 }}
+                style={{
+                  width: "100%",
+                  height: 48,
+                  borderRadius: 14,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  backgroundColor: isDark ? "#1a1a1e" : "#ffffff",
+                  color: isDark ? "#ffffff" : "#0f172a",
+                  border: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+                }}
                 prefix="₹"
               />
             </Form.Item>
@@ -257,7 +279,7 @@ export const MobileMetalRatesBar: React.FC = () => {
             <Form.Item
               name="silver_rate"
               label={
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? "#f1f5f9" : "#1e293b" }}>
                   Silver Rate ({rateUnit(silverMetal.name)})
                 </span>
               }
@@ -267,7 +289,16 @@ export const MobileMetalRatesBar: React.FC = () => {
               <InputNumber
                 placeholder="e.g. 85000"
                 min={0}
-                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 16, fontWeight: 600 }}
+                style={{
+                  width: "100%",
+                  height: 48,
+                  borderRadius: 14,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  backgroundColor: isDark ? "#1a1a1e" : "#ffffff",
+                  color: isDark ? "#ffffff" : "#0f172a",
+                  border: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+                }}
                 prefix="₹"
               />
             </Form.Item>
@@ -276,7 +307,16 @@ export const MobileMetalRatesBar: React.FC = () => {
           <div style={{ display: "flex", gap: 10 }}>
             <Button
               onClick={() => setDrawerOpen(false)}
-              style={{ flex: 1, height: 48, borderRadius: 14, fontWeight: 700, fontSize: 14 }}
+              style={{
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                fontWeight: 700,
+                fontSize: 14,
+                backgroundColor: isDark ? "#27272a" : "#f1f5f9",
+                color: isDark ? "#f8fafc" : "#334155",
+                border: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+              }}
             >
               Cancel
             </Button>

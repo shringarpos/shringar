@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { LayoutGrid, ShoppingCart, ReceiptIcon, Coins, Menu } from "lucide-react";
+import { ColorModeContext } from "../../contexts/color-mode";
 
 interface BottomNavBarProps {
   onOpenMore: () => void;
@@ -13,6 +14,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { mode } = useContext(ColorModeContext);
+  const isDark = mode === "dark";
 
   const currentPath = location.pathname;
 
@@ -66,8 +69,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         zIndex: 999,
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
-        backgroundColor: "rgba(255, 255, 255, 0.92)",
-        borderTop: "1px solid rgba(15, 23, 42, 0.08)",
+        backgroundColor: isDark ? "rgba(0, 0, 0, 0.88)" : "rgba(255, 255, 255, 0.92)",
+        borderTop: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
         paddingBottom: "max(env(safe-area-inset-bottom, 0px), 10px)",
         paddingTop: 8,
         paddingLeft: 8,
@@ -75,14 +78,14 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-around",
-        boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.05)",
+        boxShadow: isDark ? "0 -4px 20px rgba(0, 0, 0, 0.5)" : "0 -4px 20px rgba(0, 0, 0, 0.05)",
       }}
     >
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const active = tab.isActive;
-        const activeColor = "#2563eb";
-        const inactiveColor = "#475569";
+        const activeColor = isDark ? "#60a5fa" : "#2563eb";
+        const inactiveColor = isDark ? "#94a3b8" : "#475569";
 
         return (
           <button
@@ -121,7 +124,11 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 width: 44,
                 height: 30,
                 borderRadius: 15,
-                backgroundColor: active ? "rgba(37, 99, 235, 0.12)" : "transparent",
+                backgroundColor: active
+                  ? isDark
+                    ? "rgba(37, 99, 235, 0.28)"
+                    : "rgba(37, 99, 235, 0.12)"
+                  : "transparent",
                 color: active ? activeColor : inactiveColor,
                 transition: "background-color 0.2s ease, color 0.2s ease",
               }}

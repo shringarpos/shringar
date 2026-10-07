@@ -14,6 +14,18 @@
   color-scheme: dark;
 }
 
+html[data-theme="dark"],
+body[data-theme="dark"] {
+  background-color: #000000 !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="light"],
+body[data-theme="light"] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
 /* ── Light Mode Form Field Backgrounds (Always #ffffff) ───────────────── */
 input.ant-input:not(:disabled),
 textarea.ant-input:not(:disabled),
