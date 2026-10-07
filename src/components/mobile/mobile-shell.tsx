@@ -72,7 +72,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
     <div
       style={{
         minHeight: "100vh",
-        backgroundColor: token.colorBgLayout,
+        backgroundColor: "#f8fafc",
         display: "flex",
         flexDirection: "column",
         position: "relative",
@@ -85,7 +85,9 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
             position: "sticky",
             top: 0,
             zIndex: 990,
-            backgroundColor: token.colorBgElevated,
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            backgroundColor: "rgba(255, 255, 255, 0.92)",
             boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
           }}
         >
@@ -93,7 +95,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
           <header
             data-testid="mobile-top-bar"
             style={{
-              borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
               padding: "10px 16px",
               display: "flex",
               alignItems: "center",
@@ -113,29 +115,29 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
               <img
                 src="/logo_icon.png"
                 alt="Shringar"
-                style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }}
+                style={{ width: 30, height: 30, objectFit: "contain", flexShrink: 0 }}
               />
               <div style={{ lineHeight: 1.2, minWidth: 0, flex: 1 }}>
-                <Text
-                  strong
-                  ellipsis
+                <span
                   style={{
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: 700,
+                    color: "#0f172a",
                     display: "block",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
+                    letterSpacing: "-0.3px",
                   }}
                 >
                   {shop?.name || "Shringar POS"}
-                </Text>
+                </span>
                 {shop?.code && (
-                  <Text
-                    type="secondary"
-                    ellipsis
+                  <span
                     style={{
                       fontSize: 11,
+                      color: "#64748b",
+                      fontWeight: 600,
                       display: "block",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -143,22 +145,23 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
                     }}
                   >
                     Code: {shop.code}
-                  </Text>
+                  </span>
                 )}
               </div>
             </div>
 
             <Avatar
               src={avatarSrc}
-              size={34}
+              size={36}
               onClick={() => setMoreOpen(true)}
               style={{
-                backgroundColor: token.colorPrimary,
-                color: "#fff",
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
                 cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600,
+                fontSize: 15,
+                fontWeight: 700,
                 flexShrink: 0,
+                boxShadow: "0 2px 8px rgba(37, 99, 235, 0.25)",
               }}
             >
               {avatarFallback}
@@ -176,7 +179,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
           flex: 1,
           padding: isDedicatedFormPage
             ? 0
-            : "14px 16px calc(72px + env(safe-area-inset-bottom, 16px))",
+            : "14px 16px calc(76px + env(safe-area-inset-bottom, 16px))",
           maxWidth: "100%",
           boxSizing: "border-box",
           overflowX: "hidden",

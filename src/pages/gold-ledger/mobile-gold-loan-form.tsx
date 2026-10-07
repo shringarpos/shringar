@@ -14,9 +14,7 @@ import {
 import {
   ArrowLeft,
   Coins,
-  Scale,
   Percent,
-  Calendar,
   Save,
   User,
   Phone,
@@ -108,18 +106,20 @@ export const MobileGoldLoanForm: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         minHeight: "100vh",
-        backgroundColor: token.colorBgLayout,
-        paddingBottom: "calc(96px + env(safe-area-inset-bottom, 16px))",
+        backgroundColor: "#f8fafc",
+        paddingBottom: "calc(100px + env(safe-area-inset-bottom, 16px))",
       }}
     >
-      {/* ── Sticky Top App Bar ── */}
+      {/* ── Native Sticky Top App Bar with Frosted Glass Blur ── */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 50,
-          backgroundColor: token.colorBgElevated,
-          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          backgroundColor: "rgba(255, 255, 255, 0.90)",
+          borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -133,25 +133,27 @@ export const MobileGoldLoanForm: React.FC = () => {
             data-testid="mobile-form-back-btn"
             onClick={() => navigate(-1)}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              border: `1px solid ${token.colorBorderSecondary}`,
-              backgroundColor: token.colorBgLayout,
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              border: "1px solid rgba(15, 23, 42, 0.12)",
+              backgroundColor: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: token.colorText,
+              color: "#0f172a",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              transition: "transform 0.1s ease",
             }}
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={18} strokeWidth={2.5} />
           </button>
           <div>
-            <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+            <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.3px" }}>
               New Gold Loan
             </Title>
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
               Girvi & Collateral Ledger
             </Text>
           </div>
@@ -163,18 +165,20 @@ export const MobileGoldLoanForm: React.FC = () => {
           loading={isSubmitting}
           onClick={() => form.submit()}
           style={{
-            height: 36,
-            borderRadius: 10,
-            fontWeight: 600,
+            height: 38,
+            borderRadius: 12,
+            fontWeight: 700,
             fontSize: 13,
-            padding: "0 14px",
+            padding: "0 16px",
+            backgroundColor: "#2563eb",
+            boxShadow: "0 2px 8px rgba(37, 99, 235, 0.25)",
           }}
         >
           Save
         </Button>
       </header>
 
-      {/* ── Form Body ── */}
+      {/* ── Form Body: Standardized 16px Spacing, 14px Card Gaps ── */}
       <Form
         form={form}
         layout="vertical"
@@ -191,86 +195,112 @@ export const MobileGoldLoanForm: React.FC = () => {
         {/* ── Card 1: Borrower Information ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <User size={15} color={token.colorPrimary} />
-            <Text strong style={{ fontSize: 13, color: token.colorTextSecondary }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(37, 99, 235, 0.12)",
+                color: "#2563eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <User size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
               BORROWER CONTACT
-            </Text>
+            </span>
           </div>
 
           <Form.Item
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Borrower Name</span>}
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Borrower Name</span>}
             name="customer_name"
             rules={[{ required: true, message: "Borrower name is required" }]}
-            style={{ marginBottom: 12 }}
+            style={{ marginBottom: 14 }}
           >
             <Input
               placeholder="e.g. Suresh Kumar"
-              style={{ height: 44, borderRadius: 12, fontSize: 14 }}
+              style={{ height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
             />
           </Form.Item>
 
           <Form.Item
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Contact Phone (WhatsApp)</span>}
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Contact Phone (WhatsApp)</span>}
             name="contact_no"
-            style={{ marginBottom: 12 }}
+            style={{ marginBottom: 14 }}
           >
             <Input
               placeholder="10-digit mobile number"
               inputMode="tel"
-              prefix={<Phone size={14} color={token.colorTextPlaceholder} style={{ marginRight: 4 }} />}
-              style={{ height: 44, borderRadius: 12, fontSize: 13 }}
+              prefix={<Phone size={15} color="#64748b" style={{ marginRight: 6 }} />}
+              style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
             />
           </Form.Item>
 
-          <Form.Item label={<span style={{ fontSize: 12, fontWeight: 600 }}>Address</span>} name="address" style={{ marginBottom: 0 }}>
-            <Input placeholder="Resident village / town" style={{ height: 44, borderRadius: 12, fontSize: 13 }} />
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Address</span>} name="address" style={{ marginBottom: 0 }}>
+            <Input placeholder="Resident village / town" style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }} />
           </Form.Item>
         </div>
 
         {/* ── Card 2: Pledged Collateral ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <Coins size={15} color="#d97706" />
-            <Text strong style={{ fontSize: 13, color: token.colorTextSecondary }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(217, 119, 6, 0.12)",
+                color: "#d97706",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Coins size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
               PLEDGED COLLATERAL
-            </Text>
+            </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Form.Item label={<span style={{ fontSize: 12, fontWeight: 600 }}>Metal Type</span>} name="metal_type" style={{ marginBottom: 12 }}>
-              <Input style={{ height: 44, borderRadius: 12, fontSize: 13 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Metal Type</span>} name="metal_type" style={{ marginBottom: 14 }}>
+              <Input style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }} />
             </Form.Item>
 
-            <Form.Item label={<span style={{ fontSize: 12, fontWeight: 600 }}>Purity</span>} name="purity" style={{ marginBottom: 12 }}>
-              <Input placeholder="e.g. 22K" style={{ height: 44, borderRadius: 12, fontSize: 13 }} />
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Purity</span>} name="purity" style={{ marginBottom: 14 }}>
+              <Input placeholder="e.g. 22K" style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }} />
             </Form.Item>
           </div>
 
           <Form.Item
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Item Description & Weight</span>}
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Item Description & Weight</span>}
             name="item_description"
             rules={[{ required: true, message: "Describe the ornaments" }]}
             style={{ marginBottom: 0 }}
           >
             <Input
               placeholder="e.g. 2 Gold Bangles (24.5g gross)"
-              style={{ height: 44, borderRadius: 12, fontSize: 14 }}
+              style={{ height: 48, borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
             />
           </Form.Item>
         </div>
@@ -278,52 +308,65 @@ export const MobileGoldLoanForm: React.FC = () => {
         {/* ── Card 3: Loan Terms & Monthly Interest ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <Percent size={15} color={token.colorPrimary} />
-            <Text strong style={{ fontSize: 13, color: token.colorTextSecondary }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(5, 150, 105, 0.12)",
+                color: "#059669",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Percent size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
               LOAN PRINCIPAL & INTEREST
-            </Text>
+            </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Loan Principal (₹)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Loan Principal (₹)</span>}
               name="loan_amount"
               rules={[{ required: true, message: "Enter principal amount" }]}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 14 }}
             >
               <InputNumber
                 min={0}
                 placeholder="₹ Principal"
-                style={{ width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Interest (%/mo)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Interest (%/mo)</span>}
               name="interest_rate_pct"
               rules={[{ required: true, message: "Rate" }]}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 14 }}
             >
               <InputNumber
                 min={0}
                 step={0.1}
                 placeholder="2.0%"
-                style={{ width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Tenure (Months)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Tenure (Months)</span>}
               name="duration_months"
               rules={[{ required: true, message: "Duration" }]}
               style={{ marginBottom: 0 }}
@@ -331,44 +374,48 @@ export const MobileGoldLoanForm: React.FC = () => {
               <InputNumber
                 min={1}
                 max={60}
-                style={{ width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
 
-            <Form.Item label={<span style={{ fontSize: 12, fontWeight: 600 }}>Issue Date</span>} name="loan_date" style={{ marginBottom: 0 }}>
-              <DatePicker format="YYYY-MM-DD" style={{ width: "100%", height: 44, borderRadius: 12 }} />
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Issue Date</span>} name="loan_date" style={{ marginBottom: 0 }}>
+              <DatePicker format="YYYY-MM-DD" style={{ width: "100%", height: 48, borderRadius: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }} />
             </Form.Item>
           </div>
 
-          {/* Monthly Interest Badge */}
+          {/* High-Contrast Dynamic Monthly Interest Badge (10/10 Contrast) */}
           <div
             style={{
-              borderRadius: 12,
-              padding: "12px 14px",
-              background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-              color: "#fff",
+              borderRadius: 14,
+              padding: "14px 16px",
+              background: "linear-gradient(135deg, #090d16 0%, #172554 100%)",
+              color: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              boxShadow: "0 4px 16px rgba(15, 23, 42, 0.25)",
+              border: "1px solid rgba(250, 204, 21, 0.35)",
             }}
           >
             <div>
-              <span style={{ fontSize: 11, opacity: 0.8, display: "block" }}>ESTIMATED MONTHLY INTEREST</span>
-              <span style={{ fontSize: 11, opacity: 0.65 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", color: "#93c5fd", display: "block" }}>
+                ESTIMATED MONTHLY INTEREST
+              </span>
+              <span style={{ fontSize: 12, color: "#cbd5e1", fontWeight: 500 }}>
                 {interestRatePct}% on ₹{loanAmount.toLocaleString("en-IN")}
               </span>
             </div>
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#facc15" }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "#facc15", letterSpacing: "-0.5px" }}>
                 ₹{monthlyInterestRs.toLocaleString("en-IN")}
-                <span style={{ fontSize: 11, fontWeight: 400, color: "#fff", opacity: 0.7 }}> /mo</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}> /mo</span>
               </span>
             </div>
           </div>
         </div>
       </Form>
 
-      {/* ── Sticky Bottom Action Dock ── */}
+      {/* ── Native Sticky Bottom Action Dock with Translucent Frosted Glass ── */}
       <div
         style={{
           position: "fixed",
@@ -376,23 +423,28 @@ export const MobileGoldLoanForm: React.FC = () => {
           left: 0,
           right: 0,
           zIndex: 60,
-          backgroundColor: token.colorBgElevated,
-          borderTop: `1px solid ${token.colorBorderSecondary}`,
-          padding: "10px 16px",
-          paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
-          boxShadow: "0 -4px 12px rgba(0,0,0,0.06)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          backgroundColor: "rgba(255, 255, 255, 0.92)",
+          borderTop: "1px solid rgba(15, 23, 42, 0.08)",
+          padding: "12px 16px",
+          paddingBottom: "max(env(safe-area-inset-bottom), 14px)",
+          boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
           display: "flex",
-          gap: 10,
+          gap: 12,
         }}
       >
         <Button
           onClick={() => navigate(-1)}
           style={{
-            height: 48,
+            height: 50,
             borderRadius: 14,
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: 14,
             flex: 1,
+            backgroundColor: "#f1f5f9",
+            color: "#334155",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
           }}
         >
           Cancel
@@ -400,16 +452,17 @@ export const MobileGoldLoanForm: React.FC = () => {
 
         <Button
           type="primary"
-          icon={<Save size={16} />}
+          icon={<Save size={17} />}
           loading={isSubmitting}
           onClick={() => form.submit()}
           style={{
-            height: 48,
+            height: 50,
             borderRadius: 14,
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 15,
             flex: 2,
-            boxShadow: "0 2px 10px rgba(37, 99, 235, 0.3)",
+            backgroundColor: "#2563eb",
+            boxShadow: "0 3px 12px rgba(37, 99, 235, 0.35)",
           }}
         >
           Issue Gold Loan

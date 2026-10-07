@@ -141,9 +141,9 @@ export const MobileMetalRatesBar: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "6px 14px",
-          backgroundColor: token.colorBgContainer,
-          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+          padding: "7px 16px",
+          backgroundColor: "#ffffff",
+          borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
           cursor: "pointer",
           userSelect: "none",
           WebkitTapHighlightColor: "transparent",
@@ -157,18 +157,18 @@ export const MobileMetalRatesBar: React.FC = () => {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 4,
-              backgroundColor: "rgba(217, 119, 6, 0.08)",
-              padding: "2px 8px",
-              borderRadius: 6,
-              border: "1px solid rgba(217, 119, 6, 0.18)",
+              gap: 6,
+              backgroundColor: "rgba(217, 119, 6, 0.12)",
+              padding: "3px 10px",
+              borderRadius: 8,
+              border: "1px solid rgba(217, 119, 6, 0.25)",
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#d97706" }}>GOLD</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: token.colorText }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#b45309", letterSpacing: "0.03em" }}>GOLD</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
               {goldRate && goldMetal
                 ? formatRateDisplay(goldRate.rate_per_gram_paise, goldMetal.name)
-                : <span style={{ color: token.colorWarningText, fontSize: 11 }}>Not set</span>}
+                : <span style={{ color: "#d97706", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
             </span>
           </div>
 
@@ -177,18 +177,18 @@ export const MobileMetalRatesBar: React.FC = () => {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 4,
-              backgroundColor: "rgba(100, 116, 139, 0.08)",
-              padding: "2px 8px",
-              borderRadius: 6,
-              border: "1px solid rgba(100, 116, 139, 0.18)",
+              gap: 6,
+              backgroundColor: "rgba(71, 85, 105, 0.12)",
+              padding: "3px 10px",
+              borderRadius: 8,
+              border: "1px solid rgba(71, 85, 105, 0.25)",
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>SILVER</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: token.colorText }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#334155", letterSpacing: "0.03em" }}>SILVER</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
               {silverRate && silverMetal
                 ? formatRateDisplay(silverRate.rate_per_gram_paise, silverMetal.name)
-                : <span style={{ color: token.colorWarningText, fontSize: 11 }}>Not set</span>}
+                : <span style={{ color: "#475569", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
             </span>
           </div>
         </div>
@@ -200,16 +200,16 @@ export const MobileMetalRatesBar: React.FC = () => {
             display: "flex",
             alignItems: "center",
             gap: 4,
-            padding: "2px 8px",
-            borderRadius: 6,
-            backgroundColor: token.colorFillAlter,
-            color: token.colorPrimary,
-            fontWeight: 600,
+            padding: "3px 10px",
+            borderRadius: 8,
+            backgroundColor: "rgba(37, 99, 235, 0.1)",
+            color: "#1d4ed8",
+            fontWeight: 700,
             fontSize: 11,
             flexShrink: 0,
           }}
         >
-          <Edit3 size={11} />
+          <Edit3 size={12} strokeWidth={2.5} />
           <span>Update</span>
         </div>
       </div>
@@ -222,64 +222,32 @@ export const MobileMetalRatesBar: React.FC = () => {
         placement="bottom"
         height="auto"
         styles={{
-          body: {
-            padding: "16px 20px 24px",
-            borderTopLeftRadius: 18,
-            borderTopRightRadius: 18,
-          },
-          header: { display: "none" },
+          body: { padding: "16px 20px 28px" },
+          header: { borderBottom: "1px solid rgba(15, 23, 42, 0.08)", padding: "14px 20px" },
         }}
-      >
-        {/* Grab Handle */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: token.colorBorder }} />
-        </div>
-
-        {/* Drawer Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div>
-            <Title level={4} style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
-              Today's Metal Rates
-            </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {dayjs().format("dddd, D MMMM YYYY")}
-            </Text>
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <TrendingUp size={18} color="#2563eb" />
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Today's Metal Rates</span>
           </div>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              setDrawerOpen(false);
-              navigate("/metal-rates");
-            }}
-            style={{ padding: 0, fontSize: 12, display: "flex", alignItems: "center", gap: 2 }}
-          >
-            History <ArrowRight size={13} />
-          </Button>
-        </div>
-
-        {/* Form Inputs */}
+        }
+      >
         <Form form={form} layout="vertical" onFinish={handleSaveRates}>
           {goldMetal && (
             <Form.Item
               name="gold_rate"
               label={
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontWeight: 700, color: "#d97706" }}>Gold Rate</span>
-                  <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                    ({rateUnit(goldMetal.name)})
-                  </span>
-                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                  Gold Rate ({rateUnit(goldMetal.name)})
+                </span>
               }
-              rules={[{ required: true, message: "Please enter gold rate" }]}
-              style={{ marginBottom: 14 }}
+              rules={[{ required: true, message: "Enter gold rate" }]}
+              style={{ marginBottom: 16 }}
             >
               <InputNumber
-                style={{ width: "100%", height: 44, borderRadius: 10, fontSize: 15 }}
-                min={1}
-                precision={2}
-                placeholder="e.g. 7850"
-                inputMode="decimal"
+                placeholder="e.g. 7200"
+                min={0}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 16, fontWeight: 600 }}
                 prefix="₹"
               />
             </Form.Item>
@@ -289,31 +257,26 @@ export const MobileMetalRatesBar: React.FC = () => {
             <Form.Item
               name="silver_rate"
               label={
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontWeight: 700, color: "#64748b" }}>Silver Rate</span>
-                  <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                    ({rateUnit(silverMetal.name)})
-                  </span>
-                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>
+                  Silver Rate ({rateUnit(silverMetal.name)})
+                </span>
               }
-              rules={[{ required: true, message: "Please enter silver rate" }]}
+              rules={[{ required: true, message: "Enter silver rate" }]}
               style={{ marginBottom: 20 }}
             >
               <InputNumber
-                style={{ width: "100%", height: 44, borderRadius: 10, fontSize: 15 }}
-                min={1}
-                precision={2}
-                placeholder="e.g. 98"
-                inputMode="decimal"
+                placeholder="e.g. 85000"
+                min={0}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 16, fontWeight: 600 }}
                 prefix="₹"
               />
             </Form.Item>
           )}
 
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 10 }}>
             <Button
-              style={{ flex: 1, height: 44, borderRadius: 10 }}
               onClick={() => setDrawerOpen(false)}
+              style={{ flex: 1, height: 48, borderRadius: 14, fontWeight: 700, fontSize: 14 }}
             >
               Cancel
             </Button>
@@ -321,12 +284,7 @@ export const MobileMetalRatesBar: React.FC = () => {
               type="primary"
               htmlType="submit"
               loading={saving}
-              style={{
-                flex: 2,
-                height: 44,
-                borderRadius: 10,
-                fontWeight: 600,
-              }}
+              style={{ flex: 2, height: 48, borderRadius: 14, fontWeight: 700, fontSize: 14, backgroundColor: "#2563eb" }}
             >
               Save Today's Rates
             </Button>

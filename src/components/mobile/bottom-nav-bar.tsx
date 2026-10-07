@@ -1,6 +1,5 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router";
-import { theme } from "antd";
 import { LayoutGrid, ShoppingCart, ReceiptIcon, Coins, Menu } from "lucide-react";
 
 interface BottomNavBarProps {
@@ -12,7 +11,6 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   onOpenMore,
   isMoreOpen = false,
 }) => {
-  const { token } = theme.useToken();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -66,23 +64,25 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         left: 0,
         right: 0,
         zIndex: 999,
-        backgroundColor: token.colorBgElevated,
-        borderTop: `1px solid ${token.colorBorderSecondary}`,
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
-        paddingTop: 6,
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        backgroundColor: "rgba(255, 255, 255, 0.92)",
+        borderTop: "1px solid rgba(15, 23, 42, 0.08)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 10px)",
+        paddingTop: 8,
         paddingLeft: 8,
         paddingRight: 8,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-around",
-        boxShadow: "0 -2px 10px rgba(0, 0, 0, 0.05)",
+        boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.05)",
       }}
     >
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const active = tab.isActive;
-        const activeColor = token.colorPrimary;
-        const inactiveColor = token.colorTextSecondary;
+        const activeColor = "#2563eb";
+        const inactiveColor = "#475569";
 
         return (
           <button
@@ -107,10 +107,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               padding: "4px 2px",
               cursor: "pointer",
               outline: "none",
-              transition: "all 0.2s ease",
               userSelect: "none",
               WebkitTapHighlightColor: "transparent",
-              minHeight: 48,
+              minHeight: 50,
+              touchAction: "manipulation",
             }}
           >
             <div
@@ -118,20 +118,20 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 38,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: active ? token.colorPrimaryBg : "transparent",
+                width: 44,
+                height: 30,
+                borderRadius: 15,
+                backgroundColor: active ? "rgba(37, 99, 235, 0.12)" : "transparent",
                 color: active ? activeColor : inactiveColor,
                 transition: "background-color 0.2s ease, color 0.2s ease",
               }}
             >
-              <Icon size={19} strokeWidth={active ? 2.3 : 1.8} />
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
             </div>
             <span
               style={{
                 fontSize: 11,
-                fontWeight: active ? 600 : 500,
+                fontWeight: active ? 700 : 600,
                 color: active ? activeColor : inactiveColor,
                 marginTop: 2,
                 lineHeight: 1,

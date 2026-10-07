@@ -23,8 +23,8 @@ import {
   Plus,
   Save,
   Check,
-  Calendar,
-  AlertCircle,
+  Tag,
+  Scale,
   Package,
 } from "lucide-react";
 import dayjs from "dayjs";
@@ -276,9 +276,9 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         : dayjs().format("YYYY-MM-DD");
 
       const payload: Partial<IOrnament> = {
-        name: values.name,
-        sku: values.sku || null,
-        description: values.description || null,
+        name: values.name.trim(),
+        sku: values.sku?.trim() || null,
+        description: values.description?.trim() || null,
         category_id: values.category_id,
         metal_type_id: values.metal_type_id,
         purity_level_id: values.purity_level_id,
@@ -331,18 +331,20 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         display: "flex",
         flexDirection: "column",
         minHeight: "100vh",
-        backgroundColor: token.colorBgLayout,
-        paddingBottom: "calc(96px + env(safe-area-inset-bottom, 16px))",
+        backgroundColor: "#f8fafc",
+        paddingBottom: "calc(100px + env(safe-area-inset-bottom, 16px))",
       }}
     >
-      {/* ── Sticky Top App Bar ── */}
+      {/* ── Native Sticky Top App Bar with Frosted Glass Blur ── */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 50,
-          backgroundColor: token.colorBgElevated,
-          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          backgroundColor: "rgba(255, 255, 255, 0.90)",
+          borderBottom: "1px solid rgba(15, 23, 42, 0.08)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -356,25 +358,27 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
             data-testid="mobile-form-back-btn"
             onClick={() => navigate(-1)}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              border: `1px solid ${token.colorBorderSecondary}`,
-              backgroundColor: token.colorBgLayout,
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              border: "1px solid rgba(15, 23, 42, 0.12)",
+              backgroundColor: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: token.colorText,
+              color: "#0f172a",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              transition: "transform 0.1s ease",
             }}
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={18} strokeWidth={2.5} />
           </button>
           <div>
-            <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+            <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.3px" }}>
               {action === "create" ? "Add New Piece" : "Edit Piece"}
             </Title>
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
               {action === "create" ? "Catalog & Inventory" : `SKU #${ornament?.sku || id?.slice(0, 6)}`}
             </Text>
           </div>
@@ -386,18 +390,20 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
           loading={isSubmitting}
           onClick={() => form.submit()}
           style={{
-            height: 36,
-            borderRadius: 10,
-            fontWeight: 600,
+            height: 38,
+            borderRadius: 12,
+            fontWeight: 700,
             fontSize: 13,
-            padding: "0 14px",
+            padding: "0 16px",
+            backgroundColor: "#2563eb",
+            boxShadow: "0 2px 8px rgba(37, 99, 235, 0.25)",
           }}
         >
           Save
         </Button>
       </header>
 
-      {/* ── Form Body ── */}
+      {/* ── Form Body: Standardized 16px Spacing, 14px Card Gaps ── */}
       <Form
         form={form}
         layout="vertical"
@@ -408,20 +414,36 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         {/* ── Card 1: Metal & Purity Selector ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <Text strong style={{ fontSize: 13, display: "block", marginBottom: 10, color: token.colorTextSecondary }}>
-            1. METAL TYPE & KARAT PURITY
-          </Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(217, 119, 6, 0.12)",
+                color: "#d97706",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Gem size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+              1. METAL TYPE & KARAT PURITY
+            </span>
+          </div>
 
           {/* Metal Type Segmented Pills */}
-          <Form.Item name="metal_type_id" rules={[{ required: true, message: "Please select metal" }]} style={{ marginBottom: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(metalTypes.length, 2)}, 1fr)`, gap: 8 }}>
+          <Form.Item name="metal_type_id" rules={[{ required: true, message: "Please select metal" }]} style={{ marginBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(metalTypes.length, 2)}, 1fr)`, gap: 10 }}>
               {metalTypes.map((metal) => {
                 const isSelected = selectedMetalTypeId === metal.id;
                 const isGold = metal.name.toLowerCase().includes("gold");
@@ -434,36 +456,36 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
                     type="button"
                     onClick={() => form.setFieldValue("metal_type_id", metal.id)}
                     style={{
-                      height: 44,
-                      borderRadius: 12,
+                      height: 48,
+                      borderRadius: 14,
                       border: isSelected
-                        ? `2px solid ${isGold ? "#d97706" : isSilver ? "#475569" : token.colorPrimary}`
-                        : `1px solid ${token.colorBorderSecondary}`,
+                        ? `2.5px solid ${isGold ? "#d97706" : isSilver ? "#334155" : "#2563eb"}`
+                        : "1px solid rgba(15, 23, 42, 0.12)",
                       backgroundColor: isSelected
                         ? isGold
-                          ? "rgba(217, 119, 6, 0.1)"
+                          ? "rgba(217, 119, 6, 0.12)"
                           : isSilver
-                          ? "rgba(100, 116, 139, 0.1)"
-                          : token.colorPrimaryBg
-                        : token.colorBgLayout,
+                          ? "rgba(100, 116, 139, 0.12)"
+                          : "rgba(37, 99, 235, 0.1)"
+                        : "#ffffff",
                       color: isSelected
                         ? isGold
                           ? "#b45309"
                           : isSilver
-                          ? "#1e293b"
-                          : token.colorPrimary
-                        : token.colorTextSecondary,
-                      fontWeight: isSelected ? 700 : 500,
-                      fontSize: 13,
+                          ? "#0f172a"
+                          : "#1d4ed8"
+                        : "#475569",
+                      fontWeight: isSelected ? 800 : 600,
+                      fontSize: 14,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: 6,
+                      gap: 8,
                       cursor: "pointer",
                       transition: "all 0.15s ease",
                     }}
                   >
-                    <Icon size={16} />
+                    <Icon size={18} strokeWidth={isSelected ? 2.5 : 2} />
                     <span>{metal.name}</span>
                   </button>
                 );
@@ -473,7 +495,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
 
           {/* Karat Purity One-Tap Chips (horizontal scrollable) */}
           <Form.Item
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Purity Level</span>}
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Purity Level</span>}
             name="purity_level_id"
             rules={[{ required: true, message: "Select purity level" }]}
             style={{ marginBottom: 0 }}
@@ -496,22 +518,23 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
                     type="button"
                     onClick={() => form.setFieldValue("purity_level_id", p.id)}
                     style={{
-                      padding: "8px 14px",
-                      borderRadius: 20,
-                      border: isSelected ? `2px solid ${token.colorPrimary}` : `1px solid ${token.colorBorderSecondary}`,
-                      backgroundColor: isSelected ? token.colorPrimaryBg : token.colorBgLayout,
-                      color: isSelected ? token.colorPrimary : token.colorText,
-                      fontWeight: isSelected ? 700 : 500,
-                      fontSize: 12,
+                      padding: "8px 16px",
+                      borderRadius: 22,
+                      minHeight: 40,
+                      border: isSelected ? "2px solid #2563eb" : "1px solid rgba(15, 23, 42, 0.14)",
+                      backgroundColor: isSelected ? "#eff6ff" : "#f8fafc",
+                      color: isSelected ? "#1d4ed8" : "#334155",
+                      fontWeight: isSelected ? 700 : 600,
+                      fontSize: 13,
                       cursor: "pointer",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 4,
+                      gap: 6,
                       flexShrink: 0,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {isSelected && <Check size={12} strokeWidth={3} />}
+                    {isSelected && <Check size={14} strokeWidth={3} />}
                     <span>{p.display_name} ({p.purity_value}%)</span>
                   </button>
                 );
@@ -523,62 +546,78 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         {/* ── Card 2: Essential Identity ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <Text strong style={{ fontSize: 13, display: "block", marginBottom: 10, color: token.colorTextSecondary }}>
-            2. BASIC PIECE DETAILS
-          </Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(37, 99, 235, 0.12)",
+                color: "#2563eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Tag size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+              2. BASIC PIECE DETAILS
+            </span>
+          </div>
 
           <Form.Item
-            label={<span style={{ fontSize: 12, fontWeight: 600 }}>Piece Name</span>}
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Piece Name</span>}
             name="name"
             rules={[{ required: true, message: "Name is required" }]}
-            style={{ marginBottom: 12 }}
+            style={{ marginBottom: 14 }}
           >
             <Input
               placeholder="e.g. Traditional Antique Choker"
-              style={{ height: 44, borderRadius: 12, fontSize: 14 }}
+              style={{ height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
             />
           </Form.Item>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {/* Category with Quick Add */}
             <Form.Item
               label={
                 <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>Category</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>Category</span>
                   <button
                     type="button"
                     onClick={() => setNewCategoryModalOpen(true)}
                     style={{
                       background: "none",
                       border: "none",
-                      color: token.colorPrimary,
-                      fontSize: 11,
-                      fontWeight: 600,
+                      color: "#2563eb",
+                      fontSize: 12,
+                      fontWeight: 700,
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       gap: 2,
                     }}
                   >
-                    <Plus size={11} /> New
+                    <Plus size={13} strokeWidth={2.5} /> New
                   </button>
                 </div>
               }
               name="category_id"
               rules={[{ required: true, message: "Category required" }]}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 14 }}
             >
               <Select
                 {...categorySelectProps}
                 placeholder="Select category"
-                style={{ height: 44, width: "100%" }}
+                style={{ height: 48, width: "100%" }}
               />
             </Form.Item>
 
@@ -586,30 +625,30 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
             <Form.Item
               label={
                 <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>SKU Code</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b" }}>SKU Code</span>
                   {!skuManuallyEdited && (
-                    <span style={{ fontSize: 10, color: token.colorPrimary, fontWeight: 600 }}>AUTO</span>
+                    <span style={{ fontSize: 11, color: "#2563eb", fontWeight: 700 }}>AUTO</span>
                   )}
                 </div>
               }
               name="sku"
               validateStatus={skuTaken ? "error" : ""}
               help={skuTaken ? "SKU already in use" : undefined}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 14 }}
             >
               <Input
                 placeholder="SKU Code"
                 onChange={() => setSkuManuallyEdited(true)}
-                style={{ height: 44, borderRadius: 12, fontSize: 13, fontFamily: "monospace" }}
+                style={{ height: 48, borderRadius: 14, fontSize: 14, fontFamily: "monospace", border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
           </div>
 
-          <Form.Item label={<span style={{ fontSize: 12, fontWeight: 600 }}>Description (Optional)</span>} name="description" style={{ marginBottom: 0 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Description (Optional)</span>} name="description" style={{ marginBottom: 0 }}>
             <Input.TextArea
               rows={2}
               placeholder="Design hallmarks, stones, certificate notes..."
-              style={{ borderRadius: 12, fontSize: 13 }}
+              style={{ borderRadius: 14, fontSize: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
             />
           </Form.Item>
         </div>
@@ -617,92 +656,111 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         {/* ── Card 3: Weight & Pricing Calculator ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <Text strong style={{ fontSize: 13, display: "block", marginBottom: 10, color: token.colorTextSecondary }}>
-            3. WEIGHT & PURCHASE COST
-          </Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(5, 150, 105, 0.12)",
+                color: "#059669",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Scale size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+              3. WEIGHT & PURCHASE COST
+            </span>
+          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Gross Weight (g)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Gross Weight (g)</span>}
               name="weight_g"
               rules={[{ required: true, message: "Enter weight" }]}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 14 }}
             >
               <InputNumber
                 min={0}
                 step={0.01}
                 placeholder="0.00"
-                style={{ width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Purchase Metal Rate (₹/g)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Metal Rate (₹/g)</span>}
               name="purchase_metal_rate_rs"
               rules={[{ required: true, message: "Enter metal rate" }]}
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 14 }}
             >
               <InputNumber
                 min={0}
                 placeholder="₹/g"
-                style={{ width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Making Charge (₹)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Making Charge (₹)</span>}
               name="purchase_making_charge_rs"
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 0 }}
             >
               <InputNumber
                 min={0}
                 placeholder="₹0"
-                style={{ width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ fontSize: 12, fontWeight: 600 }}>Purchase Date</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Purchase Date</span>}
               name="purchase_date"
-              style={{ marginBottom: 12 }}
+              style={{ marginBottom: 0 }}
             >
               <DatePicker
                 format="YYYY-MM-DD"
-                style={{ width: "100%", height: 44, borderRadius: 12 }}
+                style={{ width: "100%", height: 48, borderRadius: 14, border: "1px solid rgba(15, 23, 42, 0.12)" }}
               />
             </Form.Item>
           </div>
 
-          {/* Live Total Cost Estimation Banner */}
+          {/* High-Contrast Live Total Cost Estimation Banner (10/10 Contrast) */}
           <div
             style={{
-              borderRadius: 12,
-              padding: "12px 14px",
-              background: "linear-gradient(135deg, #065f46 0%, #047857 100%)",
-              color: "#fff",
+              borderRadius: 14,
+              padding: "14px 16px",
+              background: "linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)",
+              color: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              boxShadow: "0 2px 8px rgba(6, 95, 70, 0.2)",
+              boxShadow: "0 4px 14px rgba(5, 150, 105, 0.25)",
+              border: "1px solid rgba(16, 185, 129, 0.3)",
             }}
           >
             <div>
-              <span style={{ fontSize: 11, opacity: 0.85, display: "block" }}>CALCULATED PURCHASE COST</span>
-              <span style={{ fontSize: 11, opacity: 0.75 }}>
-                {weightG ? `${weightG}g @ ₹${metalRateRs || 0}` : "Enter weight & rate"}
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", color: "#a7f3d0", display: "block" }}>
+                CALCULATED PURCHASE COST
+              </span>
+              <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>
+                {weightG ? `${weightG}g @ ₹${metalRateRs || 0}` : "Enter weight & metal rate"}
               </span>
             </div>
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: 18, fontWeight: 800, display: "block", letterSpacing: -0.3 }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", display: "block", letterSpacing: "-0.5px" }}>
                 ₹{totalCostRs.toLocaleString("en-IN")}
               </span>
             </div>
@@ -712,35 +770,51 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         {/* ── Card 4: Inventory Quantity ── */}
         <div
           style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: 14,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
+            backgroundColor: "#ffffff",
+            borderRadius: 18,
+            padding: "16px",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 2px 8px -2px rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.02)",
           }}
         >
-          <Text strong style={{ fontSize: 13, display: "block", marginBottom: 10, color: token.colorTextSecondary }}>
-            4. STOCK INVENTORY
-          </Text>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                backgroundColor: "rgba(124, 58, 237, 0.12)",
+                color: "#7c3aed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Package size={15} strokeWidth={2.5} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "0.02em" }}>
+              4. STOCK INVENTORY
+            </span>
+          </div>
 
-          <Form.Item name="quantity" label={<span style={{ fontSize: 12, fontWeight: 600 }}>Stock Quantity</span>} style={{ marginBottom: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Form.Item name="quantity" label={<span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", marginBottom: 6, display: "inline-block" }}>Stock Quantity</span>} style={{ marginBottom: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button
                 type="button"
                 onClick={() => form.setFieldValue("quantity", Math.max(0, (quantityValue || 1) - 1))}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  border: `1px solid ${token.colorBorderSecondary}`,
-                  backgroundColor: token.colorBgLayout,
-                  fontSize: 20,
-                  fontWeight: 600,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  border: "1px solid rgba(15, 23, 42, 0.14)",
+                  backgroundColor: "#f8fafc",
+                  fontSize: 22,
+                  fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  color: token.colorText,
+                  color: "#0f172a",
                 }}
               >
                 -
@@ -750,31 +824,31 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
                 min={0}
                 value={quantityValue}
                 onChange={(val) => form.setFieldValue("quantity", val ?? 0)}
-                style={{ width: 80, height: 44, borderRadius: 12, fontSize: 16, textAlign: "center" }}
+                style={{ width: 84, height: 48, borderRadius: 14, fontSize: 17, fontWeight: 700, textAlign: "center", border: "1px solid rgba(15, 23, 42, 0.14)" }}
               />
 
               <button
                 type="button"
                 onClick={() => form.setFieldValue("quantity", (quantityValue || 0) + 1)}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  border: `1px solid ${token.colorBorderSecondary}`,
-                  backgroundColor: token.colorBgLayout,
-                  fontSize: 20,
-                  fontWeight: 600,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  border: "1px solid rgba(15, 23, 42, 0.14)",
+                  backgroundColor: "#f8fafc",
+                  fontSize: 22,
+                  fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
-                  color: token.colorText,
+                  color: "#0f172a",
                 }}
               >
                 +
               </button>
 
-              <span style={{ fontSize: 12, color: token.colorTextSecondary }}>
+              <span style={{ fontSize: 13, color: "#475569", fontWeight: 600 }}>
                 {quantityValue === 1 ? "1 piece" : `${quantityValue} pieces`}
               </span>
             </div>
@@ -782,7 +856,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
         </div>
       </Form>
 
-      {/* ── Sticky Bottom Action Dock ── */}
+      {/* ── Native Sticky Bottom Action Dock with Translucent Frosted Glass ── */}
       <div
         style={{
           position: "fixed",
@@ -790,23 +864,28 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
           left: 0,
           right: 0,
           zIndex: 60,
-          backgroundColor: token.colorBgElevated,
-          borderTop: `1px solid ${token.colorBorderSecondary}`,
-          padding: "10px 16px",
-          paddingBottom: "max(env(safe-area-inset-bottom), 12px)",
-          boxShadow: "0 -4px 12px rgba(0,0,0,0.06)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          backgroundColor: "rgba(255, 255, 255, 0.92)",
+          borderTop: "1px solid rgba(15, 23, 42, 0.08)",
+          padding: "12px 16px",
+          paddingBottom: "max(env(safe-area-inset-bottom), 14px)",
+          boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
           display: "flex",
-          gap: 10,
+          gap: 12,
         }}
       >
         <Button
           onClick={() => navigate(-1)}
           style={{
-            height: 48,
+            height: 50,
             borderRadius: 14,
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: 14,
             flex: 1,
+            backgroundColor: "#f1f5f9",
+            color: "#334155",
+            border: "1px solid rgba(15, 23, 42, 0.08)",
           }}
         >
           Cancel
@@ -814,16 +893,17 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
 
         <Button
           type="primary"
-          icon={<Save size={16} />}
+          icon={<Save size={17} />}
           loading={isSubmitting}
           onClick={() => form.submit()}
           style={{
-            height: 48,
+            height: 50,
             borderRadius: 14,
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 15,
             flex: 2,
-            boxShadow: "0 2px 10px rgba(37, 99, 235, 0.3)",
+            backgroundColor: "#2563eb",
+            boxShadow: "0 3px 12px rgba(37, 99, 235, 0.35)",
           }}
         >
           {action === "create" ? "Save to Inventory" : "Update Piece"}
@@ -844,7 +924,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ action, 
           value={newCategoryName}
           onChange={(e) => setNewCategoryName(e.target.value)}
           onPressEnter={handleQuickAddCategory}
-          style={{ height: 42, borderRadius: 10, marginTop: 8 }}
+          style={{ height: 46, borderRadius: 12, marginTop: 8 }}
         />
       </Modal>
     </div>
