@@ -20,7 +20,7 @@ import {
   SafetyCertificateOutlined,
   HomeOutlined,
 } from "@ant-design/icons";
-import { useSearchParams, Link } from "react-router";
+import { useSearchParams, Link, useLocation } from "react-router";
 import { supabaseClient } from "../../providers/supabase-client";
 
 const { Title, Text, Paragraph } = Typography;
@@ -35,8 +35,30 @@ interface AccessRequest {
 
 export const ApproveAccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const tokenParam = searchParams.get("token");
-  const emailParam = searchParams.get("email");
+  const location = useLocation();
+
+  // Robust token & email extraction (supports searchParams, hash params, window.location.search)
+  const getParam = (key: string): string | null => {
+    // 1. From react-router useSearchParams
+    const fromSearch = searchParams.get(key);
+    if (fromSearch) return fromSearch.trim();
+
+    // 2. From window.location.search directly
+    const nativeSearch = new URLSearchParams(window.location.search).get(key);
+    if (nativeSearch) return nativeSearch.trim();
+
+    // 3. From window.location.hash query string if hash-based routing is used
+    if (window.location.hash.includes("?")) {
+      const hashQuery = window.location.hash.split("?")[1];
+      const fromHash = new URLSearchParams(hashQuery).get(key);
+      if (fromHash) return fromHash.trim();
+    }
+
+    return null;
+  };
+
+  const tokenParam = getParam("token");
+  const emailParam = getParam("email");
 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -76,7 +98,7 @@ export const ApproveAccessPage: React.FC = () => {
     }
 
     fetchRequest();
-  }, [tokenParam, emailParam]);
+  }, [tokenParam, emailParam, location.key]);
 
   const handleUpdateStatus = async (newStatus: "approved" | "rejected") => {
     if (!request) return;
@@ -290,7 +312,7 @@ export const ApproveAccessPage: React.FC = () => {
                   column={1}
                   size="small"
                   style={{ marginBottom: 20 }}
-                  labelStyle={{ width: 140, fontWeight: 500 }}
+                  styles={{ label: { width: 140, fontWeight: 500 } }}
                 >
                   <Descriptions.Item label="Email">
                     <Text strong copyable>{request.email}</Text>
