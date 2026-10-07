@@ -1,61 +1,54 @@
 import React, { useState } from "react";
 import {
-  Button,
-  Card,
   Form,
   Input,
-  Result,
-  Tag,
+  Button,
+  Card,
   Typography,
   message,
+  Result,
   theme,
+  Tag,
 } from "antd";
 import {
-  ArrowLeftOutlined,
-  CheckCircleOutlined,
-  LockOutlined,
   MailOutlined,
   SendOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
-import { Link, useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { supabaseClient } from "../../providers/supabase-client";
 
 const { Title, Text, Paragraph } = Typography;
 
-export default function RequestAccessPage() {
+export const RequestAccessPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
-
-  const { token } = theme.useToken();
-  const navigate = useNavigate();
   const [form] = Form.useForm();
-
-  const ADMIN_EMAIL = "sahilkhude11@gmail.com";
+  const navigate = useNavigate();
+  const { token } = theme.useToken();
 
   const handleRequestSubmit = async (values: { email: string }) => {
     setSubmitting(true);
-    try {
-      const normalizedEmail = values.email.toLowerCase().trim();
+    const normalizedEmail = values.email.toLowerCase().trim();
 
-      // Check if request already exists
-      const { data: existing } = await supabaseClient
+    try {
+      // Check if user already exists
+      const { data: existingUser } = await supabaseClient
         .from("access_requests")
-        .select("id, status, approval_token")
+        .select("id, status")
         .ilike("email", normalizedEmail)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (existing) {
-        if (existing.status === "approved") {
-          message.info("Your email is already approved! You can create your account now.");
-          navigate(`/create-account?token=${existing.approval_token}`);
+      if (existingUser) {
+        if (existingUser.status === "approved" || existingUser.status === "registered") {
+          message.info("Your email is already approved! You can create your account or sign in.");
+          navigate(`/login?email=${encodeURIComponent(normalizedEmail)}`);
           return;
-        } else if (existing.status === "registered") {
-          message.info("An account with this email already exists. Please log in.");
-          navigate("/login");
-          return;
-        } else if (existing.status === "pending") {
+        }
+        if (existingUser.status === "pending") {
+          message.warning("Your request is already pending approval from the admin.");
           setSubmittedEmail(normalizedEmail);
           return;
         }
@@ -78,25 +71,18 @@ export default function RequestAccessPage() {
 
       setSubmittedEmail(normalizedEmail);
 
-      // Trigger notification email to Sahil
-      const approvalUrl = `${window.location.origin}/approve-access?token=${approvalToken}`;
-      const emailSubject = encodeURIComponent(`[Access Request] Shringar POS - ${normalizedEmail}`);
-      const emailBody = encodeURIComponent(
-        `Hello Sahil,\n\nA new user has requested access to Shringar POS:\n\n` +
-        `• Email: ${normalizedEmail}\n\n` +
-        `To approve this user and send their account creation link, click here:\n${approvalUrl}\n\n` +
-        `Regards,\nShringar POS Access System`
-      );
-
-      const mailtoLink = `mailto:${ADMIN_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
+      // Trigger actual email delivery to sahilkhude11@gmail.com via Edge Function
       try {
-        const mailAnchor = document.createElement("a");
-        mailAnchor.href = mailtoLink;
-        mailAnchor.target = "_blank";
-        mailAnchor.rel = "noopener noreferrer";
-        mailAnchor.click();
-      } catch (_) {
-        // Mailto trigger fallback
+        await supabaseClient.functions.invoke("send-access-email", {
+          body: {
+            type: "new_request",
+            applicantEmail: normalizedEmail,
+            approvalToken: approvalToken,
+            origin: window.location.origin,
+          },
+        });
+      } catch (emailErr) {
+        console.warn("Automated email notification error (request still recorded):", emailErr);
       }
 
       message.success("Access request sent!");
@@ -149,32 +135,15 @@ export default function RequestAccessPage() {
         </div>
 
         {submittedEmail ? (
-          /* Clean 2-Step Feedback */
+          /* Clean Minimal Confirmation Screen without "What happens next" box */
           <Result
             status="success"
             title="Access Request Sent!"
             subTitle={
               <div style={{ textAlign: "center", marginTop: 8 }}>
-                <Paragraph style={{ fontSize: 14, color: token.colorTextSecondary }}>
+                <Paragraph style={{ fontSize: 14, color: token.colorTextSecondary, margin: 0 }}>
                   We've received your request for <Text strong>{submittedEmail}</Text>.
                 </Paragraph>
-                <div
-                  style={{
-                    background: token.colorFillAlter,
-                    padding: "16px",
-                    borderRadius: 12,
-                    border: `1px solid ${token.colorBorderSecondary}`,
-                    marginTop: 16,
-                    textAlign: "left",
-                  }}
-                >
-                  <Text strong style={{ fontSize: 13, display: "block", marginBottom: 4 }}>
-                    What happens next?
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 13 }}>
-                    Once Sahil approves your request, you will receive an invitation email with a direct link to create your account. You won't need to verify your email and can start using the app immediately.
-                  </Text>
-                </div>
               </div>
             }
             extra={[
@@ -230,32 +199,25 @@ export default function RequestAccessPage() {
                   icon={<SendOutlined />}
                   loading={submitting}
                   block
-                  style={{ height: 44, borderRadius: 10, fontWeight: 600 }}
+                  style={{ height: 44, borderRadius: 8, fontWeight: 500 }}
                 >
                   Request Access
                 </Button>
               </Form.Item>
             </Form>
+
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                Already have an approved account?{" "}
+                <Link to="/login" style={{ fontWeight: 500 }}>
+                  Sign in
+                </Link>
+              </Text>
+            </div>
           </div>
         )}
-
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: 16,
-            borderTop: `1px solid ${token.colorBorderSecondary}`,
-            paddingTop: 16,
-            textAlign: "center",
-          }}
-        >
-          <Text type="secondary" style={{ fontSize: 13 }}>
-            Already have an account?{" "}
-            <Link to="/login" style={{ color: token.colorPrimary, fontWeight: 600 }}>
-              Sign In
-            </Link>
-          </Text>
-        </div>
       </Card>
     </div>
   );
-}
+};
+export default RequestAccessPage;

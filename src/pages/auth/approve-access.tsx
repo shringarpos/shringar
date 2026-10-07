@@ -1,51 +1,48 @@
 import React, { useEffect, useState } from "react";
 import {
-  Button,
   Card,
-  Descriptions,
-  Result,
-  Space,
-  Spin,
-  Tag,
   Typography,
+  Descriptions,
+  Button,
+  Space,
+  Tag,
+  Result,
+  Spin,
   message,
   theme,
+  Divider,
 } from "antd";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   CopyOutlined,
-  HomeOutlined,
   MailOutlined,
   SafetyCertificateOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams, Link } from "react-router";
 import { supabaseClient } from "../../providers/supabase-client";
 
 const { Title, Text, Paragraph } = Typography;
 
-interface IAccessRequest {
+interface AccessRequest {
   id: string;
   email: string;
-  full_name?: string;
-  phone?: string;
-  shop_name?: string;
   status: "pending" | "approved" | "rejected" | "registered";
-  created_at: string;
-  approved_at?: string;
-  approved_by?: string;
   approval_token: string;
+  created_at: string;
 }
 
-export default function ApproveAccessPage() {
+export const ApproveAccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const tokenParam = searchParams.get("token");
   const emailParam = searchParams.get("email");
 
   const [loading, setLoading] = useState(true);
-  const [request, setRequest] = useState<IAccessRequest | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [request, setRequest] = useState<AccessRequest | null>(null);
   const [actionDone, setActionDone] = useState<"approved" | "rejected" | null>(null);
+  const [emailSentStatus, setEmailSentStatus] = useState<string | null>(null);
 
   const { token } = theme.useToken();
   const ADMIN_EMAIL = "sahilkhude11@gmail.com";
@@ -100,6 +97,25 @@ export default function ApproveAccessPage() {
       setRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
       setActionDone(newStatus);
       message.success(`Access request has been ${newStatus}!`);
+
+      if (newStatus === "approved") {
+        try {
+          const { error: fnErr } = await supabaseClient.functions.invoke("send-access-email", {
+            body: {
+              type: "invite_approved_user",
+              recipientEmail: request.email,
+              approvalToken: request.approval_token,
+              origin: window.location.origin,
+            },
+          });
+          if (fnErr) throw fnErr;
+          setEmailSentStatus("Invitation email sent directly to user's inbox!");
+          message.success("Invitation email delivered to user!");
+        } catch (mailErr: any) {
+          console.warn("Error sending automatic invite email:", mailErr);
+          setEmailSentStatus("Could not auto-deliver email; use copy link or button below.");
+        }
+      }
     } catch (err: any) {
       console.error("Error updating status:", err);
       message.error(err.message || "Failed to update access status.");
@@ -144,8 +160,8 @@ export default function ApproveAccessPage() {
       <Card
         style={{
           width: "100%",
-          maxWidth: 540,
-          boxShadow: "0 10px 32px rgba(0,0,0,0.06)",
+          maxWidth: 580,
+          boxShadow: "0 8px 30px rgba(0,0,0,0.08)",
           borderRadius: 16,
           borderColor: token.colorBorderSecondary,
         }}
@@ -188,6 +204,11 @@ export default function ApproveAccessPage() {
                     <Paragraph>
                       User <Text strong>{request.email}</Text> is now authorized to create their account.
                     </Paragraph>
+                    {emailSentStatus && (
+                      <Tag color="cyan" style={{ padding: "4px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
+                        {emailSentStatus}
+                      </Tag>
+                    )}
                     <div
                       style={{
                         background: token.colorFillAlter,
@@ -209,8 +230,16 @@ export default function ApproveAccessPage() {
                 }
                 extra={[
                   <Button
-                    key="email"
+                    key="copy"
                     type="primary"
+                    size="large"
+                    icon={<CopyOutlined />}
+                    onClick={copyCreationLink}
+                  >
+                    Copy Link
+                  </Button>,
+                  <Button
+                    key="email"
                     size="large"
                     icon={<MailOutlined />}
                     href={`mailto:${request.email}?subject=${encodeURIComponent(
@@ -219,29 +248,38 @@ export default function ApproveAccessPage() {
                       `Hello,\n\nYour access request for Shringar POS has been approved!\n\nClick the link below to set your password and access your account immediately:\n${window.location.origin}/create-account?token=${request.approval_token}\n\n(No email verification needed - you will be logged in directly!)\n\nWelcome aboard,\nSahil Khude\nShringar POS`
                     )}`}
                   >
-                    Send Email to User
+                    Open Mail App
                   </Button>,
-                  <Button
-                    key="copy"
-                    size="large"
-                    icon={<CopyOutlined />}
-                    onClick={copyCreationLink}
-                  >
-                    Copy Link
-                  </Button>,
-                  <Link key="login" to="/login">
-                    <Button size="large">Sign In</Button>
+                  <Link to="/login" key="login">
+                    <Button size="large" icon={<HomeOutlined />}>
+                      Go to POS
+                    </Button>
                   </Link>,
                 ]}
               />
             ) : actionDone === "rejected" || request.status === "rejected" ? (
               <Result
-                status="info"
+                status="error"
                 title="Access Request Rejected"
-                subTitle={`The request for ${request.email} has been marked as rejected.`}
+                subTitle={`The access request for ${request.email} was declined.`}
                 extra={
                   <Link to="/login">
-                    <Button type="primary">Back to App</Button>
+                    <Button type="primary" icon={<HomeOutlined />}>
+                      Return to Sign In
+                    </Button>
+                  </Link>
+                }
+              />
+            ) : request.status === "registered" ? (
+              <Result
+                status="info"
+                title="Account Already Registered"
+                subTitle={`The user with email ${request.email} has already completed registration.`}
+                extra={
+                  <Link to="/login">
+                    <Button type="primary" icon={<HomeOutlined />}>
+                      Go to Sign In
+                    </Button>
                   </Link>
                 }
               />
@@ -249,42 +287,41 @@ export default function ApproveAccessPage() {
               <div>
                 <Descriptions
                   bordered
-                  size="small"
                   column={1}
+                  size="small"
                   style={{ marginBottom: 20 }}
-                  labelStyle={{ width: 140, fontWeight: 600 }}
+                  labelStyle={{ width: 140, fontWeight: 500 }}
                 >
-                  <Descriptions.Item label="Applicant Email">
-                    <Text copyable strong>{request.email}</Text>
+                  <Descriptions.Item label="Email">
+                    <Text strong copyable>{request.email}</Text>
                   </Descriptions.Item>
-                  {request.full_name && (
-                    <Descriptions.Item label="Name">
-                      {request.full_name}
-                    </Descriptions.Item>
-                  )}
-                  {request.shop_name && (
-                    <Descriptions.Item label="Shop">
-                      {request.shop_name}
-                    </Descriptions.Item>
-                  )}
+                  <Descriptions.Item label="Status">
+                    {statusTag(request.status)}
+                  </Descriptions.Item>
                   <Descriptions.Item label="Requested At">
                     {new Date(request.created_at).toLocaleString()}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Current Status">
-                    {statusTag(request.status)}
-                  </Descriptions.Item>
                 </Descriptions>
 
-                <Space style={{ width: "100%", justifyContent: "center" }} size="middle">
+                <Divider style={{ margin: "16px 0" }} />
+
+                <Space direction="vertical" style={{ width: "100%" }} size="middle">
                   <Button
                     type="primary"
                     size="large"
                     icon={<CheckCircleOutlined />}
                     loading={actionLoading}
+                    block
+                    style={{
+                      height: 48,
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      backgroundColor: "#16a34a",
+                      borderColor: "#16a34a",
+                    }}
                     onClick={() => handleUpdateStatus("approved")}
-                    style={{ background: token.colorSuccess, borderColor: token.colorSuccess }}
                   >
-                    Approve Request & Send Link
+                    Approve Request & Send Invite Link
                   </Button>
 
                   <Button
@@ -292,9 +329,11 @@ export default function ApproveAccessPage() {
                     size="large"
                     icon={<CloseCircleOutlined />}
                     loading={actionLoading}
+                    block
+                    style={{ height: 44, borderRadius: 8 }}
                     onClick={() => handleUpdateStatus("rejected")}
                   >
-                    Reject Request
+                    Decline Request
                   </Button>
                 </Space>
               </div>
@@ -304,4 +343,6 @@ export default function ApproveAccessPage() {
       </Card>
     </div>
   );
-}
+};
+
+export default ApproveAccessPage;

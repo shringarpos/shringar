@@ -1,46 +1,39 @@
 import React, { useEffect, useState } from "react";
 import {
-  Button,
   Card,
-  Popconfirm,
-  Space,
   Table,
   Tag,
-  Tooltip,
+  Button,
+  Space,
   Typography,
   message,
-  theme,
+  Popconfirm,
+  Badge,
 } from "antd";
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
+  CheckOutlined,
+  CloseOutlined,
   CopyOutlined,
-  LinkOutlined,
-  MailOutlined,
   ReloadOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import { supabaseClient } from "../../providers/supabase-client";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-interface IAccessRequest {
+interface AccessRequest {
   id: string;
   email: string;
-  full_name?: string;
-  phone?: string;
-  shop_name?: string;
-  notes?: string;
   status: "pending" | "approved" | "rejected" | "registered";
-  created_at: string;
-  approved_at?: string;
-  approved_by?: string;
   approval_token: string;
+  created_at: string;
+  approved_at: string | null;
+  approved_by: string | null;
 }
 
-export default function AccessRequestsSettings() {
+export const AccessRequestsSettings: React.FC = () => {
+  const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(false);
-  const [requests, setRequests] = useState<IAccessRequest[]>([]);
-  const { token } = theme.useToken();
   const ADMIN_EMAIL = "sahilkhude11@gmail.com";
 
   const fetchRequests = async () => {
@@ -79,6 +72,26 @@ export default function AccessRequestsSettings() {
 
       if (error) throw error;
       message.success(`Access request marked as ${newStatus}!`);
+
+      if (newStatus === "approved") {
+        const req = requests.find((r) => r.id === id);
+        if (req?.approval_token) {
+          try {
+            await supabaseClient.functions.invoke("send-access-email", {
+              body: {
+                type: "invite_approved_user",
+                recipientEmail: req.email,
+                approvalToken: req.approval_token,
+                origin: window.location.origin,
+              },
+            });
+            message.success("Invitation email delivered to applicant!");
+          } catch (mErr) {
+            console.warn("Could not dispatch invite email automatically:", mErr);
+          }
+        }
+      }
+
       fetchRequests();
     } catch (err: any) {
       console.error("Error updating status:", err);
@@ -114,30 +127,17 @@ export default function AccessRequestsSettings() {
       ),
     },
     {
-      title: "Applicant Email",
-      key: "applicant",
-      render: (_: any, record: IAccessRequest) => (
-        <div>
-          <Text strong copyable>{record.email}</Text>
-          {record.full_name && (
-            <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
-              {record.full_name}
-            </div>
-          )}
-          {record.shop_name && (
-            <div style={{ fontSize: 12, color: token.colorTextSecondary }}>
-              {record.shop_name}
-            </div>
-          )}
-        </div>
-      ),
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      render: (email: string) => <Text strong>{email}</Text>,
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (st: string) => {
-        switch (st) {
+      render: (status: string) => {
+        switch (status) {
           case "approved":
             return <Tag color="success">Approved</Tag>;
           case "pending":
@@ -145,108 +145,91 @@ export default function AccessRequestsSettings() {
           case "rejected":
             return <Tag color="error">Rejected</Tag>;
           case "registered":
-            return <Tag color="processing">Registered</Tag>;
+            return <Tag color="processing">Account Registered</Tag>;
           default:
-            return <Tag>{st}</Tag>;
+            return <Tag>{status}</Tag>;
         }
       },
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: IAccessRequest) => (
+      render: (_: any, record: AccessRequest) => (
         <Space size="small">
           {record.status === "pending" && (
             <>
               <Button
                 type="primary"
                 size="small"
-                icon={<CheckCircleOutlined />}
+                icon={<CheckOutlined />}
+                style={{ backgroundColor: "#16a34a", borderColor: "#16a34a" }}
                 onClick={() => handleUpdateStatus(record.id, "approved")}
-                style={{ backgroundColor: token.colorSuccess }}
               >
                 Approve
               </Button>
               <Popconfirm
-                title="Reject this request?"
+                title="Decline this request?"
                 onConfirm={() => handleUpdateStatus(record.id, "rejected")}
-                okText="Reject"
-                cancelText="Cancel"
+                okText="Yes"
+                cancelText="No"
               >
-                <Button danger size="small" icon={<CloseCircleOutlined />}>
-                  Reject
+                <Button size="small" danger icon={<CloseOutlined />}>
+                  Decline
                 </Button>
               </Popconfirm>
             </>
           )}
 
           {record.status === "approved" && (
-            <>
-              <Tooltip title="Copy Account Creation Link">
-                <Button
-                  size="small"
-                  icon={<LinkOutlined />}
-                  onClick={() => copyCreationLink(record.approval_token)}
-                >
-                  Invite Link
-                </Button>
-              </Tooltip>
-              <Button
-                size="small"
-                icon={<MailOutlined />}
-                href={`mailto:${record.email}?subject=${encodeURIComponent(
-                  "Your Shringar POS Account Creation Link"
-                )}&body=${encodeURIComponent(
-                  `Hello,\n\nYour access request for Shringar POS has been approved!\n\nClick the link below to set your password and access your account:\n${window.location.origin}/create-account?token=${record.approval_token}\n\n(No email verification needed - you will be logged in directly!)\n\nBest regards,\nSahil Khude\nShringar POS`
-                )}`}
-              >
-                Email
-              </Button>
-            </>
+            <Button
+              size="small"
+              type="dashed"
+              icon={<CopyOutlined />}
+              onClick={() => copyCreationLink(record.approval_token)}
+            >
+              Copy Creation Link
+            </Button>
           )}
 
           {record.status === "pending" && (
-            <Tooltip title="Copy 1-Click Admin Approval Link">
-              <Button
-                size="small"
-                icon={<CopyOutlined />}
-                onClick={() => copyApprovalLink(record.approval_token)}
-              />
-            </Tooltip>
+            <Button
+              size="small"
+              icon={<LinkOutlined />}
+              onClick={() => copyApprovalLink(record.approval_token)}
+            >
+              Approval Link
+            </Button>
           )}
         </Space>
       ),
     },
   ];
 
+  const pendingCount = requests.filter((r) => r.status === "pending").length;
+
   return (
     <Card
       title={
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Title level={4} style={{ margin: 0 }}>
-            Showroom Access Requests
-          </Title>
-          <Button icon={<ReloadOutlined />} onClick={fetchRequests} loading={loading}>
-            Refresh
-          </Button>
-        </div>
+        <Space>
+          <span>Access Requests & Gatekeeper</span>
+          {pendingCount > 0 && <Badge count={pendingCount} />}
+        </Space>
       }
-      style={{ borderRadius: 12 }}
+      extra={
+        <Button icon={<ReloadOutlined />} onClick={fetchRequests} loading={loading}>
+          Refresh
+        </Button>
+      }
     >
-      <div style={{ marginBottom: 16 }}>
-        <Text type="secondary">
-          Review access requests. When you approve an applicant, an invitation link is generated allowing them to set their password and enter the app directly without email verification.
-        </Text>
-      </div>
-
       <Table
         dataSource={requests}
         columns={columns}
         rowKey="id"
         loading={loading}
         pagination={{ pageSize: 10 }}
-        size="middle"
       />
     </Card>
   );
-}
+};
+
+export default AccessRequestsSettings;
