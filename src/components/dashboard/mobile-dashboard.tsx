@@ -127,6 +127,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
       icon: Plus,
       color: "#ffffff",
       bg: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+      iconBg: "rgba(255, 255, 255, 0.2)",
       onClick: () => navigate("/sales/new"),
       testId: "mobile-action-sale",
     },
@@ -135,8 +136,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
       sub: "New Profile",
       icon: Users,
       color: "#0284c7",
-      bg: "rgba(2, 132, 199, 0.08)",
-      border: "rgba(2, 132, 199, 0.2)",
+      bg: token.colorBgElevated,
+      iconBg: "rgba(2, 132, 199, 0.1)",
       onClick: () => navigate("/customers"),
       testId: "mobile-action-customer",
     },
@@ -145,9 +146,9 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
       sub: "New Inventory",
       icon: Gem,
       color: "#d97706",
-      bg: "rgba(217, 119, 6, 0.08)",
-      border: "rgba(217, 119, 6, 0.2)",
-      onClick: () => navigate("/inventory/ornaments"),
+      bg: token.colorBgElevated,
+      iconBg: "rgba(217, 119, 6, 0.1)",
+      onClick: () => navigate("/ornaments"),
       testId: "mobile-action-add-ornament",
     },
     {
@@ -155,8 +156,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
       sub: "Pledge Ledger",
       icon: Coins,
       color: "#16a34a",
-      bg: "rgba(22, 163, 74, 0.08)",
-      border: "rgba(22, 163, 74, 0.2)",
+      bg: token.colorBgElevated,
+      iconBg: "rgba(22, 163, 74, 0.1)",
       onClick: () => navigate("/gold-ledger"),
       testId: "mobile-action-loan",
     },
@@ -278,7 +279,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
         </div>
       </div>
 
-      {/* 2x2 Quick Actions Dock - 100% Touch Area with zero dead zones */}
+      {/* 2x2 Quick Actions Dock - Sleek, App-first Aesthetic */}
       <div>
         <Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, color: token.colorTextSecondary }}>
           Quick Actions
@@ -307,7 +308,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
                   gap: 10,
                   padding: "12px 14px",
                   borderRadius: 14,
-                  border: isPrimary ? "none" : `1px solid ${action.border || token.colorBorderSecondary}`,
+                  border: isPrimary ? "none" : `1px solid ${token.colorBorderSecondary}`,
                   background: action.bg,
                   cursor: "pointer",
                   textAlign: "left",
@@ -328,7 +329,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: isPrimary ? "rgba(255, 255, 255, 0.2)" : `${action.color}15`,
+                    backgroundColor: action.iconBg,
                     color: isPrimary ? "#ffffff" : action.color,
                     flexShrink: 0,
                   }}
@@ -409,7 +410,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
 
           {/* Stock grams */}
           <div
-            onClick={() => navigate("/inventory/ornaments")}
+            onClick={() => navigate("/ornaments")}
             role="button"
             tabIndex={0}
             style={{
@@ -438,7 +439,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
 
           {/* Pieces */}
           <div
-            onClick={() => navigate("/inventory/ornaments")}
+            onClick={() => navigate("/ornaments")}
             role="button"
             tabIndex={0}
             style={{
@@ -467,7 +468,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
         </div>
       </div>
 
-      {/* Recent Bills Stream */}
+      {/* Recent Invoices Section */}
       <div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, color: token.colorTextSecondary }}>
@@ -477,105 +478,127 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
             type="link"
             size="small"
             onClick={() => navigate("/invoices")}
-            style={{
-              fontSize: 12,
-              padding: "8px 12px",
-              height: "auto",
-              minHeight: 44,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 2,
-            }}
+            style={{ padding: 0, fontSize: 12 }}
           >
-            <span>View All</span>
-            <ChevronRight size={13} />
+            View All
           </Button>
         </div>
 
         {isLoading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Skeleton active paragraph={{ rows: 2 }} />
-            <Skeleton active paragraph={{ rows: 2 }} />
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                style={{
+                  backgroundColor: token.colorBgElevated,
+                  borderRadius: 14,
+                  padding: 12,
+                }}
+              >
+                <Skeleton active paragraph={{ rows: 1 }} />
+              </div>
+            ))}
           </div>
         ) : recentInvoices.length === 0 ? (
-          <Empty description="No recent bills" style={{ margin: "20px 0" }} />
+          <div
+            style={{
+              backgroundColor: token.colorBgElevated,
+              borderRadius: 14,
+              padding: "24px 16px",
+              textAlign: "center",
+              border: `1px dashed ${token.colorBorderSecondary}`,
+            }}
+          >
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={<span style={{ fontSize: 12, color: token.colorTextSecondary }}>No invoices created yet</span>}
+            >
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => navigate("/sales/new")}
+                style={{ borderRadius: 8, fontSize: 12 }}
+              >
+                Create First Bill
+              </Button>
+            </Empty>
+          </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {recentInvoices.map((inv) => {
               const custName = inv.customer?.name || "Walk-in Customer";
-              const initial = custName[0]?.toUpperCase() || "C";
-              const isPaid = inv.payment_status === "PAID";
-              const isPartial = inv.payment_status === "PARTIAL";
+              const dateStr = inv.invoice_date
+                ? dayjs(inv.invoice_date).format("D MMM")
+                : dayjs(inv.created_at).format("D MMM");
 
               return (
                 <div
                   key={inv.id}
                   onClick={() => navigate(`/invoices/show/${inv.id}`)}
-                  role="button"
-                  tabIndex={0}
                   style={{
+                    backgroundColor: token.colorBgElevated,
+                    borderRadius: 14,
+                    padding: "12px 14px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    backgroundColor: token.colorBgElevated,
                     border: `1px solid ${token.colorBorderSecondary}`,
                     cursor: "pointer",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                    transition: "transform 0.1s ease",
+                    WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  {/* Left: Avatar + Details */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-                    <Avatar
-                      size={36}
+                    <div
                       style={{
-                        backgroundColor: token.colorPrimaryBg,
-                        color: token.colorPrimary,
-                        fontWeight: 700,
-                        fontSize: 14,
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        backgroundColor: inv.is_cancelled ? "rgba(239, 68, 68, 0.1)" : "rgba(37, 99, 235, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         flexShrink: 0,
                       }}
                     >
-                      {initial}
-                    </Avatar>
+                      <Receipt
+                        size={17}
+                        color={inv.is_cancelled ? "#ef4444" : token.colorPrimary}
+                      />
+                    </div>
+
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <Text strong style={{ fontSize: 13, display: "block" }} ellipsis>
-                        {custName}
-                      </Text>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                          #{inv.invoice_number}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Text strong style={{ fontSize: 13 }} ellipsis>
+                          {custName}
                         </Text>
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                          • {dayjs(inv.invoice_date || inv.created_at).fromNow()}
-                        </Text>
+                        {inv.is_cancelled && (
+                          <Tag color="error" style={{ margin: 0, fontSize: 9, lineHeight: "14px", padding: "0 4px" }}>
+                            VOID
+                          </Tag>
+                        )}
                       </div>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        #{inv.invoice_number} • {dateStr}
+                      </Text>
                     </div>
                   </div>
 
-                  {/* Right: Amount & Status */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <div style={{ textAlign: "right" }}>
-                      <Text strong style={{ fontSize: 14, display: "block" }}>
-                        ₹{Math.round((inv.total_amount_paise || 0) / 100).toLocaleString("en-IN")}
-                      </Text>
-                      <Tag
-                        color={isPaid ? "success" : isPartial ? "warning" : "default"}
-                        style={{
-                          margin: "2px 0 0",
-                          fontSize: 10,
-                          borderRadius: 6,
-                          lineHeight: "16px",
-                          padding: "0 6px",
-                          border: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {inv.payment_status || "UNPAID"}
-                      </Tag>
-                    </div>
-                    <ChevronRight size={14} style={{ color: token.colorTextQuaternary }} />
+                  <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: inv.is_cancelled ? token.colorTextSecondary : token.colorText,
+                        display: "block",
+                      }}
+                    >
+                      {formatRupees(inv.total_amount_paise || 0)}
+                    </span>
+                    <span style={{ fontSize: 10, color: token.colorTextTertiary }}>
+                      {dayjs(inv.created_at).fromNow(true)}
+                    </span>
                   </div>
                 </div>
               );

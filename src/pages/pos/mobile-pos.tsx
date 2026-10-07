@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { useList, useCreate } from "@refinedev/core";
+import React, { useState, useMemo, useEffect } from "react";
+import { useList, useCreate, useUpdate, useGetIdentity } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import {
   Typography,
@@ -13,6 +13,7 @@ import {
   theme,
   Spin,
   Empty,
+  Form,
 } from "antd";
 import {
   Search,
@@ -29,6 +30,7 @@ import {
   QrCode,
   Building2,
   UserPlus,
+  X,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { useShopCheck } from "../../hooks/use-shop-check";
@@ -36,6 +38,9 @@ import type {
   ICustomer,
   IOrnamentWithDetails,
   IMetalRate,
+  IInvoice,
+  IInvoiceItem,
+  IOrnament,
 } from "../../libs/interfaces";
 
 const { Title, Text } = Typography;
@@ -59,6 +64,9 @@ export const MobilePOS: React.FC<{
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
 
+  const { data: identity } = useGetIdentity<{ id: string }>();
+  const userId = identity?.id;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMetalFilter, setSelectedMetalFilter] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -66,6 +74,11 @@ export const MobilePOS: React.FC<{
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false);
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
+  const [showQuickAddClient, setShowQuickAddClient] = useState(false);
+  const [quickClientName, setQuickClientName] = useState("");
+  const [quickClientPhone, setQuickClientPhone] = useState("");
+  const [creatingClient, setCreatingClient] = useState(false);
+
   const [paymentMode, setPaymentMode] = useState<string>("CASH");
   const [cashTendered, setCashTendered] = useState<number | null>(null);
   const [discountPaise, setDiscountPaise] = useState<number>(0);
@@ -76,7 +89,8 @@ export const MobilePOS: React.FC<{
   const { query: customersQuery } = useList<ICustomer>({
     resource: "customers",
     filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
-    pagination: { mode: "server", pageSize: 50 },
+    sorters: [{ field: "created_at", order: "desc" }],
+    pagination: { mode: "server", pageSize: 100 },
     queryOptions: { enabled: !!shopId },
   });
 
@@ -96,9 +110,9 @@ export const MobilePOS: React.FC<{
     queryOptions: { enabled: !!shopId },
   });
 
-  // 3. Fetch Today's Metal Rates
+  // 3. Fetch Today's Metal Rates from ornament_rates
   const { query: ratesQuery } = useList<IMetalRate>({
-    resource: "metal_rates",
+    resource: "ornament_rates",
     filters: shopId
       ? [
           { field: "shop_id", operator: "eq", value: shopId },
@@ -108,12 +122,28 @@ export const MobilePOS: React.FC<{
     queryOptions: { enabled: !!shopId },
   });
 
-  const { mutateAsync: createInvoice } = useCreate();
-  const { mutateAsync: createInvoiceItem } = useCreate();
+  const { mutateAsync: createInvoice } = useCreate<IInvoice>();
+  const { mutateAsync: createInvoiceItem } = useCreate<IInvoiceItem>();
+  const { mutateAsync: updateOrnament } = useUpdate<IOrnament>();
+  const { mutateAsync: createCustomer } = useCreate<ICustomer>();
 
-  const customers = customersQuery?.data?.data ?? [];
-  const ornaments = ornamentsQuery?.data?.data ?? [];
-  const rates = ratesQuery?.data?.data ?? [];
+  const customers = (customersQuery?.data?.data ?? []) as ICustomer[];
+  const ornaments = (ornamentsQuery?.data?.data ?? []) as IOrnamentWithDetails[];
+  const rates = (ratesQuery?.data?.data ?? []) as IMetalRate[];
+
+  // Auto-select first customer or Walk-in if not yet selected
+  useEffect(() => {
+    if (!selectedCustomerId && customers.length > 0) {
+      const walkIn = customers.find((c) =>
+        c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
+      );
+      if (walkIn) {
+        setSelectedCustomerId(walkIn.id);
+      } else {
+        setSelectedCustomerId(customers[0].id);
+      }
+    }
+  }, [customers, selectedCustomerId]);
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === selectedCustomerId) || null,
@@ -226,6 +256,80 @@ export const MobilePOS: React.FC<{
       ? cashTendered - grandTotalRs
       : 0;
 
+  // Handler for Quick Client Creation inside the POS drawer
+  const handleCreateQuickClient = async () => {
+    if (!quickClientName.trim()) {
+      message.error("Please enter client name");
+      return;
+    }
+    if (!shopId) return;
+
+    setCreatingClient(true);
+    try {
+      const res = await createCustomer({
+        resource: "customers",
+        values: {
+          name: quickClientName.trim(),
+          phone: quickClientPhone.trim() || null,
+          shop_id: shopId,
+          created_by: userId,
+          updated_by: userId,
+          is_active: true,
+        },
+      });
+
+      const newId = res?.data?.id;
+      if (newId) {
+        setSelectedCustomerId(newId);
+        message.success(`Client ${quickClientName} added and selected!`);
+      }
+      setShowQuickAddClient(false);
+      setQuickClientName("");
+      setQuickClientPhone("");
+      await customersQuery?.refetch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create client";
+      message.error(msg);
+    } finally {
+      setCreatingClient(false);
+    }
+  };
+
+  // Handler to select or create a Walk-in Customer
+  const handleSelectWalkIn = async () => {
+    const walkIn = customers.find((c) =>
+      c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
+    );
+    if (walkIn) {
+      setSelectedCustomerId(walkIn.id);
+      setCustomerDrawerOpen(false);
+      return;
+    }
+
+    // Auto-create a Walk-in Customer record so DB foreign key / NOT NULL constraint is satisfied
+    if (!shopId) return;
+    try {
+      const res = await createCustomer({
+        resource: "customers",
+        values: {
+          name: "Walk-in Customer",
+          phone: "9999999999",
+          shop_id: shopId,
+          created_by: userId,
+          updated_by: userId,
+          is_active: true,
+        },
+      });
+      if (res?.data?.id) {
+        setSelectedCustomerId(res.data.id);
+      }
+      await customersQuery?.refetch();
+      setCustomerDrawerOpen(false);
+    } catch {
+      message.error("Could not set walk-in customer");
+    }
+  };
+
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
       message.error("Cart is empty");
@@ -235,34 +339,35 @@ export const MobilePOS: React.FC<{
       message.error("No active shop found");
       return;
     }
+    if (!selectedCustomerId) {
+      message.warning("Please select a client for this invoice");
+      setCheckoutDrawerOpen(false);
+      setCustomerDrawerOpen(true);
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const invNum = `INV-${dayjs().format("YYYYMMDD-HHmmss")}`;
-
-      // 1. Create Invoice
+      // 1. Create Invoice with Postgres-compliant columns only
       const invoiceRes = await createInvoice({
         resource: "invoices",
         values: {
           shop_id: shopId,
-          customer_id: selectedCustomerId || null,
-          invoice_number: invNum,
+          customer_id: selectedCustomerId,
           invoice_date: dayjs().format("YYYY-MM-DD"),
           subtotal_amount_paise: subtotalPaise,
           total_making_charges_paise: cart.reduce((sum, i) => sum + i.makingChargePaise, 0),
           discount_amount_paise: discountPaise,
           total_amount_paise: grandTotalPaise,
-          paid_amount_paise: effectivePaid,
-          balance_amount_paise: balancePaise,
-          payment_method: paymentMode,
-          payment_status: balancePaise === 0 ? "PAID" : effectivePaid > 0 ? "PARTIAL" : "UNPAID",
-          is_cancelled: false,
+          notes: paymentMode ? `Paid via ${paymentMode}` : null,
+          created_by: userId,
+          updated_by: userId,
         },
       });
 
       const newInvId = invoiceRes?.data?.id;
 
-      // 2. Create Items
+      // 2. Create Items & decrement stock
       for (const item of cart) {
         await createInvoiceItem({
           resource: "invoice_items",
@@ -272,6 +377,9 @@ export const MobilePOS: React.FC<{
             item_name: item.ornament.name,
             quantity: item.quantity,
             weight_mg: item.ornament.weight_mg || Math.round(item.weightGrams * 1000),
+            metal_type_name: item.ornament.metal_type?.name || "Gold",
+            purity_value: item.ornament.purity_level?.purity_value || 916,
+            purity_display_name: item.ornament.purity_level?.display_name || "22K",
             rate_per_gram_paise: item.ratePerGram,
             making_charge_per_gram_paise: Math.round(item.makingChargePaise / item.weightGrams),
             metal_amount_paise: item.totalPaise - item.makingChargePaise,
@@ -279,9 +387,22 @@ export const MobilePOS: React.FC<{
             line_total_paise: item.totalPaise,
           },
         });
+
+        // Decrement stock
+        if (item.ornament.id) {
+          const currentQty = item.ornament.quantity ?? 1;
+          await updateOrnament({
+            resource: "ornaments",
+            id: item.ornament.id,
+            values: {
+              quantity: Math.max(0, currentQty - item.quantity),
+              updated_by: userId,
+            },
+          });
+        }
       }
 
-      message.success(`Bill #${invNum} created successfully!`);
+      message.success("Invoice created successfully!");
       setCart([]);
       setCheckoutDrawerOpen(false);
       navigate(`/invoices/show/${newInvId}`);
@@ -359,7 +480,9 @@ export const MobilePOS: React.FC<{
           backgroundColor: selectedCustomer ? token.colorPrimaryBg : token.colorBgElevated,
           border: `1px solid ${selectedCustomer ? token.colorPrimaryBorder : token.colorBorderSecondary}`,
           cursor: "pointer",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+          transition: "all 0.15s ease",
+          WebkitTapHighlightColor: "transparent",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
@@ -368,51 +491,58 @@ export const MobilePOS: React.FC<{
             style={{
               backgroundColor: selectedCustomer ? token.colorPrimary : token.colorFillAlter,
               color: selectedCustomer ? "#fff" : token.colorTextSecondary,
-              fontWeight: 700,
-              fontSize: 14,
               flexShrink: 0,
             }}
           >
-            {selectedCustomer ? selectedCustomer.name[0]?.toUpperCase() : <User size={18} />}
+            {selectedCustomer ? (
+              (selectedCustomer.name?.[0] || "C").toUpperCase()
+            ) : (
+              <User size={16} />
+            )}
           </Avatar>
+
           <div style={{ minWidth: 0, flex: 1 }}>
+            <span
+              style={{
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                color: token.colorTextSecondary,
+                display: "block",
+                fontWeight: 600,
+              }}
+            >
+              Customer
+            </span>
             <Text
               strong
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 display: "block",
                 lineHeight: 1.2,
-                color: selectedCustomer ? token.colorPrimaryText : token.colorText,
+                color: selectedCustomer ? token.colorPrimary : token.colorText,
               }}
               ellipsis
             >
-              {selectedCustomer ? selectedCustomer.name : "Walk-in Customer"}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 2 }}>
-              {selectedCustomer
-                ? selectedCustomer.phone || selectedCustomer.customer_code || "Linked Client"
-                : "Tap to link a client to bill"}
+              {selectedCustomer ? selectedCustomer.name : "Select or Add Customer"}
             </Text>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 4, color: token.colorPrimary, flexShrink: 0 }}>
-          <span style={{ fontSize: 12, fontWeight: 600 }}>
-            {selectedCustomer ? "Change" : "Select"}
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, color: token.colorPrimary }}>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>Change</span>
           <ChevronRight size={14} />
         </div>
       </div>
 
-      {/* Search Input & Category Pills */}
+      {/* Ornament Search & Category Pills */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <Input
           prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-          placeholder="Search ornaments or SKU..."
+          placeholder="Search items or scan barcode..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           allowClear
-          inputMode="search"
           style={{
             height: 42,
             borderRadius: 12,
@@ -453,7 +583,7 @@ export const MobilePOS: React.FC<{
                   selectedMetalFilter === cat ? "#fff" : token.colorTextSecondary,
                 boxShadow:
                   selectedMetalFilter === cat
-                    ? "0 2px 6px rgba(0,0,0,0.12)"
+                    ? "0 2px 6px rgba(37, 99, 235, 0.2)"
                     : "none",
               }}
             >
@@ -519,73 +649,61 @@ export const MobilePOS: React.FC<{
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 4,
-                      background: token.colorBgContainer,
+                      backgroundColor: token.colorBgElevated,
                       borderRadius: 8,
-                      padding: "2px",
                       border: `1px solid ${token.colorBorderSecondary}`,
+                      overflow: "hidden",
                     }}
                   >
                     <button
                       type="button"
-                      aria-label="Decrease quantity"
                       onClick={() => handleUpdateQty(item.ornament.id, -1)}
                       style={{
                         width: 32,
                         height: 32,
-                        borderRadius: 6,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
                       }}
                     >
-                      <Minus size={14} />
+                      <Minus size={13} />
                     </button>
-                    <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: "center" }}>
+                    <span style={{ width: 24, textAlign: "center", fontSize: 12, fontWeight: 700 }}>
                       {item.quantity}
                     </span>
                     <button
                       type="button"
-                      aria-label="Increase quantity"
                       onClick={() => handleUpdateQty(item.ornament.id, 1)}
                       style={{
                         width: 32,
                         height: 32,
-                        borderRadius: 6,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        border: "none",
+                        backgroundColor: "transparent",
+                        cursor: "pointer",
                       }}
                     >
-                      <Plus size={14} />
+                      <Plus size={13} />
                     </button>
                   </div>
 
-                  {/* Distinct Danger Delete Button */}
                   <button
                     type="button"
-                    aria-label="Remove item"
                     onClick={() => handleRemoveItem(item.ornament.id)}
                     style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 8,
-                      background: "rgba(239, 68, 68, 0.1)",
                       border: "none",
-                      cursor: "pointer",
+                      background: "transparent",
                       color: token.colorError,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      padding: 6,
+                      cursor: "pointer",
                     }}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
@@ -594,7 +712,7 @@ export const MobilePOS: React.FC<{
         </div>
       )}
 
-      {/* Catalog Items Grid */}
+      {/* Catalog Grid */}
       <div>
         <Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, color: token.colorTextSecondary }}>
           Catalog Items ({filteredOrnaments.length})
@@ -729,96 +847,140 @@ export const MobilePOS: React.FC<{
         </div>
       )}
 
-      {/* Customer Selection Drawer with Search */}
+      {/* Customer Selection Drawer with Search & Quick Inline Add */}
       <Drawer
-        title="Select Customer"
+        title="Select Client"
         placement="bottom"
-        height="75%"
+        height="80%"
         open={customerDrawerOpen}
         onClose={() => setCustomerDrawerOpen(false)}
         styles={{ body: { padding: "16px 16px" } }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Customer Search Bar */}
-          <Input
-            prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-            placeholder="Search name, phone or code..."
-            value={customerSearchTerm}
-            onChange={(e) => setCustomerSearchTerm(e.target.value)}
-            allowClear
-            style={{ height: 42, borderRadius: 10 }}
-          />
-
-          {/* Walk-in Option */}
-          <div
-            onClick={() => {
-              setSelectedCustomerId(null);
-              setCustomerDrawerOpen(false);
-            }}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 12,
-              backgroundColor: !selectedCustomerId ? token.colorPrimaryBg : token.colorFillAlter,
-              border: `1px solid ${!selectedCustomerId ? token.colorPrimary : token.colorBorderSecondary}`,
-              cursor: "pointer",
-            }}
-          >
-            <Text strong style={{ fontSize: 13 }}>Walk-in Customer</Text>
-            <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-              Standard counter sale without customer profile
-            </Text>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-            <Text strong style={{ fontSize: 13 }}>
-              Saved Clients ({filteredCustomers.length})
-            </Text>
-            <Button
-              type="link"
-              size="small"
-              icon={<UserPlus size={14} />}
-              onClick={() => {
-                setCustomerDrawerOpen(false);
-                navigate("/customers");
+          {/* Quick Create Mode */}
+          {showQuickAddClient ? (
+            <div
+              style={{
+                backgroundColor: token.colorFillAlter,
+                borderRadius: 14,
+                padding: 14,
+                border: `1px solid ${token.colorPrimaryBorder}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
               }}
             >
-              Add Client
-            </Button>
-          </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>Quick Add Client</span>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<X size={14} />}
+                  onClick={() => setShowQuickAddClient(false)}
+                />
+              </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "42vh", overflowY: "auto" }}>
-            {filteredCustomers.map((c) => (
+              <Input
+                placeholder="Client Name *"
+                value={quickClientName}
+                onChange={(e) => setQuickClientName(e.target.value)}
+                style={{ height: 38, borderRadius: 8 }}
+              />
+
+              <Input
+                placeholder="Phone Number (optional)"
+                value={quickClientPhone}
+                onChange={(e) => setQuickClientPhone(e.target.value)}
+                style={{ height: 38, borderRadius: 8 }}
+              />
+
+              <Button
+                type="primary"
+                loading={creatingClient}
+                onClick={handleCreateQuickClient}
+                style={{ height: 38, borderRadius: 8, fontWeight: 600 }}
+              >
+                Save & Select Client
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Customer Search Bar */}
+              <Input
+                prefix={<Search size={16} color={token.colorTextPlaceholder} />}
+                placeholder="Search name, phone or code..."
+                value={customerSearchTerm}
+                onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                allowClear
+                style={{ height: 42, borderRadius: 10 }}
+              />
+
+              {/* Walk-in Option */}
               <div
-                key={c.id}
-                onClick={() => {
-                  setSelectedCustomerId(c.id);
-                  setCustomerDrawerOpen(false);
-                }}
+                onClick={handleSelectWalkIn}
                 style={{
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  backgroundColor: selectedCustomerId === c.id ? token.colorPrimaryBg : token.colorFillAlter,
-                  border: `1px solid ${selectedCustomerId === c.id ? token.colorPrimary : token.colorBorderSecondary}`,
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  backgroundColor: !selectedCustomerId ? token.colorPrimaryBg : token.colorFillAlter,
+                  border: `1px solid ${!selectedCustomerId ? token.colorPrimary : token.colorBorderSecondary}`,
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
                 }}
               >
-                <div>
-                  <Text strong style={{ fontSize: 13, display: "block" }}>
-                    {c.name}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    {c.phone || c.customer_code}
-                  </Text>
-                </div>
-                {selectedCustomerId === c.id && (
-                  <CheckCircle size={16} color={token.colorPrimary} />
-                )}
+                <Text strong style={{ fontSize: 13 }}>Walk-in Customer</Text>
+                <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                  Standard counter sale without client profile
+                </Text>
               </div>
-            ))}
-          </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+                <Text strong style={{ fontSize: 13 }}>
+                  Saved Clients ({filteredCustomers.length})
+                </Text>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<UserPlus size={14} />}
+                  onClick={() => setShowQuickAddClient(true)}
+                >
+                  Quick Add
+                </Button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "38vh", overflowY: "auto" }}>
+                {filteredCustomers.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedCustomerId(c.id);
+                      setCustomerDrawerOpen(false);
+                    }}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      backgroundColor: selectedCustomerId === c.id ? token.colorPrimaryBg : token.colorFillAlter,
+                      border: `1px solid ${selectedCustomerId === c.id ? token.colorPrimary : token.colorBorderSecondary}`,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <Text strong style={{ fontSize: 13, display: "block" }}>
+                        {c.name}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        {c.phone || c.customer_code}
+                      </Text>
+                    </div>
+                    {selectedCustomerId === c.id && (
+                      <CheckCircle size={16} color={token.colorPrimary} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </Drawer>
 

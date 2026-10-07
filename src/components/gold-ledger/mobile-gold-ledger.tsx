@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { useList, useGetIdentity, useUpdate } from "@refinedev/core";
+import { useNavigate } from "react-router";
+import { useList, useGetIdentity, useCreate, useUpdate } from "@refinedev/core";
 import { useDrawerForm } from "@refinedev/antd";
 import {
   Typography,
@@ -41,6 +42,7 @@ const formatRs = (val: number): string => {
 
 export const MobileGoldLedger: React.FC = () => {
   const { token } = theme.useToken();
+  const navigate = useNavigate();
   const { data: identity } = useGetIdentity<{ id: string }>();
   const userId = identity?.id;
 
@@ -49,7 +51,10 @@ export const MobileGoldLedger: React.FC = () => {
   const [showRecord, setShowRecord] = useState<IGoldLoan | null>(null);
   const [editingLoan, setEditingLoan] = useState<IGoldLoan | null>(null);
 
-  // Refine Drawer Form for Loan create & edit
+  const { mutateAsync: createLoan } = useCreate<IGoldLoan>();
+  const { mutateAsync: updateLoan } = useUpdate<IGoldLoan>();
+
+  // Refine Drawer Form for Loan create & edit (retained as backup for edit)
   const {
     drawerProps,
     formProps,
@@ -76,8 +81,6 @@ export const MobileGoldLedger: React.FC = () => {
     pagination: { mode: "server", pageSize: 50 },
     queryOptions: { enabled: !!userId },
   });
-
-  const { mutateAsync: updateLoan } = useUpdate<IGoldLoan>();
 
   const loans = (query?.data?.data ?? []) as IGoldLoan[];
   const isLoading = query?.isLoading;
@@ -116,15 +119,44 @@ export const MobileGoldLedger: React.FC = () => {
   }, [loans, searchTerm, statusFilter]);
 
   const handleCreateNew = () => {
-    setEditingLoan(null);
-    formProps.form?.resetFields();
-    showFormDrawer();
+    navigate("/gold-ledger/new");
   };
 
   const handleEdit = (loan: IGoldLoan, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditingLoan(loan);
     showFormDrawer(loan.id);
+  };
+
+  const handleFinishLoan = async (values: Partial<IGoldLoan>) => {
+    try {
+      if (editingLoan) {
+        await updateLoan({
+          resource: "gold_loans",
+          id: editingLoan.id,
+          values: {
+            ...values,
+            user_id: userId,
+          },
+        });
+        message.success(`Loan for ${values.customer_name || ""} updated`);
+      } else {
+        await createLoan({
+          resource: "gold_loans",
+          values: {
+            ...values,
+            user_id: userId,
+          },
+        });
+        message.success(`Gold loan for ${values.customer_name || ""} created`);
+      }
+      setEditingLoan(null);
+      closeFormDrawer();
+      query?.refetch();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save loan";
+      message.error(msg);
+    }
   };
 
   const handleSettleLoan = async (loan: IGoldLoan, e?: React.MouseEvent) => {
@@ -136,25 +168,24 @@ export const MobileGoldLedger: React.FC = () => {
         values: {
           status: "closed",
           closure_date: dayjs().format("YYYY-MM-DD"),
+          user_id: userId,
         },
       });
-      message.success(`Loan for ${loan.customer_name} marked as closed & settled!`);
-      if (showRecord?.id === loan.id) {
-        setShowRecord(null);
-      }
-      query.refetch();
-    } catch (err: any) {
-      message.error(err.message || "Failed to settle loan.");
+      message.success(`Loan for ${loan.customer_name} settled and closed!`);
+      query?.refetch();
+    } catch {
+      message.error("Failed to settle loan");
     }
   };
 
   const handleWhatsAppReminder = (e: React.MouseEvent, loan: IGoldLoan) => {
     e.stopPropagation();
-    const dueDate = dayjs(loan.loan_date).add(loan.duration_months || 1, "month").format("D MMM YYYY");
-    const msg = `Hello ${loan.customer_name}, this is a gentle reminder regarding your pledged gold loan with Shringar Jewellers. Principal: ${formatRs(loan.loan_amount)}, Interest: ${formatRs(loan.interest_amount)}. Due Date: ${dueDate}.`;
-    const digits = loan.contact_no?.replace(/\D/g, "") || "";
-    const waNumber = digits.length === 10 ? `91${digits}` : digits;
-    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
+    const cleanNum = loan.contact_no?.replace(/\D/g, "");
+    if (!cleanNum) return;
+    const msg = encodeURIComponent(
+      `Dear ${loan.customer_name}, gentle reminder regarding your gold loan (#${loan.id?.slice(0, 6)}). Outstanding principal: ₹${loan.loan_amount?.toLocaleString("en-IN")}. Regards, Shringar Jewellers.`
+    );
+    window.open(`https://wa.me/91${cleanNum}?text=${msg}`, "_blank");
   };
 
   return (
@@ -167,7 +198,7 @@ export const MobileGoldLedger: React.FC = () => {
         paddingBottom: "calc(88px + env(safe-area-inset-bottom, 16px))",
       }}
     >
-      {/* Top Header */}
+      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -181,7 +212,7 @@ export const MobileGoldLedger: React.FC = () => {
             Gold Loan Ledger
           </Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {filteredLoans.length} {filteredLoans.length === 1 ? "entry" : "entries"} active
+            {runningLoans.length} active pledges • {formatRs(totalReceivable)}
           </Text>
         </div>
 
@@ -204,154 +235,145 @@ export const MobileGoldLedger: React.FC = () => {
         </Button>
       </div>
 
-      {/* 3-Column Financial Summary Strip */}
+      {/* Aggregate Balance Mini-Card */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 8,
-          backgroundColor: token.colorBgElevated,
           borderRadius: 14,
-          padding: "12px 10px",
-          border: `1px solid ${token.colorBorderSecondary}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+          padding: "12px 14px",
+          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          color: "#fff",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
         }}
       >
         <div>
-          <Text type="secondary" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>
-            Principal
-          </Text>
-          <Text strong style={{ fontSize: 14, display: "block", marginTop: 2, color: token.colorText }}>
+          <span style={{ fontSize: 11, opacity: 0.7, display: "block" }}>TOTAL PRINCIPAL</span>
+          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: -0.2 }}>
             {formatRs(totalPrincipal)}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 10 }}>
-            {runningLoans.length} running
-          </Text>
+          </span>
         </div>
-
-        <div style={{ borderLeft: `1px solid ${token.colorBorderSecondary}`, paddingLeft: 8 }}>
-          <Text type="secondary" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>
-            Interest
-          </Text>
-          <Text strong style={{ fontSize: 14, display: "block", marginTop: 2, color: token.colorWarning }}>
+        <div>
+          <span style={{ fontSize: 11, opacity: 0.7, display: "block" }}>ACCRUED INTEREST</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#facc15", letterSpacing: -0.2 }}>
             {formatRs(totalInterest)}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 10 }}>
-            Accrued
-          </Text>
-        </div>
-
-        <div style={{ borderLeft: `1px solid ${token.colorBorderSecondary}`, paddingLeft: 8 }}>
-          <Text type="secondary" style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>
-            Total Due
-          </Text>
-          <Text strong style={{ fontSize: 14, display: "block", marginTop: 2, color: token.colorPrimary }}>
-            {formatRs(totalReceivable)}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 10 }}>
-            Settlement
-          </Text>
+          </span>
         </div>
       </div>
 
-      {/* Search Input */}
-      <Input
-        prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-        placeholder="Search customer, phone or ornament..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        allowClear
-        inputMode="search"
-        style={{
-          height: 44,
-          borderRadius: 12,
-          fontSize: 14,
-          background: token.colorBgElevated,
-          border: `1px solid ${token.colorBorderSecondary}`,
-        }}
-      />
-
-      {/* Status Filter Chips */}
+      {/* Status Filter Tabs */}
       <div
         style={{
           display: "flex",
           gap: 6,
-          overflowX: "auto",
-          paddingBottom: 4,
-          scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch",
+          backgroundColor: token.colorBgLayout,
+          padding: 4,
+          borderRadius: 12,
+          border: `1px solid ${token.colorBorderSecondary}`,
         }}
       >
         {[
-          { key: "ALL", label: "All Loans", testId: "mobile-loan-filter-all" },
-          { key: "ACTIVE", label: "Running" },
+          { key: "ALL", label: `All (${loans.length})` },
+          { key: "ACTIVE", label: `Active (${runningLoans.length})` },
           { key: "OVERDUE", label: "Overdue" },
           { key: "CLOSED", label: "Closed" },
-        ].map((filter) => {
-          const isSelected = statusFilter === filter.key;
+        ].map((tab) => {
+          const isSelected = statusFilter === tab.key;
           return (
             <button
-              key={filter.key}
-              data-testid={filter.testId}
+              key={tab.key}
               type="button"
-              onClick={() => setStatusFilter(filter.key)}
+              onClick={() => setStatusFilter(tab.key)}
               style={{
-                padding: "8px 16px",
-                minHeight: 38,
-                borderRadius: 20,
-                border: isSelected ? "none" : `1px solid ${token.colorBorderSecondary}`,
+                flex: 1,
+                padding: "6px 0",
+                borderRadius: 8,
+                border: "none",
                 fontSize: 12,
                 fontWeight: isSelected ? 600 : 500,
+                backgroundColor: isSelected ? token.colorBgElevated : "transparent",
+                color: isSelected ? token.colorPrimary : token.colorTextSecondary,
+                boxShadow: isSelected ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                 cursor: "pointer",
-                whiteSpace: "nowrap",
-                backgroundColor: isSelected ? token.colorPrimary : token.colorBgElevated,
-                color: isSelected ? "#fff" : token.colorTextSecondary,
-                boxShadow: isSelected ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
                 transition: "all 0.15s ease",
               }}
             >
-              {filter.label}
+              {tab.label}
             </button>
           );
         })}
       </div>
 
-      {/* Loan Cards List */}
+      {/* Search Input */}
+      <Input
+        prefix={<Search size={16} color={token.colorTextPlaceholder} style={{ marginRight: 4 }} />}
+        placeholder="Search borrower or collateral..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        allowClear
+        inputMode="search"
+        style={{
+          height: 42,
+          borderRadius: 12,
+          fontSize: 14,
+          backgroundColor: token.colorBgElevated,
+          border: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      />
+
+      {/* Loans List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {isLoading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <Skeleton active paragraph={{ rows: 2 }} />
-            <Skeleton active paragraph={{ rows: 2 }} />
-          </div>
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                backgroundColor: token.colorBgElevated,
+                borderRadius: 14,
+                padding: 14,
+                border: `1px solid ${token.colorBorderSecondary}`,
+              }}
+            >
+              <Skeleton active paragraph={{ rows: 2 }} />
+            </div>
+          ))
         ) : filteredLoans.length === 0 ? (
-          <Empty description="No gold loans found" style={{ margin: "32px 0" }} />
+          <Empty
+            description={
+              <div style={{ padding: "16px 0" }}>
+                <Text type="secondary">No loan records match filter</Text>
+                {searchTerm && (
+                  <div style={{ marginTop: 8 }}>
+                    <Button size="small" onClick={() => setSearchTerm("")}>
+                      Clear Search
+                    </Button>
+                  </div>
+                )}
+              </div>
+            }
+          />
         ) : (
           filteredLoans.map((loan) => {
             const isClosed = loan.status === "closed";
             const dueDate = dayjs(loan.loan_date).add(loan.duration_months || 1, "month");
             const isOverdue = !isClosed && dueDate.isBefore(dayjs(), "day");
-            const digits = loan.contact_no?.replace(/\D/g, "") || "";
-            const waNumber = digits.length === 10 ? `91${digits}` : digits;
+            const totalDue = Number(loan.loan_amount || 0) + Number(loan.interest_amount || 0);
 
             return (
               <div
                 key={loan.id}
-                data-testid="mobile-loan-card"
-                role="button"
-                tabIndex={0}
                 onClick={() => setShowRecord(loan)}
                 style={{
                   backgroundColor: token.colorBgElevated,
                   borderRadius: 14,
                   padding: "12px 14px",
-                  border: `1px solid ${token.colorBorderSecondary}`,
                   display: "flex",
                   flexDirection: "column",
                   gap: 10,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
+                  border: `1px solid ${isOverdue ? "#fecaca" : token.colorBorderSecondary}`,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
                   cursor: "pointer",
-                  transition: "transform 0.1s ease",
-                  WebkitTapHighlightColor: "transparent",
                   opacity: isClosed ? 0.75 : 1,
                 }}
               >
@@ -391,18 +413,17 @@ export const MobileGoldLedger: React.FC = () => {
                     }
                     style={{
                       margin: 0,
-                      borderRadius: 8,
-                      fontSize: 10,
+                      borderRadius: 10,
+                      fontSize: 11,
                       fontWeight: 600,
-                      padding: "1px 6px",
-                      border: "none",
+                      padding: "1px 8px",
                     }}
                   >
-                    {isClosed ? "CLOSED" : isOverdue ? "OVERDUE" : "RUNNING"}
+                    {isClosed ? "Settled" : isOverdue ? "Overdue" : "Active"}
                   </Tag>
                 </div>
 
-                {/* Card Middle: Customer info, Pledged gold weight & Principal */}
+                {/* Card Middle: Borrower Name & Amount */}
                 <div
                   style={{
                     display: "flex",
@@ -410,46 +431,43 @@ export const MobileGoldLedger: React.FC = () => {
                     justifyContent: "space-between",
                   }}
                 >
-                  <div style={{ minWidth: 0, flex: 1, marginRight: 8 }}>
-                    <Text strong style={{ fontSize: 14, display: "block" }} ellipsis>
+                  <div>
+                    <Title level={5} style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
                       {loan.customer_name}
-                    </Text>
+                    </Title>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "#d97706",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 3,
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Scale size={11} />
-                        {loan.ornament_details || "Gold Ornaments"}
-                      </span>
+                      <Scale size={12} color={token.colorTextSecondary} />
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {loan.ornament_details || "Collateral"}
+                      </Text>
                     </div>
                   </div>
 
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <Text strong style={{ fontSize: 16, display: "block", color: token.colorPrimary }}>
-                      {formatRs(loan.loan_amount)}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      @ {loan.interest_rate}% / mo
-                    </Text>
+                  <div style={{ textAlign: "right" }}>
+                    <span
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: token.colorText,
+                        display: "block",
+                      }}
+                    >
+                      {formatRs(Number(loan.loan_amount || 0))}
+                    </span>
+                    <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
+                      Due: {formatRs(totalDue)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Card Bottom: Actions */}
+                {/* Card Bottom: Quick Actions */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    borderTop: `1px solid ${token.colorFillAlter}`,
+                    gap: 8,
                     paddingTop: 8,
-                    gap: 6,
+                    borderTop: `1px dashed ${token.colorBorderSecondary}`,
                   }}
                 >
                   {/* Phone Dial Trigger */}
@@ -469,13 +487,13 @@ export const MobileGoldLedger: React.FC = () => {
                         border: `1px solid ${token.colorPrimaryBorder}`,
                         textDecoration: "none",
                       }}
-                      aria-label="Call customer"
+                      aria-label="Call borrower"
                     >
                       <Phone size={14} />
                     </a>
                   )}
 
-                  {/* WhatsApp Reminder Trigger */}
+                  {/* WhatsApp Reminder Direct Action */}
                   {loan.contact_no && !isClosed && (
                     <button
                       type="button"
@@ -565,7 +583,7 @@ export const MobileGoldLedger: React.FC = () => {
         )}
       </div>
 
-      {/* Show Drawer (Proper props passed: record, open, onClose, onEdit, onCloseLoan) */}
+      {/* Show Drawer */}
       <LoanShowDrawer
         open={!!showRecord}
         record={showRecord}
@@ -578,7 +596,7 @@ export const MobileGoldLedger: React.FC = () => {
         onCloseLoan={(loan) => handleSettleLoan(loan)}
       />
 
-      {/* Create / Edit Drawer (Proper props: action, drawerProps, formProps, onFinish, close) */}
+      {/* Create / Edit Drawer */}
       <LoanDrawer
         action={editingLoan ? "edit" : "create"}
         drawerProps={drawerProps}
@@ -588,7 +606,7 @@ export const MobileGoldLedger: React.FC = () => {
           setEditingLoan(null);
           closeFormDrawer();
         }}
-        onFinish={formProps.onFinish as any}
+        onFinish={handleFinishLoan}
       />
     </div>
   );

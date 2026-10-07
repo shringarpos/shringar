@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router";
 import { useList } from "@refinedev/core";
-import { useDrawerForm } from "@refinedev/antd";
 import {
   Typography,
   Input,
@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import type { IOrnament, IOrnamentWithDetails } from "../../libs/interfaces";
 import { useShopCheck } from "../../hooks/use-shop-check";
-import { OrnamentDrawer } from "./ornaments/ornament-drawer";
 import { OrnamentShowDrawer } from "./ornaments/ornament-show-drawer";
 
 const { Title, Text } = Typography;
@@ -50,10 +49,9 @@ const getMetalTheme = (metalName?: string) => {
       icon: Sparkles,
     };
   }
-  // Default Gold
   return {
     name: "Gold",
-    badgeBg: "#fef3c7",
+    badgeBg: "#fffbeb",
     badgeText: "#92400e",
     badgeBorder: "#fde68a",
     accent: "#d97706",
@@ -64,29 +62,13 @@ const getMetalTheme = (metalName?: string) => {
 
 export const MobileOrnamentGrid: React.FC = () => {
   const { token } = theme.useToken();
+  const navigate = useNavigate();
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMetal, setSelectedMetal] = useState<string>("all");
   const [showOrnament, setShowOrnament] = useState<IOrnamentWithDetails | null>(null);
-  const [editingOrnament, setEditingOrnament] = useState<IOrnament | null>(null);
-
-  const {
-    drawerProps,
-    formProps,
-    show: showDrawer,
-    close: closeDrawer,
-  } = useDrawerForm<IOrnament>({
-    resource: "ornaments",
-    action: editingOrnament ? "edit" : "create",
-    id: editingOrnament?.id,
-    redirect: false,
-    onMutationSuccess: () => {
-      setEditingOrnament(null);
-      closeDrawer();
-    },
-  });
 
   const { query } = useList<IOrnamentWithDetails>({
     resource: "ornaments",
@@ -119,15 +101,12 @@ export const MobileOrnamentGrid: React.FC = () => {
   }, [ornaments, searchTerm, selectedMetal]);
 
   const handleCreateNew = () => {
-    setEditingOrnament(null);
-    formProps.form?.resetFields();
-    showDrawer();
+    navigate("/ornaments/new");
   };
 
   const handleEdit = (e: React.MouseEvent, orn: IOrnamentWithDetails) => {
     e.stopPropagation();
-    setEditingOrnament(orn);
-    showDrawer(orn.id);
+    navigate(`/ornaments/edit/${orn.id}`);
   };
 
   const metalPills = [
@@ -239,234 +218,171 @@ export const MobileOrnamentGrid: React.FC = () => {
                 transition: "all 0.15s ease",
               }}
             >
-              {Icon && <Icon size={13} strokeWidth={2.2} />}
+              {Icon && <Icon size={14} />}
               <span>{label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* 2-Column Showcase Grid */}
+      {/* Ornaments List */}
       {isLoading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {[1, 2, 3, 4].map((n) => (
-            <div
-              key={n}
-              style={{
-                backgroundColor: token.colorBgElevated,
-                borderRadius: 16,
-                padding: 12,
-                border: `1px solid ${token.colorBorderSecondary}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  height: 90,
-                  borderRadius: 10,
-                  backgroundColor: token.colorFillTertiary,
-                }}
-              />
-              <div style={{ height: 14, width: "70%", borderRadius: 4, backgroundColor: token.colorFillSecondary }} />
-              <div style={{ height: 10, width: "40%", borderRadius: 4, backgroundColor: token.colorFillTertiary }} />
-            </div>
-          ))}
+        <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+          <Text type="secondary">Loading showcase pieces...</Text>
         </div>
       ) : filteredOrnaments.length === 0 ? (
-        <div
-          style={{
-            backgroundColor: token.colorBgElevated,
-            borderRadius: 16,
-            padding: "36px 16px",
-            textAlign: "center",
-            border: `1px dashed ${token.colorBorderSecondary}`,
-            margin: "12px 0",
-          }}
-        >
-          <Empty
-            description={
-              <div>
-                <Text strong style={{ fontSize: 14, display: "block" }}>
-                  No ornaments match your filter
-                </Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Try changing your search term or category
-                </Text>
+        <Empty
+          description={
+            <div style={{ padding: "20px 0" }}>
+              <Text type="secondary">No ornaments found matching your criteria</Text>
+              <div style={{ marginTop: 12 }}>
+                <Button
+                  icon={<RotateCcw size={14} />}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedMetal("all");
+                  }}
+                  size="small"
+                >
+                  Clear Filters
+                </Button>
               </div>
-            }
-          >
-            {(searchTerm || selectedMetal !== "all") && (
-              <Button
-                size="small"
-                icon={<RotateCcw size={13} />}
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedMetal("all");
-                }}
-                style={{ marginTop: 8, borderRadius: 8 }}
-              >
-                Reset Filters
-              </Button>
-            )}
-          </Empty>
-        </div>
+            </div>
+          }
+        />
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 12,
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filteredOrnaments.map((orn) => {
-            const weightG = orn.weight_mg != null ? (orn.weight_mg / 1000).toFixed(3) : "0.000";
-            const purity = orn.purity_level?.display_name || "22K";
             const metalTheme = getMetalTheme(orn.metal_type?.name);
-            const isOutOfStock = orn.quantity <= 0;
+            const MetalIcon = metalTheme.icon;
+            const weightG = orn.weight_mg ? (orn.weight_mg / 1000).toFixed(2) : "0.00";
+            const isOutOfStock = (orn.quantity ?? 0) <= 0;
 
             return (
               <div
                 key={orn.id}
-                role="button"
-                tabIndex={0}
                 onClick={() => setShowOrnament(orn)}
                 style={{
                   backgroundColor: token.colorBgElevated,
                   borderRadius: 16,
-                  padding: "12px",
-                  border: `1px solid ${token.colorBorderSecondary}`,
+                  padding: "14px 16px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
                   gap: 10,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                  border: `1px solid ${token.colorBorderSecondary}`,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.02)",
                   cursor: "pointer",
-                  transition: "transform 0.1s ease, box-shadow 0.15s ease",
-                  WebkitTapHighlightColor: "transparent",
-                  position: "relative",
-                  opacity: isOutOfStock ? 0.75 : 1,
+                  transition: "transform 0.1s ease, box-shadow 0.1s ease",
+                  opacity: isOutOfStock ? 0.65 : 1,
                 }}
               >
-                {/* Visual Header / Thumbnail Placeholder */}
-                <div
-                  style={{
-                    height: 84,
-                    borderRadius: 12,
-                    background: metalTheme.gradient,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    overflow: "hidden",
-                    border: `1px solid ${metalTheme.badgeBorder}`,
-                  }}
-                >
-                  <metalTheme.icon size={36} color={metalTheme.accent} style={{ opacity: 0.65 }} />
+                {/* Top Row: Title, SKU & Quick Edit */}
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+                      {/* Metal pill tag */}
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          backgroundColor: metalTheme.badgeBg,
+                          color: metalTheme.badgeText,
+                          border: `1px solid ${metalTheme.badgeBorder}`,
+                        }}
+                      >
+                        <MetalIcon size={12} />
+                        {orn.metal_type?.name || "Gold"}
+                        {orn.purity_level?.display_name ? ` • ${orn.purity_level.display_name}` : ""}
+                      </span>
 
-                  {/* Purity Tag (Top Left) */}
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 6,
-                      left: 6,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "2px 6px",
-                      borderRadius: 6,
-                      backgroundColor: metalTheme.badgeBg,
-                      color: metalTheme.badgeText,
-                      border: `1px solid ${metalTheme.badgeBorder}`,
-                      letterSpacing: 0.2,
-                    }}
-                  >
-                    {purity}
-                  </span>
+                      {orn.category?.name && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: token.colorTextSecondary,
+                            backgroundColor: token.colorBgLayout,
+                            padding: "2px 6px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          {orn.category.name}
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Edit Icon Button (Top Right, 32px touch target) */}
+                    <Title
+                      level={5}
+                      style={{
+                        margin: 0,
+                        fontSize: 15,
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {orn.name}
+                    </Title>
+
+                    {orn.sku && (
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: 11,
+                          fontFamily: "monospace",
+                          color: token.colorTextPlaceholder,
+                        }}
+                      >
+                        SKU: {orn.sku}
+                      </Text>
+                    )}
+                  </div>
+
+                  {/* Edit button */}
                   <button
                     type="button"
-                    title="Edit Ornament"
                     onClick={(e) => handleEdit(e, orn)}
                     style={{
-                      position: "absolute",
-                      top: 5,
-                      right: 5,
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: "rgba(255,255,255,0.85)",
-                      border: "1px solid rgba(0,0,0,0.06)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      cursor: "pointer",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      border: `1px solid ${token.colorBorderSecondary}`,
+                      backgroundColor: token.colorBgLayout,
                       color: token.colorTextSecondary,
+                      cursor: "pointer",
+                      flexShrink: 0,
                     }}
+                    aria-label="Edit piece"
                   >
-                    <Edit2 size={12} />
+                    <Edit2 size={15} />
                   </button>
                 </div>
 
-                {/* Details Section */}
-                <div>
-                  <Text
-                    strong
-                    style={{
-                      fontSize: 13,
-                      lineHeight: 1.3,
-                      display: "block",
-                      marginBottom: 2,
-                    }}
-                    ellipsis
-                  >
-                    {orn.name}
-                  </Text>
-                  <Text
-                    type="secondary"
-                    style={{
-                      fontSize: 11,
-                      fontFamily: "monospace",
-                      letterSpacing: 0.3,
-                    }}
-                  >
-                    #{orn.sku || "ORN"}
-                  </Text>
-                </div>
-
-                {/* Metric Strip: Weight & Stock Status */}
+                {/* Bottom Row: Weight & Stock status */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    paddingTop: 6,
+                    paddingTop: 8,
                     borderTop: `1px dashed ${token.colorBorderSecondary}`,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <Scale size={12} color={metalTheme.accent} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: token.colorText }}>
-                      {weightG}
-                      <span style={{ fontSize: 10, fontWeight: 400, color: token.colorTextSecondary }}>
-                        {" "}g
-                      </span>
-                    </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Scale size={14} color={token.colorPrimary} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{weightG} g</span>
                   </div>
 
                   {isOutOfStock ? (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: "#ef4444",
-                        backgroundColor: "#fef2f2",
-                        padding: "1px 5px",
-                        borderRadius: 4,
-                      }}
-                    >
+                    <span style={{ fontSize: 11, fontWeight: 600, color: token.colorError }}>
                       Out of stock
                     </span>
                   ) : (
@@ -490,23 +406,9 @@ export const MobileOrnamentGrid: React.FC = () => {
           const target = showOrnament;
           setShowOrnament(null);
           if (target) {
-            setEditingOrnament(target);
-            showDrawer(target.id);
+            navigate(`/ornaments/edit/${target.id}`);
           }
         }}
-      />
-
-      {/* Create / Edit Ornament Drawer */}
-      <OrnamentDrawer
-        action={editingOrnament ? "edit" : "create"}
-        drawerProps={drawerProps}
-        formProps={formProps}
-        shopId={shopId}
-        close={() => {
-          setEditingOrnament(null);
-          closeDrawer();
-        }}
-        onFinish={formProps.onFinish as any}
       />
     </div>
   );

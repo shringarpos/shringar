@@ -20,7 +20,10 @@ import { dataProvider } from "./providers/data";
 import { Coins, FileText, Gem, Images, LayoutGrid, List, ReceiptIcon, SettingsIcon, ShoppingCart, Store, TrendingUp, Users } from "lucide-react";
 import Dashboard from "./pages/dashboard";
 import Customers from "./pages/customers";
+import CustomerCreatePage from "./pages/customers/create";
 import Ornaments from "./pages/inventory/ornaments";
+import OrnamentCreatePage from "./pages/inventory/ornaments/create";
+import OrnamentEditPage from "./pages/inventory/ornaments/edit";
 import Settings from "./pages/settings";
 import ShopSetup from "./pages/onboarding";
 import { OnboardingGuard } from "./components/onboarding-guard";
@@ -33,6 +36,7 @@ import Invoices from "./pages/invoices";
 import InvoiceShow from "./pages/invoices/show";
 import InvoiceEdit from "./pages/invoices/edit";
 import GoldLedger from "./pages/gold-ledger";
+import GoldLoanCreatePage from "./pages/gold-ledger/create";
 import GoldLedgerReports from "./pages/gold-ledger/reports";
 import DesignGallery from "./pages/design-gallery";
 import AlbumShow from "./pages/design-gallery/album-show";
@@ -169,7 +173,8 @@ function App() {
                     element={
                       <Authenticated
                         key="authenticated-inner"
-                        fallback={<CatchAllNavigate to="/login" />}
+                        fallback={<CatchAllNavigate to="/login" />
+                      }
                       >
                         <OnboardingGuard>
                           <MobileShell SidebarTitle={SidebarTitle}>
@@ -189,9 +194,12 @@ function App() {
                     </Route>
                     <Route path="/customers">
                       <Route index element={<Customers />} />
+                      <Route path="new" element={<CustomerCreatePage />} />
                     </Route>
                     <Route path="/ornaments">
                       <Route index element={<Ornaments />} />
+                      <Route path="new" element={<OrnamentCreatePage />} />
+                      <Route path="edit/:id" element={<OrnamentEditPage />} />
                     </Route>
                     <Route path="/categories">
                       <Route index element={<Categories />} />
@@ -201,6 +209,7 @@ function App() {
                     </Route>
                     <Route path="/gold-ledger">
                       <Route index element={<GoldLedger />} />
+                      <Route path="new" element={<GoldLoanCreatePage />} />
                       <Route path="reports" element={<GoldLedgerReports />} />
                     </Route>
                     <Route path="/design-gallery">

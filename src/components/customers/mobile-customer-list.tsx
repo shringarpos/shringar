@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router";
 import { useList } from "@refinedev/core";
 import { useModalForm } from "@refinedev/antd";
 import {
@@ -19,7 +20,6 @@ import {
   Edit,
   MessageCircle,
   MapPin,
-  UserCheck,
 } from "lucide-react";
 import type { ICustomer } from "../../libs/interfaces";
 import { useShopCheck } from "../../hooks/use-shop-check";
@@ -30,6 +30,7 @@ const { Title, Text } = Typography;
 
 export const MobileCustomerList: React.FC = () => {
   const { token } = theme.useToken();
+  const navigate = useNavigate();
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
 
@@ -37,7 +38,7 @@ export const MobileCustomerList: React.FC = () => {
   const [showCustomer, setShowCustomer] = useState<ICustomer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<ICustomer | null>(null);
 
-  // Modal form for creating/editing customer
+  // Modal form for creating/editing customer (retained as backup for edit)
   const {
     modalProps,
     formProps,
@@ -71,16 +72,14 @@ export const MobileCustomerList: React.FC = () => {
     return customers.filter(
       (c) =>
         c.name.toLowerCase().includes(term) ||
+        c.phone?.toLowerCase().includes(term) ||
         c.customer_code?.toLowerCase().includes(term) ||
-        c.phone?.includes(term) ||
         c.address?.toLowerCase().includes(term)
     );
   }, [customers, searchTerm]);
 
   const handleCreateNew = () => {
-    setEditingCustomer(null);
-    formProps.form?.resetFields();
-    showCustomerModal();
+    navigate("/customers/new");
   };
 
   const handleEdit = (c: ICustomer, e?: React.MouseEvent) => {
@@ -149,148 +148,164 @@ export const MobileCustomerList: React.FC = () => {
           top: 0,
           zIndex: 10,
           backgroundColor: token.colorBgLayout,
-          paddingBottom: 4,
+          padding: "4px 0",
         }}
       >
         <Input
-          prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-          placeholder="Search name, phone, or customer code..."
+          prefix={<Search size={16} color={token.colorTextPlaceholder} style={{ marginRight: 4 }} />}
+          placeholder="Search by name, phone or code..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           allowClear
           inputMode="search"
           style={{
-            height: 44,
+            height: 42,
             borderRadius: 12,
             fontSize: 14,
-            background: token.colorBgElevated,
+            backgroundColor: token.colorBgElevated,
             border: `1px solid ${token.colorBorderSecondary}`,
           }}
         />
       </div>
 
-      {/* Customers Cards List */}
+      {/* Customers List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {isLoading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <Skeleton active paragraph={{ rows: 2 }} />
-            <Skeleton active paragraph={{ rows: 2 }} />
-          </div>
+          Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                backgroundColor: token.colorBgElevated,
+                borderRadius: 14,
+                padding: 14,
+                border: `1px solid ${token.colorBorderSecondary}`,
+              }}
+            >
+              <Skeleton active avatar paragraph={{ rows: 1 }} />
+            </div>
+          ))
         ) : filteredCustomers.length === 0 ? (
           <Empty
             description={
-              <span>
-                {searchTerm ? "No customers matching your search" : "No customers found"}
-              </span>
+              <div style={{ padding: "16px 0" }}>
+                <Text type="secondary">No clients found matching your query</Text>
+                {searchTerm && (
+                  <div style={{ marginTop: 8 }}>
+                    <Button size="small" onClick={() => setSearchTerm("")}>
+                      Clear Search
+                    </Button>
+                  </div>
+                )}
+              </div>
             }
-            style={{ margin: "32px 0" }}
-          >
-            {searchTerm && (
-              <Button size="small" onClick={() => setSearchTerm("")}>
-                Clear Search
-              </Button>
-            )}
-          </Empty>
+          />
         ) : (
           filteredCustomers.map((c) => {
-            const initial = c.name ? c.name[0].toUpperCase() : "C";
-            const digits = cleanPhone(c.phone);
-            const waNumber = digits.length === 10 ? `91${digits}` : digits;
+            const rawDigits = cleanPhone(c.phone);
+            const initials = c.name
+              ? c.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()
+              : "C";
 
             return (
               <div
                 key={c.id}
-                role="button"
-                tabIndex={0}
                 onClick={() => setShowCustomer(c)}
                 style={{
                   backgroundColor: token.colorBgElevated,
                   borderRadius: 14,
                   padding: "12px 14px",
-                  border: `1px solid ${token.colorBorderSecondary}`,
                   display: "flex",
                   flexDirection: "column",
-                  gap: 10,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
+                  gap: 8,
+                  border: `1px solid ${token.colorBorderSecondary}`,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
                   cursor: "pointer",
-                  transition: "transform 0.1s ease",
-                  WebkitTapHighlightColor: "transparent",
                 }}
               >
-                {/* Top Row: Avatar, Name & Code */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ position: "relative" }}>
-                      <Avatar
-                        size={40}
-                        style={{
-                          backgroundColor: token.colorPrimaryBg,
-                          color: token.colorPrimary,
-                          fontWeight: 700,
-                          fontSize: 16,
-                        }}
-                      >
-                        {initial}
-                      </Avatar>
-                      {c.is_active && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            bottom: -1,
-                            right: -1,
-                            width: 10,
-                            height: 10,
-                            borderRadius: 5,
-                            backgroundColor: "#16a34a",
-                            border: `2px solid ${token.colorBgElevated}`,
-                          }}
-                        />
-                      )}
-                    </div>
+                {/* Top Row: Avatar, Name, Code, and Call Action */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <Avatar
+                      style={{
+                        backgroundColor: token.colorPrimary,
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        flexShrink: 0,
+                      }}
+                      size={36}
+                    >
+                      {initials}
+                    </Avatar>
 
-                    <div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <Text strong style={{ fontSize: 14, color: token.colorText }}>
+                        <Text
+                          strong
+                          style={{
+                            fontSize: 14,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           {c.name}
                         </Text>
+                        {!c.is_active && (
+                          <Tag color="default" style={{ margin: 0, fontSize: 10, padding: "0 4px" }}>
+                            Inactive
+                          </Tag>
+                        )}
                       </div>
-                      <Tag
-                        color="blue"
-                        style={{
-                          margin: "2px 0 0",
-                          fontFamily: "monospace",
-                          fontSize: 10,
-                          lineHeight: "16px",
-                          padding: "0 4px",
-                          borderRadius: 4,
-                        }}
-                      >
-                        {c.customer_code}
-                      </Tag>
+
+                      {c.customer_code && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: token.colorPrimary,
+                            fontWeight: 600,
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          #{c.customer_code}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* 1-Tap Call & WhatsApp Direct Triggers */}
-                  {c.phone && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {/* Call action button */}
+                  {rawDigits && (
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                       <a
-                        href={`https://wa.me/${waNumber}`}
+                        href={`https://wa.me/91${rawDigits}`}
                         target="_blank"
-                        rel="noopener noreferrer"
+                        rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        aria-label="WhatsApp customer"
                         style={{
-                          display: "flex",
+                          display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          width: 34,
-                          height: 34,
-                          borderRadius: 17,
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
                           backgroundColor: "#f0fdf4",
                           color: "#16a34a",
                           border: "1px solid #bbf7d0",
                           textDecoration: "none",
                         }}
+                        aria-label="WhatsApp chat"
                       >
                         <MessageCircle size={15} />
                       </a>
@@ -298,17 +313,17 @@ export const MobileCustomerList: React.FC = () => {
                       <a
                         href={`tel:${c.phone}`}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label="Call customer"
                         style={{
-                          display: "flex",
+                          display: "inline-flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           gap: 4,
+                          padding: "0 10px",
+                          height: 36,
                           backgroundColor: token.colorPrimaryBg,
                           color: token.colorPrimary,
                           border: `1px solid ${token.colorPrimaryBorder}`,
-                          padding: "0 10px",
-                          height: 34,
-                          borderRadius: 17,
+                          borderRadius: 18,
                           fontSize: 12,
                           fontWeight: 600,
                           textDecoration: "none",
@@ -351,32 +366,28 @@ export const MobileCustomerList: React.FC = () => {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    borderTop: `1px solid ${token.colorFillAlter}`,
-                    paddingTop: 8,
+                    justifyContent: "flex-end",
                     gap: 8,
+                    paddingTop: 6,
+                    borderTop: `1px dashed ${token.colorBorderSecondary}`,
                   }}
                 >
                   <Button
                     size="small"
-                    type="primary"
-                    ghost
                     icon={<Eye size={13} />}
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowCustomer(c);
                     }}
                     style={{
-                      flex: 1,
                       borderRadius: 8,
                       fontSize: 12,
-                      fontWeight: 600,
-                      height: 34,
+                      height: 36,
+                      padding: "0 14px",
                     }}
                   >
-                    View Ledger
+                    View
                   </Button>
-
                   <Button
                     size="small"
                     icon={<Edit size={13} />}
@@ -384,7 +395,7 @@ export const MobileCustomerList: React.FC = () => {
                     style={{
                       borderRadius: 8,
                       fontSize: 12,
-                      height: 34,
+                      height: 36,
                       padding: "0 14px",
                     }}
                   >
