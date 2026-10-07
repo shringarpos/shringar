@@ -1,7 +1,7 @@
 import { Authenticated, Refine, type TitleProps } from "@refinedev/core";
 import { DevtoolsPanel, DevtoolsProvider } from "@refinedev/devtools";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
-import { GoogleOutlined } from "@ant-design/icons"
+import { GoogleOutlined } from "@ant-design/icons";
 import { AuthPage, ErrorComponent, ThemedLayout, ThemedSider, useNotificationProvider } from "@refinedev/antd";
 import "@refinedev/antd/dist/reset.css";
 import "./index.css";
@@ -58,6 +58,7 @@ const SidebarTitle: React.FC<TitleProps> = ({ collapsed }) => {
 function App() {
   return (
     <BrowserRouter>
+      {/* <GitHubBanner /> */}
       <RefineKbarProvider>
         <ColorModeContextProvider>
           <AntdApp>
@@ -187,6 +188,7 @@ function App() {
                     }
                   >
                     <Route index element={<Dashboard />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/sales/new" element={<CreateSale />} />
                     <Route path="/invoices">
                       <Route index element={<Invoices />} />
@@ -218,7 +220,7 @@ function App() {
                     </Route>
                   </Route>
 
-                  {/* Public Setup Route */}
+                  {/* Public Setup Route & Aliases */}
                   <Route
                     element={
                       <Authenticated
@@ -230,6 +232,8 @@ function App() {
                     }
                   >
                     <Route path="/setup" element={<ShopSetup />} />
+                    <Route path="/onboarding/shop-setup" element={<ShopSetup />} />
+                    <Route path="/onboarding" element={<ShopSetup />} />
                   </Route>
 
                   {/* Public Auth Routes */}

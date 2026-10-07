@@ -11,12 +11,12 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Only check shop if NOT on onboarding route
-    const isOnboardingRoute = location.pathname.startsWith("/onboarding");
+    // Check if on onboarding/setup route
+    const isOnboardingRoute = location.pathname.startsWith("/onboarding") || location.pathname.startsWith("/setup");
     const { hasShop, isLoading } = useShopCheck();
 
     useEffect(() => {
-        // Skip all checks if on onboarding route
+        // Skip all checks if on onboarding/setup route
         if (isOnboardingRoute) {
             return;
         }
@@ -26,9 +26,9 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
             return;
         }
 
-        // If no shop exists, redirect to onboarding
+        // If no shop exists, redirect to onboarding setup
         if (!hasShop) {
-            navigate("/onboarding/shop-setup", { replace: true });
+            navigate("/setup", { replace: true });
         }
     }, [hasShop, isLoading, navigate, isOnboardingRoute]);
 
