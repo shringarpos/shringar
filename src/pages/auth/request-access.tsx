@@ -32,23 +32,28 @@ export const RequestAccessPage: React.FC = () => {
     const normalizedEmail = values.email.toLowerCase().trim();
 
     try {
-      // Check if user already exists
+      // Check if user already exists in access_requests
       const { data: existingUser } = await supabaseClient
         .from("access_requests")
-        .select("id, status")
+        .select("id, status, approval_token")
         .ilike("email", normalizedEmail)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (existingUser) {
-        if (existingUser.status === "approved" || existingUser.status === "registered") {
-          message.info("Your email is already approved! You can create your account or sign in.");
+        if (existingUser.status === "registered") {
+          message.info("Your account is already active! Please sign in.");
           navigate(`/login?email=${encodeURIComponent(normalizedEmail)}`);
           return;
         }
+        if (existingUser.status === "approved" && existingUser.approval_token) {
+          message.success("Your email is already approved! Taking you to create your account.");
+          navigate(`/create-account?token=${encodeURIComponent(existingUser.approval_token)}`);
+          return;
+        }
         if (existingUser.status === "pending") {
-          message.warning("Your request is already pending approval from the admin.");
+          message.warning("Your request is already pending approval from Sahil.");
           setSubmittedEmail(normalizedEmail);
           return;
         }

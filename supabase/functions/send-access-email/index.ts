@@ -12,15 +12,18 @@ async function sendSesEmail({
   to,
   subject,
   html,
+  text,
 }: {
   to: string;
   subject: string;
   html: string;
+  text: string;
 }) {
   const region = Deno.env.get("AWS_EMAIL_REGION") || "ap-south-1";
   const accessKeyId = Deno.env.get("AWS_EMAIL_ACCESS_KEY_ID");
   const secretAccessKey = Deno.env.get("AWS_EMAIL_SECRET_ACCESS_KEY");
-  const source = Deno.env.get("AWS_EMAIL_FROM") || "auth@offensiq.ai";
+  const rawSource = Deno.env.get("AWS_EMAIL_FROM") || "auth@offensiq.ai";
+  const source = `Shringar POS <${rawSource.replace(/.*<|>.*/g, "")}>`;
 
   if (!accessKeyId || !secretAccessKey) {
     throw new Error("AWS SES credentials are not configured in edge function environment.");
@@ -40,6 +43,8 @@ async function sendSesEmail({
     "Message.Subject.Charset": "UTF-8",
     "Message.Body.Html.Charset": "UTF-8",
     "Message.Body.Html.Data": html,
+    "Message.Body.Text.Charset": "UTF-8",
+    "Message.Body.Text.Data": text,
   });
 
   const response = await ses.fetch(`https://email.${region}.amazonaws.com`, {
@@ -80,9 +85,9 @@ serve(async (req) => {
 <html>
 <head><meta charset="utf-8"/></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f6f8fa; margin: 0; padding: 40px 20px;">
-  <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e1e4e8; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+  <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e1e4e8; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
     <div style="text-align: center; margin-bottom: 24px;">
-      <h2 style="color: #1a1a1a; margin: 0; font-size: 22px;">💍 Shringar POS</h2>
+      <h2 style="color: #1a1a1a; margin: 0; font-size: 22px;">💎 Shringar POS</h2>
       <p style="color: #6a737d; margin: 6px 0 0; font-size: 14px;">Access Request Received</p>
     </div>
     <p style="font-size: 15px; color: #24292e; line-height: 1.5;">
@@ -105,10 +110,13 @@ serve(async (req) => {
 </body>
 </html>`;
 
+      const text = `💎 Shringar POS - Access Request Received\n\nA new user has requested access: ${applicantEmail}\n\nApprove this request by opening:\n${approvalUrl}`;
+
       await sendSesEmail({
         to: ADMIN_EMAIL,
         subject: `New Access Request for Shringar POS: ${applicantEmail}`,
         html,
+        text,
       });
 
       return new Response(JSON.stringify({ success: true, message: "Email sent to admin" }), {
@@ -130,9 +138,9 @@ serve(async (req) => {
 <html>
 <head><meta charset="utf-8"/></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f6f8fa; margin: 0; padding: 40px 20px;">
-  <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e1e4e8; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+  <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e1e4e8; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
     <div style="text-align: center; margin-bottom: 24px;">
-      <h2 style="color: #1a1a1a; margin: 0; font-size: 22px;">💍 Shringar POS</h2>
+      <h2 style="color: #1a1a1a; margin: 0; font-size: 22px;">💎 Shringar POS</h2>
       <p style="color: #6a737d; margin: 6px 0 0; font-size: 14px;">Showroom Management Suite</p>
     </div>
     <p style="font-size: 15px; color: #24292e; line-height: 1.5;">
@@ -147,32 +155,35 @@ serve(async (req) => {
       </a>
     </div>
     <p style="font-size: 12px; color: #6a737d; text-align: center; margin-top: 20px;">
-      Or copy the link directly into your browser:<br/>
+      Or copy direct account creation link:<br/>
       <a href="${createAccountUrl}" style="color: #0366d6; word-break: break-all;">${createAccountUrl}</a>
     </p>
   </div>
 </body>
 </html>`;
 
+      const text = `💎 Shringar POS - Access Approved\n\nYour request has been approved! Set your password and launch the app:\n${createAccountUrl}`;
+
       await sendSesEmail({
         to: targetEmail,
-        subject: `Your Access to Shringar POS Has Been Approved!`,
+        subject: "Your Access to Shringar POS Has Been Approved!",
         html,
+        text,
       });
 
-      return new Response(JSON.stringify({ success: true, message: "Invitation email sent to user" }), {
-        status: 200,
+      return new Response(
+        JSON.stringify({ success: true, message: "Invitation email sent to user" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else {
+      return new Response(JSON.stringify({ error: "Invalid type parameter" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    return new Response(JSON.stringify({ error: "Invalid email type" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (err: any) {
     console.error("send-access-email error:", err);
-    return new Response(JSON.stringify({ error: err.message || "Failed to send email" }), {
+    return new Response(JSON.stringify({ error: err.message || "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
