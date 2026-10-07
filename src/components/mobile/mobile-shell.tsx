@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { Grid, Layout, theme, Avatar, Space, Typography } from "antd";
+import { Grid, Layout, theme, Avatar, Typography } from "antd";
 import { ThemedLayout, ThemedSider } from "@refinedev/antd";
 import { Header } from "../header";
 import { BottomNavBar } from "./bottom-nav-bar";
 import { MoreMenuDrawer } from "./more-menu-drawer";
-import { HeaderRatesWidget } from "../metal-rates/header-rates-widget";
 import { useGetIdentity, useList } from "@refinedev/core";
 
 const { useBreakpoint } = Grid;
@@ -76,48 +75,76 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
           zIndex: 990,
           backgroundColor: token.colorBgElevated,
           borderBottom: `1px solid ${token.colorBorderSecondary}`,
-          padding: "8px 16px",
+          padding: "10px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            minWidth: 0,
+            flex: 1,
+            marginRight: 12,
+          }}
+        >
           <img
             src="/logo_icon.png"
             alt="Shringar"
-            style={{ width: 26, height: 26, objectFit: "contain" }}
+            style={{ width: 28, height: 28, objectFit: "contain", flexShrink: 0 }}
           />
-          <div style={{ lineHeight: 1.2 }}>
-            <Text strong style={{ fontSize: 15, display: "block" }}>
+          <div style={{ lineHeight: 1.2, minWidth: 0, flex: 1 }}>
+            <Text
+              strong
+              ellipsis
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                display: "block",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {shop?.name || "Shringar POS"}
             </Text>
             {shop?.code && (
-              <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+              <Text
+                type="secondary"
+                ellipsis
+                style={{
+                  fontSize: 11,
+                  display: "block",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 Code: {shop.code}
               </Text>
             )}
           </div>
         </div>
 
-        <Space size="middle" align="center">
-          <HeaderRatesWidget />
-          <Avatar
-            src={avatarSrc}
-            size={32}
-            onClick={() => setMoreOpen(true)}
-            style={{
-              backgroundColor: token.colorPrimary,
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            {avatarFallback}
-          </Avatar>
-        </Space>
+        <Avatar
+          src={avatarSrc}
+          size={34}
+          onClick={() => setMoreOpen(true)}
+          style={{
+            backgroundColor: token.colorPrimary,
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: 14,
+            fontWeight: 600,
+            flexShrink: 0,
+          }}
+        >
+          {avatarFallback}
+        </Avatar>
       </header>
 
       {/* Main Content Area with Bottom Padding for Tab Dock */}
