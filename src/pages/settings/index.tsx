@@ -1,30 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Grid, theme, Typography } from "antd";
 import ShopProfileSettings from "../../components/settings/shop-profile-settings";
 import MakingChargesSettings from "../../components/settings/making-charges-settings";
-import AccessRequestsSettings from "../../components/settings/access-requests-settings";
-import { Percent, Store, ShieldCheck } from "lucide-react";
-import { supabaseClient } from "../../providers/supabase-client";
+import { Percent, Store } from "lucide-react";
 
 const { useBreakpoint } = Grid;
 const { Title, Text } = Typography;
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<"shop" | "making-charges" | "access-requests">("making-charges");
-  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<"shop" | "making-charges">("making-charges");
   const { token } = theme.useToken();
   const screens = useBreakpoint();
-
-  // Fetch pending access requests count for mobile tab badge
-  useEffect(() => {
-    supabaseClient
-      .from("access_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending")
-      .then(({ count }) => {
-        if (count !== null) setPendingRequestsCount(count);
-      });
-  }, [activeTab]);
 
   if (!screens.md) {
     const tabs = [
@@ -33,21 +19,12 @@ export default function Settings() {
         label: "Making Charges",
         icon: <Percent size={15} />,
         testId: "mobile-settings-tab-making-charges",
-        badge: 0,
       },
       {
         key: "shop",
         label: "Shop Profile",
         icon: <Store size={15} />,
         testId: "mobile-settings-tab-shop",
-        badge: 0,
-      },
-      {
-        key: "access-requests",
-        label: "Access Requests",
-        icon: <ShieldCheck size={15} />,
-        testId: "mobile-settings-tab-access-requests",
-        badge: pendingRequestsCount,
       },
     ] as const;
 
@@ -69,7 +46,7 @@ export default function Settings() {
             Showroom Settings
           </Title>
           <Text type="secondary" style={{ fontSize: 12, marginTop: 2, display: "block" }}>
-            Manage rates, shop profile and team access
+            Manage rates and shop profile
           </Text>
         </div>
 
@@ -121,22 +98,6 @@ export default function Settings() {
               >
                 {tab.icon}
                 <span>{tab.label}</span>
-                {tab.badge > 0 && (
-                  <span
-                    style={{
-                      backgroundColor: isActive ? "#ffffff" : token.colorError,
-                      color: isActive ? token.colorPrimary : "#ffffff",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      borderRadius: 10,
-                      padding: "1px 6px",
-                      lineHeight: "14px",
-                      marginLeft: 2,
-                    }}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -146,7 +107,6 @@ export default function Settings() {
         <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
           {activeTab === "shop" && <ShopProfileSettings />}
           {activeTab === "making-charges" && <MakingChargesSettings />}
-          {activeTab === "access-requests" && <AccessRequestsSettings />}
         </div>
       </div>
     );
@@ -175,17 +135,10 @@ export default function Settings() {
           onClick={() => setActiveTab("shop")}
           token={token}
         />
-        <TabItem
-          label="Access Requests"
-          active={activeTab === "access-requests"}
-          onClick={() => setActiveTab("access-requests")}
-          token={token}
-        />
       </div>
 
       {activeTab === "shop" && <ShopProfileSettings />}
       {activeTab === "making-charges" && <MakingChargesSettings />}
-      {activeTab === "access-requests" && <AccessRequestsSettings />}
     </div>
   );
 }
@@ -205,19 +158,17 @@ function TabItem({
     <button
       onClick={onClick}
       style={{
-        background: "none",
         border: "none",
-        padding: "12px 4px",
-        cursor: "pointer",
-        fontSize: 15,
-        fontWeight: active ? 600 : 400,
+        background: "none",
+        fontSize: "16px",
+        fontWeight: active ? "600" : "400",
         color: active ? token.colorPrimary : token.colorTextSecondary,
-        position: "relative",
-        borderBottom: active
-          ? `2px solid ${token.colorPrimary}`
-          : "2px solid transparent",
-        marginBottom: -1,
-        transition: "all 0.2s ease",
+        borderBottom: active ? `2px solid ${token.colorPrimary}` : "2px solid transparent",
+        paddingBottom: "10px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
       }}
     >
       {label}
