@@ -226,6 +226,7 @@ export const AccessRequestsSettings: React.FC = () => {
         columns={columns}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 500 }}
         pagination={{ pageSize: 10 }}
       />
     </Card>
