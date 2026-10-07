@@ -26,6 +26,7 @@ import type { FilterDropdownProps } from "antd/es/table/interface";
 import {
     App,
     Button,
+    Grid,
     Input,
     Radio,
     Select,
@@ -41,12 +42,13 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { OrnamentDrawer } from "../../../components/inventory/ornaments/ornament-drawer";
 import { OrnamentShowDrawer } from "../../../components/inventory/ornaments/ornament-show-drawer";
+import { MobileOrnamentGrid } from "../../../components/inventory/mobile-ornament-grid";
 import { useShopCheck } from "../../../hooks/use-shop-check";
 import type { ICategory, IMetalType, IOrnament, IOrnamentWithDetails } from "../../../libs/interfaces";
 
 dayjs.extend(relativeTime);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const paise2Rs = (paise?: number | null) =>
     paise != null ? (paise / 100).toFixed(2) : null;
@@ -54,7 +56,7 @@ const paise2Rs = (paise?: number | null) =>
 const mg2g = (mg?: number | null) =>
     mg != null ? (mg / 1000).toFixed(3) : "—";
 
-// ─── Category filter dropdown ─────────────────────────────────────────────────
+// ─── Category filter dropdown ────────────────────────────────────────────────
 
 interface CategoryFilterProps extends FilterDropdownProps {
     shopId?: string;
@@ -68,7 +70,7 @@ const CategoryFilterDropdown: React.FC<CategoryFilterProps> = ({
     shopId,
 }) => {
     const { selectProps } = useSelect<ICategory>({
-        resource: "ornament_categories",
+        resource: "categories",
         optionLabel: "name",
         optionValue: "id",
         filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
@@ -76,11 +78,10 @@ const CategoryFilterDropdown: React.FC<CategoryFilterProps> = ({
     });
 
     return (
-        <div style={{ padding: 8, minWidth: 220 }}>
+        <div style={{ padding: 8, minWidth: 200 }}>
             <Select<string>
                 options={selectProps.options}
                 loading={selectProps.loading}
-                onSearch={selectProps.onSearch}
                 allowClear
                 showSearch
                 filterOption={false}
@@ -107,9 +108,11 @@ const CategoryFilterDropdown: React.FC<CategoryFilterProps> = ({
     );
 };
 
-// ─── Metal type filter dropdown ────────────────────────────────────────────────
+// ─── Metal type filter dropdown ──────────────────────────────────────────────
 
-const MetalTypeFilterDropdown: React.FC<FilterDropdownProps> = ({
+interface MetalTypeFilterProps extends FilterDropdownProps {}
+
+const MetalTypeFilterDropdown: React.FC<MetalTypeFilterProps> = ({
     setSelectedKeys,
     selectedKeys,
     confirm,
@@ -154,13 +157,19 @@ const MetalTypeFilterDropdown: React.FC<FilterDropdownProps> = ({
     );
 };
 
-// ─── Page default export ──────────────────────────────────────────────────────
+// ─── Page default export ─────────────────────────────────────────────────────
+
+const { useBreakpoint } = Grid;
 
 export default function Ornaments() {
+    const screens = useBreakpoint();
+    if (!screens.md) {
+        return <MobileOrnamentGrid />;
+    }
     return <OrnamentList />;
 }
 
-// ─── Main list component ──────────────────────────────────────────────────────
+// ─── Main list component ─────────────────────────────────────────────────────
 
 const OrnamentList: React.FC = () => {
     const { notification, modal } = App.useApp();
@@ -173,24 +182,19 @@ const OrnamentList: React.FC = () => {
     // Show drawer state
     const [showRecord, setShowRecord] = useState<IOrnamentWithDetails | null>(null);
 
-    // Per-row toggle-loading
+    // Form record state for edit and clone
+    const [editingOrnament, setEditingOrnament] = useState<IOrnament | null>(null);
+    const [cloningOrnament, setCloningOrnament] = useState<IOrnament | null>(null);
+
+    // Per-row toggle-loading state
     const [loadingToggles, setLoadingToggles] = useState<Record<string, boolean>>({});
 
-    // Per-row quantity-update loading
-    const [loadingQty, setLoadingQty] = useState<Record<string, boolean>>({});
-
-    // Toolbar state
+    // Toolbar filters state
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
 
-    // ── Table ──────────────────────────────────────────────────────────────────
-
     const { tableProps, sorters, filters, setFilters } = useTable<IOrnamentWithDetails, HttpError>({
         resource: "ornaments",
-        meta: {
-            select:
-                "*, category:ornament_categories(id, name), metal_type:metal_types(id, name), purity_level:purity_levels(id, display_name, purity_value)",
-        },
         filters: {
             permanent: shopId
                 ? [{ field: "shop_id", operator: "eq", value: shopId }]
@@ -199,230 +203,104 @@ const OrnamentList: React.FC = () => {
         sorters: {
             initial: [{ field: "created_at", order: "desc" }],
         },
-        syncWithLocation: true,
-        queryOptions: { enabled: !!shopId },
-    });
-
-    // ── Mutations ──────────────────────────────────────────────────────────────
-
-    const { mutate: deleteOrnament } = useDelete();
-    const { mutate: updateOrnament } = useUpdate<IOrnament>();
-
-    // ── Drawer Forms ───────────────────────────────────────────────────────────
-
-    const {
-        drawerProps: createDrawerProps,
-        formProps: createFormProps,
-        show: showCreate,
-        close: closeCreate,
-        saveButtonProps: createSaveButtonProps,
-    } = useDrawerForm<IOrnament>({
-        action: "create",
-        resource: "ornaments",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "create-ornament", syncId: false },
-    });
-
-    const {
-        drawerProps: editDrawerProps,
-        formProps: editFormProps,
-        show: showEdit,
-        close: closeEdit,
-        id: editId,
-        saveButtonProps: editSaveButtonProps,
-    } = useDrawerForm<IOrnament>({
-        action: "edit",
-        resource: "ornaments",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "edit-ornament", syncId: true },
-    });
-
-    const {
-        drawerProps: cloneDrawerProps,
-        formProps: cloneFormProps,
-        show: showClone,
-        close: closeClone,
-        saveButtonProps: cloneSaveButtonProps,
-    } = useDrawerForm<IOrnament>({
-        action: "clone",
-        resource: "ornaments",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "clone-ornament", syncId: true },
-    });
-
-    // ── Export ─────────────────────────────────────────────────────────────────
-
-    const { triggerExport, isLoading: exportLoading } = useExport<IOrnamentWithDetails>({
-        resource: "ornaments",
         meta: {
-            select:
-                "*, category:ornament_categories(id, name), metal_type:metal_types(id, name), purity_level:purity_levels(id, display_name, purity_value)",
+            select: "*, category:categories(id,name), metal_type:metal_types(id,name), purity_level:purity_levels(id,purity_value,display_name)",
         },
-        filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
-        mapData: (item) => ({
-            "Name": item.name,
-            "SKU": item.sku ?? "",
-            "Category": item.category?.name ?? "",
-            "Metal": item.metal_type?.name ?? "",
-            "Purity": item.purity_level?.display_name ?? "",
-            "Weight (g)": item.weight_mg != null ? item.weight_mg / 1000 : "",
-            "Quantity": item.quantity,
-            "Metal Rate (₹/g)": paise2Rs(item.purchase_metal_rate_paise) ?? "",
-            "Making Charge (₹)": paise2Rs(item.purchase_making_charge_paise) ?? "",
-            "Total Cost (₹)": paise2Rs(item.purchase_total_cost_paise) ?? "",
-            "Purchase Date": item.purchase_date ?? "",
-            "Status": item.is_active ? "Active" : "Inactive",
-            "Added": new Date(item.created_at).toLocaleDateString("en-IN"),
-        }),
     });
 
-    // ── Toolbar helpers ────────────────────────────────────────────────────────
+    const { mutate: updateOrnament } = useUpdate<IOrnament>();
+    const { mutate: deleteOrnament } = useDelete<IOrnament>();
 
-    const applyFilters = (text: string, status: "all" | "active" | "inactive") => {
-        const next = [];
-        if (text.trim()) {
-            next.push({ field: "name", operator: "contains" as const, value: text.trim() });
-        }
-        if (status !== "all") {
-            next.push({ field: "is_active", operator: "eq" as const, value: status === "active" });
-        }
-        setFilters(next, "replace");
+    const { triggerExport, isLoading: isExporting } = useExport<IOrnamentWithDetails>({
+        resource: "ornaments",
+        filters: {
+            permanent: shopId
+                ? [{ field: "shop_id", operator: "eq", value: shopId }]
+                : [],
+        },
+        mapData: (record) => ({
+            "Item Code": record.item_code,
+            Name: record.name,
+            Category: record.category?.name ?? "",
+            Metal: record.metal_type?.name ?? "",
+            Purity: record.purity_level?.display_name ?? "",
+            "Gross Wt (g)": record.gross_weight_grams,
+            "Net Wt (g)": record.net_weight_grams,
+            "Wastage (mg)": record.wastage_mg ?? "",
+            "Making Charge Type": record.making_charge_type ?? "",
+            "Making Charge (Rs)": paise2Rs(record.making_charge_value_paise) ?? "",
+            Quantity: record.quantity,
+            Status: record.is_active ? "Active" : "Inactive",
+            "Created At": record.created_at,
+        }),
+        exportOptions: {
+            filename: `ornaments-${dayjs().format("YYYY-MM-DD")}`,
+        },
+    });
+
+    // Refine Drawer Form for Ornament create & edit
+    const {
+        drawerProps,
+        formProps,
+        show: showFormDrawer,
+        close: closeFormDrawer,
+    } = useDrawerForm<IOrnament>({
+        resource: "ornaments",
+        action: editingOrnament ? "edit" : "create",
+        id: editingOrnament?.id,
+        redirect: false,
+        meta: {
+            select: "*, category:categories(id,name), metal_type:metal_types(id,name), purity_level:purity_levels(id,purity_value,display_name)",
+        },
+        onMutationSuccess: () => {
+            setEditingOrnament(null);
+            closeFormDrawer();
+        },
+    });
+
+    const handleCreateNew = () => {
+        setEditingOrnament(null);
+        setCloningOrnament(null);
+        formProps.form?.resetFields();
+        showFormDrawer();
     };
 
-    const makeColumnFilter =
-        (field: string, placeholder: string) =>
-        ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) =>
-            (
-                <div style={{ padding: 8, minWidth: 200 }}>
-                    <Input
-                        autoFocus
-                        placeholder={placeholder}
-                        value={selectedKeys[0] as string}
-                        onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-                        onPressEnter={() => {
-                            setFilters(
-                                [{ field, operator: "contains" as const, value: selectedKeys[0] || undefined }],
-                                "merge"
-                            );
-                            confirm();
-                        }}
-                        style={{ marginBottom: 8, display: "block" }}
-                    />
-                    <Space>
-                        <Button
-                            type="primary"
-                            size="small"
-                            onClick={() => {
-                                setFilters(
-                                    [{ field, operator: "contains" as const, value: selectedKeys[0] || undefined }],
-                                    "merge"
-                                );
-                                confirm();
-                            }}
-                        >
-                            Filter
-                        </Button>
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                clearFilters?.();
-                                setFilters(
-                                    [{ field, operator: "contains" as const, value: undefined }],
-                                    "merge"
-                                );
-                                confirm();
-                            }}
-                        >
-                            Reset
-                        </Button>
-                    </Space>
-                </div>
-            );
-
-    // ── Handlers ───────────────────────────────────────────────────────────────
-
-    const handleCreateFinish = (values: Partial<IOrnament>) =>
-        createFormProps.onFinish?.({ ...values, shop_id: shopId, created_by: userId, updated_by: userId });
-
-    const handleEditFinish = (values: Partial<IOrnament>) =>
-        editFormProps.onFinish?.({ ...values, updated_by: userId });
-
-    const handleCloneFinish = (values: Partial<IOrnament>) =>
-        cloneFormProps.onFinish?.({ ...values, shop_id: shopId, created_by: userId, updated_by: userId });
-
-    const handleToggle = (record: IOrnamentWithDetails, checked: boolean) => {
-        setLoadingToggles((prev) => ({ ...prev, [record.id]: true }));
-        updateOrnament(
-            {
-                resource: "ornaments",
-                id: record.id,
-                values: { is_active: checked, updated_by: userId },
-                successNotification: () => ({
-                    message: checked ? "Ornament activated" : "Ornament deactivated",
-                    type: "success",
-                }),
-            },
-            {
-                onSettled: () =>
-                    setLoadingToggles((prev) => {
-                        const next = { ...prev };
-                        delete next[record.id];
-                        return next;
-                    }),
-            }
-        );
+    const handleEdit = (record: IOrnamentWithDetails) => {
+        setEditingOrnament(record);
+        setCloningOrnament(null);
+        showFormDrawer(record.id);
     };
 
-    const handleQtyChange = (record: IOrnamentWithDetails, delta: number) => {
-        const newQty = (record.quantity ?? 0) + delta;
-        if (newQty < 0) return;
-        setLoadingQty((prev) => ({ ...prev, [record.id]: true }));
-        updateOrnament(
-            {
-                resource: "ornaments",
-                id: record.id,
-                values: { quantity: newQty, updated_by: userId },
-                successNotification: () => ({
-                    message: `Quantity updated to ${newQty}`,
-                    type: "success",
-                }),
-            },
-            {
-                onSettled: () =>
-                    setLoadingQty((prev) => {
-                        const next = { ...prev };
-                        delete next[record.id];
-                        return next;
-                    }),
-            }
-        );
+    const handleClone = (record: IOrnamentWithDetails) => {
+        setEditingOrnament(null);
+        setCloningOrnament(record);
+        formProps.form?.resetFields();
+        showFormDrawer();
     };
 
     const handleDelete = (record: IOrnamentWithDetails) => {
         modal.confirm({
-            title: "Delete ornament?",
-            content: (
-                <>
-                    <Typography.Text>
-                        Permanently delete <b>{record.name}</b>
-                        {record.sku ? ` (${record.sku})` : ""}? This cannot be undone.
-                    </Typography.Text>
-                    <br />
-                    <Typography.Text type="warning">
-                        Deletion will fail if this ornament is linked to invoices.
-                    </Typography.Text>
-                </>
-            ),
+            title: "Delete Ornament",
+            content: `Are you sure you want to delete "${record.name}" (${record.item_code})? This action cannot be undone.`,
             okText: "Delete",
-            okButtonProps: { danger: true },
+            okType: "danger",
+            cancelText: "Cancel",
             onOk: () => {
                 deleteOrnament(
-                    { resource: "ornaments", id: record.id },
                     {
-                        onError: () => {
+                        resource: "ornaments",
+                        id: record.id,
+                    },
+                    {
+                        onSuccess: () => {
+                            notification.success({
+                                message: "Ornament deleted successfully",
+                            });
+                        },
+                        onError: (error) => {
                             notification.error({
-                                message: "Cannot delete ornament",
-                                description: "This ornament is linked to invoices. Remove links first.",
+                                message: "Error deleting ornament",
+                                description: error?.message,
                             });
                         },
                     }
@@ -431,405 +309,356 @@ const OrnamentList: React.FC = () => {
         });
     };
 
-    const hasActiveFilters =
-        searchText !== "" ||
-        statusFilter !== "all" ||
-        filters.some((f) => "field" in f && f.field !== "shop_id");
+    const handleToggleActive = (record: IOrnamentWithDetails, checked: boolean) => {
+        setLoadingToggles((prev) => ({ ...prev, [record.id]: true }));
+        updateOrnament(
+            {
+                resource: "ornaments",
+                id: record.id,
+                values: {
+                    is_active: checked,
+                    updated_by: userId,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setLoadingToggles((prev) => ({ ...prev, [record.id]: false }));
+                    notification.success({
+                        message: `Ornament marked as ${checked ? "Active" : "Inactive"}`,
+                    });
+                },
+                onError: (error) => {
+                    setLoadingToggles((prev) => ({ ...prev, [record.id]: false }));
+                    notification.error({
+                        message: "Error updating ornament status",
+                        description: error?.message,
+                    });
+                },
+            }
+        );
+    };
 
-    // ── Render ─────────────────────────────────────────────────────────────────
+    const handleSearch = (value: string) => {
+        setSearchText(value);
+        setFilters(
+            value
+                ? [
+                      {
+                          field: "name",
+                          operator: "contains",
+                          value,
+                      },
+                  ]
+                : [],
+            "merge"
+        );
+    };
+
+    const handleStatusFilterChange = (status: "all" | "active" | "inactive") => {
+        setStatusFilter(status);
+        if (status === "all") {
+            setFilters(
+                [{ field: "is_active", operator: "eq", value: undefined }],
+                "merge"
+            );
+        } else {
+            setFilters(
+                [
+                    {
+                        field: "is_active",
+                        operator: "eq",
+                        value: status === "active",
+                    },
+                ],
+                "merge"
+            );
+        }
+    };
+
+    const columns = [
+        {
+            title: "Item Code",
+            dataIndex: "item_code",
+            key: "item_code",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("item_code", sorters),
+            render: (value: string, record: IOrnamentWithDetails) => (
+                <Button
+                    type="link"
+                    style={{ padding: 0, fontFamily: "monospace" }}
+                    onClick={() => setShowRecord(record)}
+                >
+                    {value}
+                </Button>
+            ),
+        },
+        {
+            title: "Name",
+            dataIndex: "name",
+            key: "name",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("name", sorters),
+            render: (value: string, record: IOrnamentWithDetails) => (
+                <Space>
+                    <Typography.Text strong>{value}</Typography.Text>
+                    {record.huid && (
+                        <Tag color="purple" style={{ fontFamily: "monospace", fontSize: 11 }}>
+                            HUID: {record.huid}
+                        </Tag>
+                    )}
+                </Space>
+            ),
+        },
+        {
+            title: "Category",
+            dataIndex: ["category", "name"],
+            key: "category.name",
+            filterDropdown: (props: FilterDropdownProps) => (
+                <CategoryFilterDropdown {...props} shopId={shopId} />
+            ),
+            filterIcon: (filtered: boolean) => (
+                <FilterOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+            ),
+            render: (value?: string) => value ?? "—",
+        },
+        {
+            title: "Metal",
+            dataIndex: ["metal_type", "name"],
+            key: "metal_type.name",
+            filterDropdown: (props: FilterDropdownProps) => (
+                <MetalTypeFilterDropdown {...props} />
+            ),
+            filterIcon: (filtered: boolean) => (
+                <FilterOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+            ),
+            render: (value?: string) => {
+                if (!value) return "—";
+                const isGold = value.toUpperCase() === "GOLD";
+                const isSilver = value.toUpperCase() === "SILVER";
+                return (
+                    <Tag color={isGold ? "gold" : isSilver ? "default" : "blue"}>
+                        {value}
+                    </Tag>
+                );
+            },
+        },
+        {
+            title: "Purity",
+            dataIndex: ["purity_level", "display_name"],
+            key: "purity_level.display_name",
+            render: (value?: string) => value ?? "—",
+        },
+        {
+            title: "Gross Wt (g)",
+            dataIndex: "gross_weight_grams",
+            key: "gross_weight_grams",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("gross_weight_grams", sorters),
+            render: (value: number) => value.toFixed(3),
+        },
+        {
+            title: "Net Wt (g)",
+            dataIndex: "net_weight_grams",
+            key: "net_weight_grams",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("net_weight_grams", sorters),
+            render: (value: number) => value.toFixed(3),
+        },
+        {
+            title: "Wastage",
+            dataIndex: "wastage_mg",
+            key: "wastage_mg",
+            render: (value?: number | null) =>
+                value != null ? `${mg2g(value)} g` : "—",
+        },
+        {
+            title: "Making Charges",
+            key: "making_charges",
+            render: (_: unknown, record: IOrnamentWithDetails) => {
+                if (record.making_charge_value_paise == null) return "—";
+                const rs = paise2Rs(record.making_charge_value_paise);
+                if (record.making_charge_type === "PER_PIECE") {
+                    return `₹${rs} (fixed)`;
+                }
+                if (record.making_charge_type === "PERCENTAGE") {
+                    return `${rs}%`;
+                }
+                return `₹${rs}/g`;
+            },
+        },
+        {
+            title: "Qty",
+            dataIndex: "quantity",
+            key: "quantity",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("quantity", sorters),
+            render: (value: number) => (
+                <Tag color={value > 0 ? "blue" : "error"}>{value}</Tag>
+            ),
+        },
+        {
+            title: "Status",
+            dataIndex: "is_active",
+            key: "is_active",
+            render: (value: boolean, record: IOrnamentWithDetails) => (
+                <Space>
+                    <Switch
+                        size="small"
+                        checked={value}
+                        loading={!!loadingToggles[record.id]}
+                        onChange={(checked) => handleToggleActive(record, checked)}
+                    />
+                    <Tag color={value ? "success" : "default"}>
+                        {value ? "Active" : "Inactive"}
+                    </Tag>
+                </Space>
+            ),
+        },
+        {
+            title: "Created At",
+            dataIndex: "created_at",
+            key: "created_at",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("created_at", sorters),
+            render: (value: string) => (
+                <Tooltip title={dayjs(value).format("YYYY-MM-DD HH:mm:ss")}>
+                    {dayjs(value).fromNow()}
+                </Tooltip>
+            ),
+        },
+        {
+            title: "Actions",
+            key: "actions",
+            render: (_: unknown, record: IOrnamentWithDetails) => (
+                <Space>
+                    <Tooltip title="View">
+                        <Button
+                            type="text"
+                            icon={<EyeOutlined />}
+                            size="small"
+                            onClick={() => setShowRecord(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={() => handleEdit(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Clone">
+                        <Button
+                            type="text"
+                            icon={<CopyOutlined />}
+                            size="small"
+                            onClick={() => handleClone(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                        <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            onClick={() => handleDelete(record)}
+                        />
+                    </Tooltip>
+                </Space>
+            ),
+        },
+    ];
 
     return (
-        <>
-            <RefineList
-                headerButtons={({ defaultButtons }) => (
-                    <>
-                        {defaultButtons}
-                        <ExportButton onClick={triggerExport} loading={exportLoading} />
-                    </>
-                )}
-                createButtonProps={{
-                    onClick: () => showCreate(),
-                    children: "New Ornament",
+        <RefineList
+            title="Ornaments"
+            headerButtons={[
+                <ExportButton
+                    key="export"
+                    onClick={() => triggerExport()}
+                    loading={isExporting}
+                />,
+                <Button
+                    key="create"
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleCreateNew}
+                >
+                    Add Ornament
+                </Button>,
+            ]}
+        >
+            {/* Toolbar */}
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 16,
+                    gap: 16,
+                    flexWrap: "wrap",
                 }}
             >
-                {/* ── Toolbar ──────────────────────────────────────────── */}
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 16,
-                        flexWrap: "wrap",
-                        gap: 8,
+                <Space wrap>
+                    <Input.Search
+                        placeholder="Search by name"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        onSearch={handleSearch}
+                        style={{ width: 240 }}
+                        allowClear
+                    />
+                    <Radio.Group
+                        value={statusFilter}
+                        onChange={(e) => handleStatusFilterChange(e.target.value)}
+                        buttonStyle="solid"
+                    >
+                        <Radio.Button value="all">All</Radio.Button>
+                        <Radio.Button value="active">Active</Radio.Button>
+                        <Radio.Button value="inactive">Inactive</Radio.Button>
+                    </Radio.Group>
+                </Space>
+                <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => {
+                        setSearchText("");
+                        setStatusFilter("all");
+                        setFilters([], "replace");
                     }}
                 >
-                    <Space wrap>
-                        <Input.Search
-                            placeholder="Search by name…"
-                            allowClear
-                            style={{ width: 260 }}
-                            value={searchText}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSearchText(val);
-                                if (!val) applyFilters("", statusFilter);
-                            }}
-                            onSearch={(val) => {
-                                setSearchText(val);
-                                applyFilters(val, statusFilter);
-                            }}
-                        />
-                        <Radio.Group
-                            value={statusFilter}
-                            onChange={(e) => {
-                                const val = e.target.value as "all" | "active" | "inactive";
-                                setStatusFilter(val);
-                                applyFilters(searchText, val);
-                            }}
-                            optionType="button"
-                            buttonStyle="solid"
-                            size="small"
-                        >
-                            <Radio.Button value="all">All</Radio.Button>
-                            <Radio.Button value="active">Active</Radio.Button>
-                            <Radio.Button value="inactive">Inactive</Radio.Button>
-                        </Radio.Group>
-                    </Space>
+                    Reset Filters
+                </Button>
+            </div>
 
-                    <Tooltip title="Reset all filters">
-                        <Button
-                            icon={<ReloadOutlined />}
-                            size="small"
-                            type={hasActiveFilters ? "primary" : "default"}
-                            onClick={() => {
-                                setSearchText("");
-                                setStatusFilter("all");
-                                setFilters([], "replace");
-                            }}
-                        >
-                            Reset Filters
-                        </Button>
-                    </Tooltip>
-                </div>
-
-                {/* ── Table ─────────────────────────────────────────────── */}
-                <Table
-                    {...tableProps}
-                    rowKey="id"
-                    size="small"
-                    scroll={{ x: 1400 }}
-                    onChange={(pagination, _columnFilters, sorter, extra) => {
-                        tableProps.onChange?.(pagination, {}, sorter, extra);
-                    }}
-                    onRow={(record) => ({
-                        style: {
-                            cursor: "pointer",
-                            ...(record.quantity <= 2
-                                ? { backgroundColor: "rgba(255, 77, 79, 0.07)" }
-                                : {}),
-                        },
-                        onClick: () => setShowRecord(record),
-                    })}
-                >
-                    {/* Date */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="created_at"
-                        dataIndex="created_at"
-                        title="Date"
-                        width={110}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("created_at", sorters)}
-                        render={(val: string) => (
-                            <Tooltip title={new Date(val).toLocaleString("en-IN")}>
-                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                    {dayjs(val).fromNow()}
-                                </Typography.Text>
-                            </Tooltip>
-                        )}
-                    />
-
-                    {/* Name + SKU */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="name"
-                        dataIndex="name"
-                        title="Name"
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("name", sorters)}
-                        filterDropdown={makeColumnFilter("name", "Filter by name…")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(_: unknown, record: IOrnamentWithDetails) => (
-                            <div>
-                                <Typography.Text strong>{record.name}</Typography.Text>
-                                {record.sku && (
-                                    <div style={{ marginTop: 2 }}>
-                                        <Tag
-                                            color="blue"
-                                            style={{
-                                                fontFamily: "monospace",
-                                                fontSize: 10,
-                                                padding: "0 5px",
-                                                lineHeight: "18px",
-                                            }}
-                                        >
-                                            {record.sku}
-                                        </Tag>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    />
-
-                    {/* Metal + Purity */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="metal_type_id"
-                        dataIndex="metal_type_id"
-                        title="Metal"
-                        width={160}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("metal_type_id", sorters)}
-                        filterDropdown={(props) => <MetalTypeFilterDropdown {...props} />}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(_: unknown, record: IOrnamentWithDetails) => (
-                            <div>
-                                <Typography.Text strong>
-                                    {record.metal_type?.name ?? "—"}
-                                </Typography.Text>
-                                {record.purity_level && (
-                                    <Typography.Text
-                                        type="secondary"
-                                        style={{ display: "block", fontSize: 11 }}
-                                    >
-                                        {record.purity_level.display_name} ({record.purity_level.purity_value}%)
-                                    </Typography.Text>
-                                )}
-                            </div>
-                        )}
-                    />
-
-                    {/* Category */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="category_id"
-                        dataIndex="category_id"
-                        title="Category"
-                        width={150}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("category_id", sorters)}
-                        filterDropdown={(props) => (
-                            <CategoryFilterDropdown {...props} shopId={shopId} />
-                        )}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(_: unknown, record: IOrnamentWithDetails) => (
-                            <Tag color="geekblue">{record.category?.name ?? "—"}</Tag>
-                        )}
-                    />
-
-                    {/* Weight */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="weight_mg"
-                        dataIndex="weight_mg"
-                        title="Weight"
-                        width={100}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("weight_mg", sorters)}
-                        render={(mg: number) => (
-                            <Typography.Text style={{ fontFamily: "monospace" }}>
-                                {mg2g(mg)} g
-                            </Typography.Text>
-                        )}
-                    />
-
-                    {/* Quantity */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="quantity"
-                        dataIndex="quantity"
-                        title="Qty"
-                        width={130}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("quantity", sorters)}
-                        render={(_: unknown, record: IOrnamentWithDetails) => {
-                            const qty = record.quantity ?? 0;
-                            return (
-                                <Space
-                                    size={4}
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ alignItems: "center" }}
-                                >
-                                    <Tag
-                                        color={qty === 0 ? "error" : qty <= 2 ? "warning" : "success"}
-                                        style={{ margin: 0, marginRight: 20 }}
-                                    >
-                                        {qty} pcs
-                                    </Tag>
-                                    <Tooltip title="Increase">
-                                        <Button
-                                            icon={<PlusOutlined />}
-                                            size="small"
-                                            type="primary"
-                                            loading={!!loadingQty[record.id]}
-                                            onClick={() => handleQtyChange(record, 1)}
-                                            style={{ minWidth: 22, padding: "0 4px" }}
-                                        />
-                                    </Tooltip>
-                                </Space>
-                            );
-                        }}
-                    />
-
-                    {/* Total Cost + breakdown */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="purchase_total_cost_paise"
-                        dataIndex="purchase_total_cost_paise"
-                        title="Total Cost"
-                        width={160}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("purchase_total_cost_paise", sorters)}
-                        render={(_: unknown, record: IOrnamentWithDetails) => {
-                            const total = paise2Rs(record.purchase_total_cost_paise);
-                            const rate = paise2Rs(record.purchase_metal_rate_paise);
-                            const making = paise2Rs(record.purchase_making_charge_paise);
-                            return (
-                                <div>
-                                    {total ? (
-                                        <Typography.Text strong>₹{total}</Typography.Text>
-                                    ) : (
-                                        <Typography.Text type="secondary">—</Typography.Text>
-                                    )}
-                                    {(rate || making) && (
-                                        <div style={{ marginTop: 2 }}>
-                                            {rate && (
-                                                <Typography.Text
-                                                    type="secondary"
-                                                    style={{ fontSize: 10, display: "block" }}
-                                                >
-                                                    Rate: ₹{rate}/g
-                                                </Typography.Text>
-                                            )}
-                                            {making && (
-                                                <Typography.Text
-                                                    type="secondary"
-                                                    style={{ fontSize: 10, display: "block" }}
-                                                >
-                                                    Making: ₹{making}
-                                                </Typography.Text>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        }}
-                    />
-
-                    {/* Active toggle */}
-                    <Table.Column<IOrnamentWithDetails>
-                        key="is_active"
-                        dataIndex="is_active"
-                        title="Active"
-                        width={72}
-                        render={(_: unknown, record: IOrnamentWithDetails) => (
-                            <div onClick={(e) => e.stopPropagation()}>
-                                <Switch
-                                    size="small"
-                                    checked={record.is_active}
-                                    loading={!!loadingToggles[record.id]}
-                                    onChange={(checked) => handleToggle(record, checked)}
-                                />
-                            </div>
-                        )}
-                    />
-
-                    {/* Actions */}
-                    <Table.Column<IOrnamentWithDetails>
-                        title="Actions"
-                        dataIndex="actions"
-                        key="actions"
-                        width={140}
-                        fixed="right"
-                        render={(_: unknown, record: IOrnamentWithDetails) => (
-                            <Space size={4} onClick={(e) => e.stopPropagation()}>
-                                <Tooltip title="View">
-                                    <Button
-                                        icon={<EyeOutlined />}
-                                        size="small"
-                                        onClick={() => setShowRecord(record)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Edit">
-                                    <Button
-                                        icon={<EditOutlined />}
-                                        size="small"
-                                        onClick={() => showEdit(record.id)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Clone">
-                                    <Button
-                                        icon={<CopyOutlined />}
-                                        size="small"
-                                        onClick={() => showClone(record.id)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                    <Button
-                                        icon={<DeleteOutlined />}
-                                        size="small"
-                                        danger
-                                        onClick={() => handleDelete(record)}
-                                    />
-                                </Tooltip>
-                            </Space>
-                        )}
-                    />
-                </Table>
-            </RefineList>
-
-            {/* ── Drawer Forms ─────────────────────────────────────────── */}
-            <OrnamentDrawer
-                action="create"
-                drawerProps={createDrawerProps}
-                formProps={createFormProps}
-                onFinish={handleCreateFinish}
-                close={closeCreate}
-                shopId={shopId}
-                saveButtonProps={createSaveButtonProps}
-            />
-            <OrnamentDrawer
-                action="edit"
-                drawerProps={editDrawerProps}
-                formProps={editFormProps}
-                onFinish={handleEditFinish}
-                close={closeEdit}
-                shopId={shopId}
-                saveButtonProps={editSaveButtonProps}
-            />
-            <OrnamentDrawer
-                action="clone"
-                drawerProps={cloneDrawerProps}
-                formProps={cloneFormProps}
-                onFinish={handleCloneFinish}
-                close={closeClone}
-                shopId={shopId}
-                saveButtonProps={cloneSaveButtonProps}
+            <Table
+                {...tableProps}
+                rowKey="id"
+                columns={columns}
+                pagination={{
+                    ...tableProps.pagination,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Total ${total} ornaments`,
+                }}
             />
 
-            {/* ── Show Drawer ───────────────────────────────────────────── */}
             <OrnamentShowDrawer
-                record={showRecord}
                 open={!!showRecord}
+                ornament={showRecord}
                 onClose={() => setShowRecord(null)}
-                onEdit={
-                    showRecord
-                        ? () => {
-                              setShowRecord(null);
-                              showEdit(showRecord.id);
-                          }
-                        : undefined
-                }
             />
-        </>
+
+            <OrnamentDrawer
+                drawerProps={drawerProps}
+                formProps={formProps}
+                ornament={editingOrnament}
+                clonedOrnament={cloningOrnament}
+                shopId={shopId}
+                onClose={() => {
+                    setEditingOrnament(null);
+                    setCloningOrnament(null);
+                    closeFormDrawer();
+                }}
+            />
+        </RefineList>
     );
 };

@@ -25,6 +25,7 @@ import type { FilterDropdownProps } from "antd/es/table/interface";
 import {
     App,
     Button,
+    Grid,
     Input,
     Radio,
     Select,
@@ -40,6 +41,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import React, { useState } from "react";
 import { CustomerModal } from "../../components/customers/customer-modal";
 import { CustomerShowModal } from "../../components/customers/customer-show-modal";
+import { MobileCustomerList } from "../../components/customers/mobile-customer-list";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import type { ICustomer } from "../../libs/interfaces";
 
@@ -58,36 +60,33 @@ const ReferredByFilterDropdown: React.FC<ReferredByFilterProps> = ({
 }) => {
     const { selectProps } = useSelect<ICustomer>({
         resource: "customers",
-        optionLabel: (item) => `${item.name} (${item.customer_code})`,
+        optionLabel: "name",
         optionValue: "id",
         filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
-        onSearch: (value) => [{ field: "name", operator: "contains" as const, value }],
     });
 
     return (
-        <div style={{ padding: 8, minWidth: 260 }}>
-            <Select<string>
-                    options={selectProps.options}
-                    loading={selectProps.loading}
-                    onSearch={selectProps.onSearch}
-                    filterOption={false}
-                    allowClear
-                    showSearch
-                    style={{ width: "100%", marginBottom: 8 }}
-                    placeholder="Search by name or code…"
-                    value={selectedKeys[0] as string || undefined}
-                    onChange={(val) => setSelectedKeys(val ? [val] : [])}
+        <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+            <Select
+                {...selectProps}
+                style={{ width: 200, marginBottom: 8, display: "block" }}
+                placeholder="Filter by referrer"
+                value={selectedKeys[0]}
+                onChange={(val) => setSelectedKeys(val ? [val] : [])}
+                allowClear
             />
             <Space>
                 <Button
                     type="primary"
                     size="small"
                     onClick={() => {
+                        confirm();
                         setFilters(
-                            [{ field: "reference_by", operator: "eq", value: selectedKeys[0] || undefined }],
+                            selectedKeys[0]
+                                ? [{ field: "reference_by", operator: "eq", value: selectedKeys[0] }]
+                                : [{ field: "reference_by", operator: "eq", value: undefined }],
                             "merge"
                         );
-                        confirm();
                     }}
                 >
                     Filter
@@ -112,7 +111,13 @@ const ReferredByFilterDropdown: React.FC<ReferredByFilterProps> = ({
 
 dayjs.extend(relativeTime);
 
+const { useBreakpoint } = Grid;
+
 export default function Customers() {
+    const screens = useBreakpoint();
+    if (!screens.md) {
+        return <MobileCustomerList />;
+    }
     return <CustomerList />;
 }
 
@@ -148,206 +153,96 @@ const CustomerList: React.FC = () => {
         sorters: {
             initial: [{ field: "created_at", order: "desc" }],
         },
-        syncWithLocation: true,
-        queryOptions: { enabled: !!shopId },
     });
 
-    const { mutate: deleteCustomer } = useDelete();
     const { mutate: updateCustomer } = useUpdate<ICustomer>();
+    const { mutate: deleteCustomer } = useDelete<ICustomer>();
 
-    // Modal Forms
-    const {
-        modalProps: createModalProps,
-        formProps: createFormProps,
-        show: showCreate,
-        close: closeCreate,
-    } = useModalForm<ICustomer>({
-        action: "create",
+    const { triggerExport, isLoading: isExporting } = useExport<ICustomer>({
         resource: "customers",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "create-customer", syncId: false },
-    });
-
-    const {
-        modalProps: editModalProps,
-        formProps: editFormProps,
-        show: showEdit,
-        close: closeEdit,
-        id: editId,
-    } = useModalForm<ICustomer>({
-        action: "edit",
-        resource: "customers",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "edit-customer", syncId: true },
-    });
-
-    const {
-        modalProps: cloneModalProps,
-        formProps: cloneFormProps,
-        show: showClone,
-        close: closeClone,
-    } = useModalForm<ICustomer>({
-        action: "clone",
-        resource: "customers",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "clone-customer", syncId: true },
-    });
-
-    // Export
-    const { triggerExport, isLoading: exportLoading } = useExport<ICustomer>({
-        resource: "customers",
-        filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
-        mapData: (item) => ({
-            "Customer Code": item.customer_code,
-            "Name": item.name,
-            "Phone": item.phone,
-            "Alternate Phone": item.alternate_phone ?? "",
-            "Email": item.email ?? "",
-            "Address": item.address,
-            "Referred By": item.referred_customer
-                ? `${item.referred_customer.name} (${item.referred_customer.customer_code})`
-                : "",
-            "Status": item.is_active ? "Active" : "Inactive",
-            "Joined": new Date(item.created_at).toLocaleDateString("en-IN"),
+        filters: {
+            permanent: shopId
+                ? [{ field: "shop_id", operator: "eq", value: shopId }]
+                : [],
+        },
+        mapData: (record) => ({
+            "Customer Code": record.customer_code,
+            Name: record.name,
+            Phone: record.phone,
+            Email: record.email ?? "",
+            City: record.city ?? "",
+            "PAN Card": record.pan_card ?? "",
+            "Aadhaar Card": record.aadhaar_card ?? "",
+            Status: record.is_active ? "Active" : "Inactive",
+            "Created At": record.created_at,
         }),
+        exportOptions: {
+            filename: `customers-${dayjs().format("YYYY-MM-DD")}`,
+        },
     });
 
-    // Global filter helper
-    const applyFilters = (text: string, status: "all" | "active" | "inactive") => {
-        const next = [];
-        if (text.trim()) {
-            next.push({ field: "name", operator: "contains" as const, value: text.trim() });
-        }
-        if (status !== "all") {
-            next.push({ field: "is_active", operator: "eq" as const, value: status === "active" });
-        }
-        setFilters(next, "replace");
+    const [editingCustomer, setEditingCustomer] = useState<ICustomer | null>(null);
+    const [cloningCustomer, setCloningCustomer] = useState<ICustomer | null>(null);
+
+    const {
+        modalProps,
+        formProps,
+        show: showCustomerModal,
+        close: closeCustomerModal,
+    } = useModalForm<ICustomer>({
+        resource: "customers",
+        action: editingCustomer ? "edit" : "create",
+        id: editingCustomer?.id,
+        redirect: false,
+        onMutationSuccess: () => {
+            setEditingCustomer(null);
+            closeCustomerModal();
+        },
+    });
+
+    const handleCreate = () => {
+        setEditingCustomer(null);
+        setCloningCustomer(null);
+        formProps.form?.resetFields();
+        showCustomerModal();
     };
 
-    // Per-column filter dropdown 
-    const makeColumnFilter = (field: string, placeholder: string) =>
-        ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
-            <div style={{ padding: 8, minWidth: 200 }}>
-                <Input
-                    autoFocus
-                    placeholder={placeholder}
-                    value={selectedKeys[0] as string}
-                    onChange={(e) =>
-                        setSelectedKeys(e.target.value ? [e.target.value] : [])
-                    }
-                    onPressEnter={() => {
-                        setFilters(
-                            [{ field, operator: "contains" as const, value: selectedKeys[0] || undefined }],
-                            "merge"
-                        );
-                        confirm();
-                    }}
-                    style={{ marginBottom: 8, display: "block" }}
-                />
-                <Space>
-                    <Button
-                        type="primary"
-                        size="small"
-                        onClick={() => {
-                            setFilters(
-                                [{ field, operator: "contains" as const, value: selectedKeys[0] || undefined }],
-                                "merge"
-                            );
-                            confirm();
-                        }}
-                    >
-                        Filter
-                    </Button>
-                    <Button
-                        size="small"
-                        onClick={() => {
-                            clearFilters?.();
-                            setFilters(
-                                [{ field, operator: "contains" as const, value: undefined }],
-                                "merge"
-                            );
-                            confirm();
-                        }}
-                    >
-                        Reset
-                    </Button>
-                </Space>
-            </div>
-        );
-
-    // Handlers 
-    const handleCreateFinish = (values: Partial<ICustomer>) => {
-        return createFormProps.onFinish?.({
-            ...values,
-            shop_id: shopId,
-            created_by: userId,
-            updated_by: userId,
-        });
+    const handleEdit = (record: ICustomer) => {
+        setEditingCustomer(record);
+        setCloningCustomer(null);
+        showCustomerModal(record.id);
     };
 
-    const handleEditFinish = (values: Partial<ICustomer>) => {
-        return editFormProps.onFinish?.({ ...values, updated_by: userId });
-    };
-
-    const handleCloneFinish = (values: Partial<ICustomer>) => {
-        return cloneFormProps.onFinish?.({
-            ...values,
-            shop_id: shopId,
-            created_by: userId,
-            updated_by: userId,
-        });
-    };
-
-    const handleToggle = (record: ICustomer, checked: boolean) => {
-        setLoadingToggles((prev) => ({ ...prev, [record.id]: true }));
-        updateCustomer(
-            {
-                resource: "customers",
-                id: record.id,
-                values: { is_active: checked, updated_by: userId },
-                successNotification: () => ({
-                    message: checked ? "Customer activated" : "Customer deactivated",
-                    type: "success",
-                }),
-            },
-            {
-                onSettled: () => {
-                    setLoadingToggles((prev) => {
-                        const next = { ...prev };
-                        delete next[record.id];
-                        return next;
-                    });
-                },
-            }
-        );
+    const handleClone = (record: ICustomer) => {
+        setEditingCustomer(null);
+        setCloningCustomer(record);
+        formProps.form?.resetFields();
+        showCustomerModal();
     };
 
     const handleDelete = (record: ICustomer) => {
         modal.confirm({
-            title: "Delete customer?",
-            content: (
-                <>
-                    <Typography.Text>
-                        Permanently delete <b>{record.name}</b> ({record.customer_code})?
-                        This cannot be undone.
-                    </Typography.Text>
-                    <br />
-                    <Typography.Text type="warning">
-                        Deletion will fail if invoices exist for this customer.
-                    </Typography.Text>
-                </>
-            ),
+            title: "Delete Customer",
+            content: `Are you sure you want to delete "${record.name}"? This action cannot be undone.`,
             okText: "Delete",
-            okButtonProps: { danger: true },
+            okType: "danger",
+            cancelText: "Cancel",
             onOk: () => {
                 deleteCustomer(
-                    { resource: "customers", id: record.id },
                     {
-                        onError: () => {
+                        resource: "customers",
+                        id: record.id,
+                    },
+                    {
+                        onSuccess: () => {
+                            notification.success({
+                                message: "Customer deleted successfully",
+                            });
+                        },
+                        onError: (error) => {
                             notification.error({
-                                message: "Cannot delete customer",
-                                description:
-                                    "This customer has invoices. Remove or reassign them first.",
+                                message: "Error deleting customer",
+                                description: error?.message,
                             });
                         },
                     }
@@ -356,353 +251,365 @@ const CustomerList: React.FC = () => {
         });
     };
 
-    // Render
-    return (
-        <>
-            <RefineList
-                headerButtons={({ defaultButtons }) => (
-                    <>
-                        {defaultButtons}
-                        <ExportButton onClick={triggerExport} loading={exportLoading} />
-                    </>
-                )}
-                createButtonProps={{
-                    onClick: () => showCreate(),
-                    children: "New Customer",
-                }}
-            >
-                {/* Toolbar */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-                    <Space wrap>
-                        <Input.Search
-                            placeholder="Search by name…"
-                            allowClear
-                            style={{ width: 260 }}
-                            value={searchText}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSearchText(val);
-                                if (!val) applyFilters("", statusFilter);
-                            }}
-                            onSearch={(val) => {
-                                setSearchText(val);
-                                applyFilters(val, statusFilter);
-                            }}
-                        />
+    const handleToggleActive = (record: ICustomer, checked: boolean) => {
+        setLoadingToggles((prev) => ({ ...prev, [record.id]: true }));
+        updateCustomer(
+            {
+                resource: "customers",
+                id: record.id,
+                values: {
+                    is_active: checked,
+                    updated_by: userId,
+                },
+            },
+            {
+                onSuccess: () => {
+                    setLoadingToggles((prev) => ({ ...prev, [record.id]: false }));
+                    notification.success({
+                        message: `Customer marked as ${checked ? "Active" : "Inactive"}`,
+                    });
+                },
+                onError: (error) => {
+                    setLoadingToggles((prev) => ({ ...prev, [record.id]: false }));
+                    notification.error({
+                        message: "Error updating customer status",
+                        description: error?.message,
+                    });
+                },
+            }
+        );
+    };
 
-                        <Radio.Group
-                            value={statusFilter}
-                            onChange={(e) => {
-                                const val = e.target.value as "all" | "active" | "inactive";
-                                setStatusFilter(val);
-                                applyFilters(searchText, val);
-                            }}
-                            optionType="button"
-                            buttonStyle="solid"
-                            size="small"
-                        >
-                            <Radio.Button value="all">All</Radio.Button>
-                            <Radio.Button value="active">Active</Radio.Button>
-                            <Radio.Button value="inactive">Inactive</Radio.Button>
-                        </Radio.Group>
-                    </Space>
+    const handleSearch = (value: string) => {
+        setSearchText(value);
+        setFilters(
+            value
+                ? [
+                      {
+                          field: "name",
+                          operator: "contains",
+                          value,
+                      },
+                  ]
+                : [],
+            "merge"
+        );
+    };
 
-                    {(() => {
-                        const hasActive =
-                            searchText !== "" ||
-                            statusFilter !== "all" ||
-                            filters.some((f) => "field" in f && f.field !== "shop_id");
-                        return (
-                            <Tooltip title="Reset all filters">
-                                <Button
-                                    icon={<ReloadOutlined />}
-                                    size="small"
-                                    type={hasActive ? "primary" : "default"}
-                                    onClick={() => {
-                                        setSearchText("");
-                                        setStatusFilter("all");
-                                        setFilters([], "replace");
-                                    }}
-                                >
-                                    Reset Filters
-                                </Button>
-                            </Tooltip>
-                        );
-                    })()}
-                </div>
+    const handleStatusFilterChange = (status: "all" | "active" | "inactive") => {
+        setStatusFilter(status);
+        if (status === "all") {
+            setFilters(
+                [{ field: "is_active", operator: "eq", value: undefined }],
+                "merge"
+            );
+        } else {
+            setFilters(
+                [
+                    {
+                        field: "is_active",
+                        operator: "eq",
+                        value: status === "active",
+                    },
+                ],
+                "merge"
+            );
+        }
+    };
 
-                <Table
-                    {...tableProps}
-                    rowKey="id"
-                    size="small"
-                    scroll={{ x: 1320 }}
-                    onChange={(pagination, _columnFilters, sorter, extra) => {
-                        // Filters are managed entirely via setFilters; pass empty column
-                        // filters to prevent Ant Design from re-applying them as "in"
-                        // operators (which would override our "contains"/"eq" filters)
-                        // every time the user sorts or changes page.
-                        tableProps.onChange?.(pagination, {}, sorter, extra);
-                    }}
-                    onRow={(record) => ({
-                        style: { cursor: "pointer" },
-                        onClick: () => setShowRecord(record),
-                    })}
+    const columns = [
+        {
+            title: "Customer Code",
+            dataIndex: "customer_code",
+            key: "customer_code",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("customer_code", sorters),
+            render: (value: string, record: ICustomer) => (
+                <Button
+                    type="link"
+                    style={{ padding: 0, fontFamily: "monospace" }}
+                    onClick={() => setShowRecord(record)}
                 >
-                    {/* Date */}
-                    <Table.Column<ICustomer>
-                        key="created_at"
-                        dataIndex="created_at"
-                        title="Date"
-                        width={110}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("created_at", sorters)}
-                        render={(val: string) => (
-                            <Tooltip title={new Date(val).toLocaleString("en-IN")}>
-                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                                    {dayjs(val).fromNow()}
-                                </Typography.Text>
-                            </Tooltip>
-                        )}
-                    />
-
-                    {/* Name + Code */}
-                    <Table.Column<ICustomer>
-                        key="name"
-                        dataIndex="name"
-                        title="Name"
-                        sorter
-                        width={285}
-                        defaultSortOrder={getDefaultSortOrder("name", sorters)}
-                        filterDropdown={makeColumnFilter("name", "Filter by name…")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(_: unknown, record: ICustomer) => (
-                            <div>
-                                <Typography.Text strong>{record.name}</Typography.Text>
-                                <div style={{ marginTop: 2 }}>
-                                    <Tag
-                                        color="blue"
-                                        style={{
-                                            fontSize: 10,
-                                            padding: "0 4px",
-                                            fontFamily: "monospace",
-                                        }}
-                                    >
-                                        {record.customer_code}
-                                    </Tag>
-                                </div>
-                            </div>
-                        )}
-                    />
-
-                    {/* Phone */}
-                    <Table.Column<ICustomer>
-                        key="phone"
-                        dataIndex="phone"
-                        title="Phone"
-                        width={160}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("phone", sorters)}
-                        filterDropdown={makeColumnFilter("phone", "Filter by phone…")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(_: unknown, record: ICustomer) => (
-                            <div>
-                                <Typography.Text>{record.phone}</Typography.Text>
-                                {record.alternate_phone && (
-                                    <Typography.Text
-                                        type="secondary"
-                                        style={{ display: "block", fontSize: 11 }}
-                                    >
-                                        {record.alternate_phone}
-                                    </Typography.Text>
-                                )}
-                            </div>
-                        )}
-                    />
-
-                    {/* Email */}
-                    <Table.Column<ICustomer>
-                        key="email"
-                        dataIndex="email"
-                        title="Email"
-                        width={200}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("email", sorters)}
-                        filterDropdown={makeColumnFilter("email", "Filter by email…")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(email: string | null) =>
-                            email ? (
-                                <Typography.Text>{email}</Typography.Text>
-                            ) : (
-                                <Typography.Text type="secondary">—</Typography.Text>
-                            )
+                    {value}
+                </Button>
+            ),
+        },
+        {
+            title: "Name",
+            dataIndex: "name",
+            key: "name",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("name", sorters),
+            filterDropdown: (props: FilterDropdownProps) => (
+                <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+                    <Input
+                        placeholder="Search name"
+                        value={props.selectedKeys[0]}
+                        onChange={(e) =>
+                            props.setSelectedKeys(e.target.value ? [e.target.value] : [])
                         }
-                    />
-
-                    {/* Address – fixed width, scrollable via table x scroll */}
-                    <Table.Column<ICustomer>
-                        key="address"
-                        dataIndex="address"
-                        title="Address"
-                        width={220}
-                        ellipsis
-                        filterDropdown={makeColumnFilter("address", "Filter by address…")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                    />
-
-                    {/* Referred By */}
-                    <Table.Column<ICustomer>
-                        key="reference_by"
-                        dataIndex="reference_by"
-                        title="Referred By"
-                        width={180}
-                        filterDropdown={(props) => (
-                            <ReferredByFilterDropdown
-                                {...props}
-                                shopId={shopId}
-                                setFilters={setFilters}
-                            />
-                        )}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
-                        )}
-                        render={(_: unknown, record: ICustomer) => {
-                            if (!record.referred_customer) {
-                                return (
-                                    <Typography.Text type="secondary">—</Typography.Text>
-                                );
-                            }
-                            return (
-                                <Space size={4}>
-                                    <span>{record.referred_customer.name}</span>
-                                    <Tag
-                                        color="default"
-                                        style={{
-                                            fontSize: 10,
-                                            padding: "0 4px",
-                                            fontFamily: "monospace",
-                                        }}
-                                    >
-                                        {record.referred_customer.customer_code}
-                                    </Tag>
-                                </Space>
+                        onPressEnter={() => {
+                            props.confirm();
+                            setFilters(
+                                props.selectedKeys[0]
+                                    ? [
+                                          {
+                                              field: "name",
+                                              operator: "contains",
+                                              value: props.selectedKeys[0],
+                                          },
+                                      ]
+                                    : [{ field: "name", operator: "contains", value: undefined }],
+                                "merge"
                             );
                         }}
+                        style={{ width: 188, marginBottom: 8, display: "block" }}
                     />
-
-                    {/* Active Toggle – filter via toolbar, no column sorter */}
-                    <Table.Column<ICustomer>
-                        key="is_active"
-                        dataIndex="is_active"
-                        title="Active"
-                        width={80}
-                        render={(_: unknown, record: ICustomer) => (
-                            <div onClick={(e) => e.stopPropagation()}>
-                                <Switch
-                                    size="small"
-                                    checked={record.is_active}
-                                    loading={!!loadingToggles[record.id]}
-                                    onChange={(checked) => handleToggle(record, checked)}
-                                />
-                            </div>
-                        )}
+                    <Space>
+                        <Button
+                            type="primary"
+                            size="small"
+                            onClick={() => {
+                                props.confirm();
+                                setFilters(
+                                    props.selectedKeys[0]
+                                        ? [
+                                              {
+                                                  field: "name",
+                                                  operator: "contains",
+                                                  value: props.selectedKeys[0],
+                                              },
+                                          ]
+                                        : [{ field: "name", operator: "contains", value: undefined }],
+                                    "merge"
+                                );
+                            }}
+                        >
+                            Search
+                        </Button>
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                props.clearFilters?.();
+                                setFilters(
+                                    [{ field: "name", operator: "contains", value: undefined }],
+                                    "merge"
+                                );
+                                props.confirm();
+                            }}
+                        >
+                            Reset
+                        </Button>
+                    </Space>
+                </div>
+            ),
+            filterIcon: (filtered: boolean) => (
+                <FilterOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+            ),
+        },
+        {
+            title: "Phone",
+            dataIndex: "phone",
+            key: "phone",
+        },
+        {
+            title: "City",
+            dataIndex: "city",
+            key: "city",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("city", sorters),
+            render: (value?: string) => value ?? "—",
+        },
+        {
+            title: "Referred By",
+            dataIndex: "referred_customer",
+            key: "reference_by",
+            filterDropdown: (props: FilterDropdownProps) => (
+                <ReferredByFilterDropdown
+                    {...props}
+                    shopId={shopId}
+                    setFilters={setFilters}
+                />
+            ),
+            filterIcon: (filtered: boolean) => (
+                <FilterOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+            ),
+            render: (referredCustomer: { id: string; name: string; customer_code: string } | null) => {
+                if (!referredCustomer) return <Typography.Text type="secondary">—</Typography.Text>;
+                return (
+                    <Typography.Text>
+                        {referredCustomer.name}{" "}
+                        <Tag
+                            color="blue"
+                            style={{
+                                fontFamily: "monospace",
+                                fontSize: 10,
+                                padding: "0 5px",
+                                lineHeight: "18px",
+                            }}
+                        >
+                            {referredCustomer.customer_code}
+                        </Tag>
+                    </Typography.Text>
+                );
+            },
+        },
+        {
+            title: "Status",
+            dataIndex: "is_active",
+            key: "is_active",
+            render: (value: boolean, record: ICustomer) => (
+                <Space>
+                    <Switch
+                        size="small"
+                        checked={value}
+                        loading={!!loadingToggles[record.id]}
+                        onChange={(checked) => handleToggleActive(record, checked)}
                     />
+                    <Tag color={value ? "success" : "default"}>
+                        {value ? "Active" : "Inactive"}
+                    </Tag>
+                </Space>
+            ),
+        },
+        {
+            title: "Created At",
+            dataIndex: "created_at",
+            key: "created_at",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("created_at", sorters),
+            render: (value: string) => (
+                <Tooltip title={dayjs(value).format("YYYY-MM-DD HH:mm:ss")}>
+                    {dayjs(value).fromNow()}
+                </Tooltip>
+            ),
+        },
+        {
+            title: "Actions",
+            key: "actions",
+            render: (_: unknown, record: ICustomer) => (
+                <Space>
+                    <Tooltip title="View">
+                        <Button
+                            type="text"
+                            icon={<EyeOutlined />}
+                            size="small"
+                            onClick={() => setShowRecord(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={() => handleEdit(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Clone">
+                        <Button
+                            type="text"
+                            icon={<CopyOutlined />}
+                            size="small"
+                            onClick={() => handleClone(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                        <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            onClick={() => handleDelete(record)}
+                        />
+                    </Tooltip>
+                </Space>
+            ),
+        },
+    ];
 
-                    {/* Actions */}
-                    <Table.Column<ICustomer>
-                        title="Actions"
-                        dataIndex="actions"
-                        key="actions"
-                        width={140}
-                        fixed="right"
-                        render={(_: unknown, record: ICustomer) => (
-                            <Space
-                                size={4}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <Tooltip title="View">
-                                    <Button
-                                        icon={<EyeOutlined />}
-                                        size="small"
-                                        onClick={() => setShowRecord(record)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Edit">
-                                    <Button
-                                        icon={<EditOutlined />}
-                                        size="small"
-                                        onClick={() => showEdit(record.id)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Clone">
-                                    <Button
-                                        icon={<CopyOutlined />}
-                                        size="small"
-                                        onClick={() => showClone(record.id)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                    <Button
-                                        icon={<DeleteOutlined />}
-                                        size="small"
-                                        danger
-                                        onClick={() => handleDelete(record)}
-                                    />
-                                </Tooltip>
-                            </Space>
-                        )}
+    return (
+        <RefineList
+            title="Customers"
+            headerButtons={[
+                <ExportButton
+                    key="export"
+                    onClick={() => triggerExport()}
+                    loading={isExporting}
+                />,
+                <Button key="create" type="primary" onClick={handleCreate}>
+                    Create Customer
+                </Button>,
+            ]}
+        >
+            {/* Toolbar */}
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 16,
+                    gap: 16,
+                    flexWrap: "wrap",
+                }}
+            >
+                <Space wrap>
+                    <Input.Search
+                        placeholder="Search by name"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        onSearch={handleSearch}
+                        style={{ width: 240 }}
+                        allowClear
                     />
-                </Table>
-            </RefineList>
+                    <Radio.Group
+                        value={statusFilter}
+                        onChange={(e) => handleStatusFilterChange(e.target.value)}
+                        buttonStyle="solid"
+                    >
+                        <Radio.Button value="all">All</Radio.Button>
+                        <Radio.Button value="active">Active</Radio.Button>
+                        <Radio.Button value="inactive">Inactive</Radio.Button>
+                    </Radio.Group>
+                </Space>
+                <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => {
+                        setSearchText("");
+                        setStatusFilter("all");
+                        setFilters([], "replace");
+                    }}
+                >
+                    Reset Filters
+                </Button>
+            </div>
 
-            {/* Modals*/}
-            <CustomerModal
-                action="create"
-                modalProps={createModalProps}
-                formProps={createFormProps}
-                onFinish={handleCreateFinish}
-                close={closeCreate}
-                shopId={shopId}
-            />
-            <CustomerModal
-                action="edit"
-                modalProps={editModalProps}
-                formProps={editFormProps}
-                onFinish={handleEditFinish}
-                close={closeEdit}
-                shopId={shopId}
-                excludeCustomerId={editId as string | undefined}
-            />
-            <CustomerModal
-                action="clone"
-                modalProps={cloneModalProps}
-                formProps={cloneFormProps}
-                onFinish={handleCloneFinish}
-                close={closeClone}
-                shopId={shopId}
+            <Table
+                {...tableProps}
+                rowKey="id"
+                columns={columns}
+                pagination={{
+                    ...tableProps.pagination,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Total ${total} customers`,
+                }}
             />
 
-            {/* Show Modal */}
             <CustomerShowModal
-                record={showRecord}
-                open={!!showRecord}
+                customer={showRecord}
                 onClose={() => setShowRecord(null)}
-                onEdit={
-                    showRecord
-                        ? () => {
-                              setShowRecord(null);
-                              showEdit(showRecord.id);
-                          }
-                        : undefined
-                }
             />
-        </>
+
+            <CustomerModal
+                modalProps={modalProps}
+                formProps={formProps}
+                customer={editingCustomer}
+                clonedCustomer={cloningCustomer}
+                onClose={() => {
+                    setEditingCustomer(null);
+                    setCloningCustomer(null);
+                    closeCustomerModal();
+                }}
+            />
+        </RefineList>
     );
 };

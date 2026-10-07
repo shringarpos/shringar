@@ -69,6 +69,7 @@ export const RateHistoryTable: React.FC<RateHistoryTableProps> = ({
     <Table
       {...restTableProps}
       dataSource={pivotData as unknown as IMetalRate[]}
+      scroll={{ x: 450 }}
       title={() => (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Text strong>Rate History</Text>
@@ -86,7 +87,7 @@ export const RateHistoryTable: React.FC<RateHistoryTableProps> = ({
         dataIndex="rate_date"
         title="Date"
         render={(v: string) => dayjs(v).format("D MMM YYYY")}
-        width={200}
+        width={140}
       />
       {metals.map((metal) => (
         <Table.Column<IMetalRate>
