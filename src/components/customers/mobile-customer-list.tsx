@@ -10,7 +10,6 @@ import {
   Skeleton,
   theme,
   Empty,
-  message,
 } from "antd";
 import {
   Search,
@@ -18,7 +17,7 @@ import {
   Phone,
   Eye,
   Edit,
-  Share2,
+  MessageCircle,
   MapPin,
   UserCheck,
 } from "lucide-react";
@@ -58,7 +57,7 @@ export const MobileCustomerList: React.FC = () => {
   const { query } = useList<ICustomer>({
     resource: "customers",
     filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
-    sorters: [{ field: "name", order: "asc" }],
+    sorters: [{ field: "created_at", order: "desc" }],
     pagination: { mode: "server", pageSize: 50 },
     queryOptions: { enabled: !!shopId },
   });
@@ -67,16 +66,15 @@ export const MobileCustomerList: React.FC = () => {
   const isLoading = query?.isLoading;
 
   const filteredCustomers = useMemo(() => {
-    return customers.filter((c) => {
-      if (!searchTerm) return true;
-      const term = searchTerm.toLowerCase();
-      return (
+    if (!searchTerm.trim()) return customers;
+    const term = searchTerm.toLowerCase();
+    return customers.filter(
+      (c) =>
         c.name.toLowerCase().includes(term) ||
         c.customer_code?.toLowerCase().includes(term) ||
         c.phone?.includes(term) ||
-        c.city?.toLowerCase().includes(term)
-      );
-    });
+        c.address?.toLowerCase().includes(term)
+    );
   }, [customers, searchTerm]);
 
   const handleCreateNew = () => {
@@ -85,9 +83,15 @@ export const MobileCustomerList: React.FC = () => {
     showCustomerModal();
   };
 
-  const handleEdit = (c: ICustomer) => {
+  const handleEdit = (c: ICustomer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setEditingCustomer(c);
     showCustomerModal(c.id);
+  };
+
+  const cleanPhone = (phone?: string) => {
+    if (!phone) return "";
+    return phone.replace(/\D/g, "");
   };
 
   return (
@@ -97,7 +101,8 @@ export const MobileCustomerList: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        paddingBottom: 40,
+        paddingBottom: "calc(88px + env(safe-area-inset-bottom, 16px))",
+        position: "relative",
       }}
     >
       {/* Header */}
@@ -114,7 +119,7 @@ export const MobileCustomerList: React.FC = () => {
             Customers
           </Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {filteredCustomers.length} {filteredCustomers.length === 1 ? "client" : "clients"}
+            {filteredCustomers.length} {filteredCustomers.length === 1 ? "client" : "clients"} listed
           </Text>
         </div>
 
@@ -137,20 +142,32 @@ export const MobileCustomerList: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search Input */}
-      <Input
-        prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-        placeholder="Search name, phone, or customer code..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        allowClear
+      {/* Sticky Search Input */}
+      <div
         style={{
-          height: 42,
-          borderRadius: 12,
-          fontSize: 14,
-          background: token.colorBgElevated,
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          backgroundColor: token.colorBgLayout,
+          paddingBottom: 4,
         }}
-      />
+      >
+        <Input
+          prefix={<Search size={16} color={token.colorTextPlaceholder} />}
+          placeholder="Search name, phone, or customer code..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          allowClear
+          inputMode="search"
+          style={{
+            height: 44,
+            borderRadius: 12,
+            fontSize: 14,
+            background: token.colorBgElevated,
+            border: `1px solid ${token.colorBorderSecondary}`,
+          }}
+        />
+      </div>
 
       {/* Customers Cards List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -160,14 +177,32 @@ export const MobileCustomerList: React.FC = () => {
             <Skeleton active paragraph={{ rows: 2 }} />
           </div>
         ) : filteredCustomers.length === 0 ? (
-          <Empty description="No customers found" style={{ margin: "32px 0" }} />
+          <Empty
+            description={
+              <span>
+                {searchTerm ? "No customers matching your search" : "No customers found"}
+              </span>
+            }
+            style={{ margin: "32px 0" }}
+          >
+            {searchTerm && (
+              <Button size="small" onClick={() => setSearchTerm("")}>
+                Clear Search
+              </Button>
+            )}
+          </Empty>
         ) : (
           filteredCustomers.map((c) => {
             const initial = c.name ? c.name[0].toUpperCase() : "C";
+            const digits = cleanPhone(c.phone);
+            const waNumber = digits.length === 10 ? `91${digits}` : digits;
 
             return (
               <div
                 key={c.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setShowCustomer(c)}
                 style={{
                   backgroundColor: token.colorBgElevated,
                   borderRadius: 14,
@@ -177,30 +212,47 @@ export const MobileCustomerList: React.FC = () => {
                   flexDirection: "column",
                   gap: 10,
                   boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
+                  cursor: "pointer",
+                  transition: "transform 0.1s ease",
+                  WebkitTapHighlightColor: "transparent",
                 }}
               >
                 {/* Top Row: Avatar, Name & Code */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Avatar
-                      size={40}
-                      style={{
-                        backgroundColor: token.colorPrimaryBg,
-                        color: token.colorPrimary,
-                        fontWeight: 700,
-                        fontSize: 16,
-                      }}
-                    >
-                      {initial}
-                    </Avatar>
+                    <div style={{ position: "relative" }}>
+                      <Avatar
+                        size={40}
+                        style={{
+                          backgroundColor: token.colorPrimaryBg,
+                          color: token.colorPrimary,
+                          fontWeight: 700,
+                          fontSize: 16,
+                        }}
+                      >
+                        {initial}
+                      </Avatar>
+                      {c.is_active && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: -1,
+                            right: -1,
+                            width: 10,
+                            height: 10,
+                            borderRadius: 5,
+                            backgroundColor: "#16a34a",
+                            border: `2px solid ${token.colorBgElevated}`,
+                          }}
+                        />
+                      )}
+                    </div>
+
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <Text strong style={{ fontSize: 14 }}>
+                        <Text strong style={{ fontSize: 14, color: token.colorText }}>
                           {c.name}
                         </Text>
-                        {c.is_active && (
-                          <UserCheck size={13} color={token.colorSuccess} />
-                        )}
                       </div>
                       <Tag
                         color="blue"
@@ -210,6 +262,7 @@ export const MobileCustomerList: React.FC = () => {
                           fontSize: 10,
                           lineHeight: "16px",
                           padding: "0 4px",
+                          borderRadius: 4,
                         }}
                       >
                         {c.customer_code}
@@ -217,37 +270,66 @@ export const MobileCustomerList: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* 1-Tap Call & WhatsApp Direct Triggers */}
                   {c.phone && (
-                    <a
-                      href={`tel:${c.phone}`}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        backgroundColor: "#f0fdf4",
-                        color: "#16a34a",
-                        padding: "6px 10px",
-                        borderRadius: 20,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        textDecoration: "none",
-                      }}
-                    >
-                      <Phone size={12} />
-                      <span>Call</span>
-                    </a>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <a
+                        href={`https://wa.me/${waNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="WhatsApp customer"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: "#f0fdf4",
+                          color: "#16a34a",
+                          border: "1px solid #bbf7d0",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <MessageCircle size={15} />
+                      </a>
+
+                      <a
+                        href={`tel:${c.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Call customer"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          backgroundColor: token.colorPrimaryBg,
+                          color: token.colorPrimary,
+                          border: `1px solid ${token.colorPrimaryBorder}`,
+                          padding: "0 10px",
+                          height: 34,
+                          borderRadius: 17,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textDecoration: "none",
+                        }}
+                      >
+                        <Phone size={13} />
+                        <span>Call</span>
+                      </a>
+                    </div>
                   )}
                 </div>
 
                 {/* Middle Row: Phone & Address */}
-                {(c.phone || c.city || c.address) && (
+                {(c.phone || c.address) && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     {c.phone && (
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         Phone: {c.phone}
                       </Text>
                     )}
-                    {(c.address || c.city) && (
+                    {c.address && (
                       <span
                         style={{
                           fontSize: 11,
@@ -258,7 +340,7 @@ export const MobileCustomerList: React.FC = () => {
                         }}
                       >
                         <MapPin size={11} />
-                        {[c.address, c.city].filter(Boolean).join(", ")}
+                        {c.address}
                       </span>
                     )}
                   </div>
@@ -280,26 +362,30 @@ export const MobileCustomerList: React.FC = () => {
                     type="primary"
                     ghost
                     icon={<Eye size={13} />}
-                    onClick={() => setShowCustomer(c)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCustomer(c);
+                    }}
                     style={{
                       flex: 1,
                       borderRadius: 8,
                       fontSize: 12,
                       fontWeight: 600,
-                      height: 32,
+                      height: 34,
                     }}
                   >
-                    Profile
+                    View Ledger
                   </Button>
 
                   <Button
                     size="small"
                     icon={<Edit size={13} />}
-                    onClick={() => handleEdit(c)}
+                    onClick={(e) => handleEdit(c, e)}
                     style={{
                       borderRadius: 8,
                       fontSize: 12,
-                      height: 32,
+                      height: 34,
+                      padding: "0 14px",
                     }}
                   >
                     Edit
@@ -313,19 +399,29 @@ export const MobileCustomerList: React.FC = () => {
 
       {/* Show Customer Modal */}
       <CustomerShowModal
-        customer={showCustomer}
+        open={!!showCustomer}
+        record={showCustomer}
         onClose={() => setShowCustomer(null)}
+        onEdit={() => {
+          const target = showCustomer;
+          setShowCustomer(null);
+          if (target) {
+            handleEdit(target);
+          }
+        }}
       />
 
       {/* Create / Edit Customer Modal */}
       <CustomerModal
+        action={editingCustomer ? "edit" : "create"}
         modalProps={modalProps}
         formProps={formProps}
-        customer={editingCustomer}
-        onClose={() => {
+        shopId={shopId}
+        close={() => {
           setEditingCustomer(null);
           closeCustomerModal();
         }}
+        onFinish={formProps.onFinish as any}
       />
     </div>
   );

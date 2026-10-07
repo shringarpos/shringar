@@ -6,7 +6,6 @@ import {
   Input,
   Button,
   Tag,
-  Avatar,
   Skeleton,
   theme,
   Empty,
@@ -16,14 +15,9 @@ import {
   Search,
   Plus,
   Eye,
-  Share2,
   Copy,
-  Receipt,
   Phone,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  FileText,
+  MessageCircle,
 } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -37,6 +31,10 @@ const { Title, Text } = Typography;
 
 interface IInvoiceRow extends IInvoice {
   customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone"> | null;
+  payment_status?: string;
+  payment_method?: string;
+  paid_amount_paise?: number;
+  balance_amount_paise?: number;
 }
 
 const abbrRs = (paise: number): string => {
@@ -78,25 +76,32 @@ export const MobileInvoiceList: React.FC = () => {
         inv.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         inv.customer?.phone?.includes(searchTerm);
 
-      const matchStatus =
-        statusFilter === "ALL" ||
-        (inv.payment_status || "UNPAID").toUpperCase() === statusFilter;
+      if (!matchSearch) return false;
 
-      return matchSearch && matchStatus;
+      if (statusFilter === "ALL") return true;
+      if (statusFilter === "CANCELLED") return !!inv.is_cancelled;
+      return (inv.payment_status || "UNPAID").toUpperCase() === statusFilter && !inv.is_cancelled;
     });
   }, [invoices, searchTerm, statusFilter]);
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(text);
-    message.success(`Copied ${text} to clipboard!`);
+    message.success(`Copied #${text}`);
   };
 
-  const handleWhatsApp = (inv: IInvoiceRow) => {
-    const text = encodeURIComponent(
-      `Hello ${inv.customer?.name || "Customer"}, your invoice #${inv.invoice_number} from Shringar Jewellers for ${abbrRs(inv.total_amount_paise || 0)} is ready. Thank you for your business!`
-    );
-    const phone = inv.customer?.phone ? inv.customer.phone.replace(/[^0-9]/g, "") : "";
-    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+  const handleWhatsApp = (e: React.MouseEvent, inv: IInvoiceRow) => {
+    e.stopPropagation();
+    const custName = inv.customer?.name || "Valued Customer";
+    const total = abbrRs(inv.total_amount_paise || 0);
+    const balance = inv.balance_amount_paise ? abbrRs(inv.balance_amount_paise) : null;
+    const msg = balance
+      ? `Hello ${custName}, thank you for shopping with Shringar Jewellers! Your invoice #${inv.invoice_number} is for ${total}. Outstanding balance due: ${balance}.`
+      : `Hello ${custName}, thank you for your payment at Shringar Jewellers! Your invoice #${inv.invoice_number} for ${total} is fully settled.`;
+
+    const digits = inv.customer?.phone ? inv.customer.phone.replace(/\D/g, "") : "";
+    const waNumber = digits.length === 10 ? `91${digits}` : digits;
+    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   return (
@@ -106,7 +111,7 @@ export const MobileInvoiceList: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        paddingBottom: 40,
+        paddingBottom: "calc(88px + env(safe-area-inset-bottom, 16px))",
       }}
     >
       {/* Top Header */}
@@ -123,7 +128,7 @@ export const MobileInvoiceList: React.FC = () => {
             Invoices & Receipts
           </Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {filteredInvoices.length} {filteredInvoices.length === 1 ? "record" : "records"}
+            {filteredInvoices.length} {filteredInvoices.length === 1 ? "bill" : "bills"} found
           </Text>
         </div>
 
@@ -148,15 +153,17 @@ export const MobileInvoiceList: React.FC = () => {
       {/* Search Input */}
       <Input
         prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-        placeholder="Search invoice #, customer, phone..."
+        placeholder="Search bill #, customer, phone..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         allowClear
+        inputMode="search"
         style={{
-          height: 42,
+          height: 44,
           borderRadius: 12,
           fontSize: 14,
           background: token.colorBgElevated,
+          border: `1px solid ${token.colorBorderSecondary}`,
         }}
       />
 
@@ -168,6 +175,7 @@ export const MobileInvoiceList: React.FC = () => {
           overflowX: "auto",
           paddingBottom: 4,
           scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {[
@@ -176,31 +184,33 @@ export const MobileInvoiceList: React.FC = () => {
           { key: "PARTIAL", label: "Partial" },
           { key: "UNPAID", label: "Unpaid" },
           { key: "CANCELLED", label: "Cancelled" },
-        ].map((filter) => (
-          <button
-            key={filter.key}
-            data-testid={filter.testId}
-            type="button"
-            onClick={() => setStatusFilter(filter.key)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 14,
-              border: "none",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              backgroundColor:
-                statusFilter === filter.key
-                  ? token.colorPrimary
-                  : token.colorFillAlter,
-              color:
-                statusFilter === filter.key ? "#fff" : token.colorTextSecondary,
-            }}
-          >
-            {filter.label}
-          </button>
-        ))}
+        ].map((filter) => {
+          const isSelected = statusFilter === filter.key;
+          return (
+            <button
+              key={filter.key}
+              data-testid={filter.testId}
+              type="button"
+              onClick={() => setStatusFilter(filter.key)}
+              style={{
+                padding: "8px 16px",
+                minHeight: 38,
+                borderRadius: 20,
+                border: isSelected ? "none" : `1px solid ${token.colorBorderSecondary}`,
+                fontSize: 12,
+                fontWeight: isSelected ? 600 : 500,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                backgroundColor: isSelected ? token.colorPrimary : token.colorBgElevated,
+                color: isSelected ? "#fff" : token.colorTextSecondary,
+                boxShadow: isSelected ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {filter.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Invoice Cards List */}
@@ -223,7 +233,7 @@ export const MobileInvoiceList: React.FC = () => {
           filteredInvoices.map((inv) => {
             const isPaid = inv.payment_status === "PAID";
             const isPartial = inv.payment_status === "PARTIAL";
-            const isCancelled = inv.payment_status === "CANCELLED";
+            const isCancelled = !!inv.is_cancelled;
             const custName = inv.customer?.name || "Walk-in Customer";
             const phone = inv.customer?.phone;
 
@@ -231,6 +241,9 @@ export const MobileInvoiceList: React.FC = () => {
               <div
                 key={inv.id}
                 data-testid="mobile-invoice-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/invoices/show/${inv.id}`)}
                 style={{
                   backgroundColor: token.colorBgElevated,
                   borderRadius: 14,
@@ -240,6 +253,10 @@ export const MobileInvoiceList: React.FC = () => {
                   flexDirection: "column",
                   gap: 10,
                   boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
+                  cursor: "pointer",
+                  transition: "transform 0.1s ease",
+                  WebkitTapHighlightColor: "transparent",
+                  opacity: isCancelled ? 0.75 : 1,
                 }}
               >
                 {/* Card Top: Invoice #, Date, Status */}
@@ -252,7 +269,7 @@ export const MobileInvoiceList: React.FC = () => {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span
-                      onClick={() => handleCopy(inv.invoice_number)}
+                      onClick={(e) => handleCopy(e, inv.invoice_number)}
                       style={{
                         fontSize: 13,
                         fontWeight: 700,
@@ -273,12 +290,12 @@ export const MobileInvoiceList: React.FC = () => {
 
                   <Tag
                     color={
-                      isPaid
+                      isCancelled
+                        ? "default"
+                        : isPaid
                         ? "success"
                         : isPartial
                         ? "warning"
-                        : isCancelled
-                        ? "default"
                         : "error"
                     }
                     style={{
@@ -287,9 +304,10 @@ export const MobileInvoiceList: React.FC = () => {
                       fontSize: 10,
                       fontWeight: 600,
                       padding: "1px 6px",
+                      border: "none",
                     }}
                   >
-                    {inv.payment_status || "UNPAID"}
+                    {isCancelled ? "CANCELLED" : inv.payment_status || "UNPAID"}
                   </Tag>
                 </div>
 
@@ -327,7 +345,7 @@ export const MobileInvoiceList: React.FC = () => {
                       {abbrRs(inv.total_amount_paise || 0)}
                     </Text>
                     {inv.balance_amount_paise && inv.balance_amount_paise > 0 ? (
-                      <Text type="danger" style={{ fontSize: 11, fontWeight: 500 }}>
+                      <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>
                         Due: {abbrRs(inv.balance_amount_paise)}
                       </Text>
                     ) : (
@@ -338,7 +356,7 @@ export const MobileInvoiceList: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Bottom: Touch Actions */}
+                {/* Card Bottom: Actions */}
                 <div
                   style={{
                     display: "flex",
@@ -346,7 +364,7 @@ export const MobileInvoiceList: React.FC = () => {
                     justifyContent: "space-between",
                     borderTop: `1px solid ${token.colorFillAlter}`,
                     paddingTop: 8,
-                    gap: 6,
+                    gap: 8,
                   }}
                 >
                   <Button
@@ -354,33 +372,39 @@ export const MobileInvoiceList: React.FC = () => {
                     type="primary"
                     ghost
                     icon={<Eye size={13} />}
-                    onClick={() => navigate(`/invoices/show/${inv.id}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/invoices/show/${inv.id}`);
+                    }}
                     style={{
                       flex: 1,
                       borderRadius: 8,
                       fontSize: 12,
                       fontWeight: 600,
-                      height: 32,
+                      height: 34,
                     }}
                   >
-                    View
+                    View Bill
                   </Button>
 
                   <Button
                     size="small"
-                    icon={<Share2 size={13} />}
-                    onClick={() => handleWhatsApp(inv)}
+                    icon={<MessageCircle size={13} color="#16a34a" />}
+                    onClick={(e) => handleWhatsApp(e, inv)}
                     style={{
                       borderRadius: 8,
                       fontSize: 12,
-                      height: 32,
-                      padding: "0 10px",
+                      height: 34,
+                      padding: "0 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    Share
+                    WhatsApp
                   </Button>
 
-                  <div style={{ transform: "scale(0.92)", transformOrigin: "right center" }}>
+                  <div onClick={(e) => e.stopPropagation()}>
                     <DownloadInvoiceButton invoiceId={inv.id} />
                   </div>
                 </div>

@@ -1,10 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  useList,
-  useCreate,
-  useCreateMany,
-  useGetIdentity,
-} from "@refinedev/core";
+import { useList, useCreate } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import {
   Typography,
@@ -13,35 +8,34 @@ import {
   Tag,
   Avatar,
   Drawer,
-  Radio,
   InputNumber,
   message,
   theme,
   Spin,
   Empty,
-  Badge,
 } from "antd";
 import {
   Search,
-  ShoppingCart,
-  User,
   Plus,
   Minus,
   Trash2,
+  ShoppingCart,
+  User,
   ChevronRight,
   ArrowLeft,
   CheckCircle,
-  Gem,
-  Sparkles,
+  CreditCard,
+  Banknote,
+  QrCode,
+  Building2,
+  UserPlus,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import type {
   ICustomer,
-  IInvoice,
-  IInvoiceItem,
-  IMetalRate,
   IOrnamentWithDetails,
+  IMetalRate,
 } from "../../libs/interfaces";
 
 const { Title, Text } = Typography;
@@ -50,70 +44,75 @@ interface CartItem {
   ornament: IOrnamentWithDetails;
   quantity: number;
   weightGrams: number;
-  ratePerGram: number; // in paise
+  ratePerGram: number;
   makingChargePaise: number;
   totalPaise: number;
 }
 
 export const MobilePOS: React.FC<{
-  mode?: "create" | "clone";
+  onBackToDesktop?: () => void;
+  mode?: string;
   existingInvoice?: any;
 }> = () => {
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
-  const { data: user } = useGetIdentity<{ id: string; email?: string }>();
 
-  // State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMetalFilter, setSelectedMetalFilter] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false);
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
   const [paymentMode, setPaymentMode] = useState<string>("CASH");
+  const [cashTendered, setCashTendered] = useState<number | null>(null);
   const [discountPaise, setDiscountPaise] = useState<number>(0);
   const [paidPaise, setPaidPaise] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Queries
+  // 1. Fetch Customers
+  const { query: customersQuery } = useList<ICustomer>({
+    resource: "customers",
+    filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
+    pagination: { mode: "server", pageSize: 50 },
+    queryOptions: { enabled: !!shopId },
+  });
+
+  // 2. Fetch Ornaments
   const { query: ornamentsQuery } = useList<IOrnamentWithDetails>({
     resource: "ornaments",
     meta: {
-      select: "*, metal_type:metal_types(id,name), purity_level:purity_levels(id,purity_value,display_name)",
+      select: "*, metal_type:metal_types(id,name), purity_level:purity_levels(id,display_name,purity_value)",
     },
-    filters: [
-      ...(shopId ? [{ field: "shop_id", operator: "eq" as const, value: shopId }] : []),
-      { field: "is_active", operator: "eq" as const, value: true },
-    ],
-    pagination: { mode: "off" },
+    filters: shopId
+      ? [
+          { field: "shop_id", operator: "eq", value: shopId },
+          { field: "quantity", operator: "gt", value: 0 },
+        ]
+      : [],
+    pagination: { mode: "server", pageSize: 60 },
     queryOptions: { enabled: !!shopId },
   });
 
-  const { query: customersQuery } = useList<ICustomer>({
-    resource: "customers",
-    filters: shopId ? [{ field: "shop_id", operator: "eq" as const, value: shopId }] : [],
-    pagination: { mode: "off" },
-    queryOptions: { enabled: !!shopId },
-  });
-
-  const today = dayjs().format("YYYY-MM-DD");
+  // 3. Fetch Today's Metal Rates
   const { query: ratesQuery } = useList<IMetalRate>({
-    resource: "ornament_rates",
-    filters: [
-      { field: "shop_id", operator: "eq" as const, value: shopId },
-      { field: "rate_date", operator: "eq" as const, value: today },
-    ],
-    pagination: { mode: "off" },
+    resource: "metal_rates",
+    filters: shopId
+      ? [
+          { field: "shop_id", operator: "eq", value: shopId },
+          { field: "rate_date", operator: "eq", value: dayjs().format("YYYY-MM-DD") },
+        ]
+      : [],
     queryOptions: { enabled: !!shopId },
   });
 
-  const { mutateAsync: createInvoice } = useCreate<IInvoice>();
-  const { mutateAsync: createItems } = useCreateMany<IInvoiceItem>();
+  const { mutateAsync: createInvoice } = useCreate();
+  const { mutateAsync: createInvoiceItem } = useCreate();
 
-  const ornaments = ornamentsQuery?.data?.data ?? [];
   const customers = customersQuery?.data?.data ?? [];
+  const ornaments = ornamentsQuery?.data?.data ?? [];
   const rates = ratesQuery?.data?.data ?? [];
 
   const selectedCustomer = useMemo(
@@ -121,13 +120,24 @@ export const MobilePOS: React.FC<{
     [customers, selectedCustomerId]
   );
 
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearchTerm.trim()) return customers;
+    const q = customerSearchTerm.toLowerCase();
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.customer_code?.toLowerCase().includes(q)
+    );
+  }, [customers, customerSearchTerm]);
+
   // Filter ornaments by search and metal
   const filteredOrnaments = useMemo(() => {
     return ornaments.filter((orn) => {
       const matchSearch =
         !searchTerm ||
         orn.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        orn.item_code?.toLowerCase().includes(searchTerm.toLowerCase());
+        orn.sku?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchMetal =
         selectedMetalFilter === "all" ||
@@ -139,16 +149,11 @@ export const MobilePOS: React.FC<{
 
   // Cart calculation helper
   const calculateItemTotal = (orn: IOrnamentWithDetails, qty: number) => {
-    const weight = (orn.net_weight_grams || orn.gross_weight_grams || 1) * qty;
-    // Default fallback rate: 7000/g in paise (700000)
-    const rateItem = rates.find(
-      (r) =>
-        r.metal_type_id === orn.metal_type_id &&
-        (!orn.purity_level_id || r.purity_level_id === orn.purity_level_id)
-    );
+    const weight = ((orn.weight_mg ? orn.weight_mg / 1000 : 1) || 1) * qty;
+    const rateItem = rates.find((r) => r.metal_type_id === orn.metal_type_id);
     const ratePerGram = rateItem?.rate_per_gram_paise || 700000;
     const metalVal = weight * ratePerGram;
-    const makingPaise = (orn.making_charge_value_paise || 35000) * qty;
+    const makingPaise = (orn.purchase_making_charge_paise || 35000) * qty;
     return {
       weightGrams: weight,
       ratePerGram,
@@ -165,15 +170,24 @@ export const MobilePOS: React.FC<{
         const calc = calculateItemTotal(orn, newQty);
         return prev.map((item) =>
           item.ornament.id === orn.id
-            ? { ...item, quantity: newQty, ...calc }
+            ? {
+                ...item,
+                quantity: newQty,
+                ...calc,
+              }
             : item
         );
-      } else {
-        const calc = calculateItemTotal(orn, 1);
-        return [...prev, { ornament: orn, quantity: 1, ...calc }];
       }
+      const calc = calculateItemTotal(orn, 1);
+      return [
+        ...prev,
+        {
+          ornament: orn,
+          quantity: 1,
+          ...calc,
+        },
+      ];
     });
-    message.success(`${orn.name} added to cart!`);
   };
 
   const handleUpdateQty = (ornId: string, delta: number) => {
@@ -184,7 +198,11 @@ export const MobilePOS: React.FC<{
             const newQty = item.quantity + delta;
             if (newQty <= 0) return null;
             const calc = calculateItemTotal(item.ornament, newQty);
-            return { ...item, quantity: newQty, ...calc };
+            return {
+              ...item,
+              quantity: newQty,
+              ...calc,
+            };
           }
           return item;
         })
@@ -196,84 +214,91 @@ export const MobilePOS: React.FC<{
     setCart((prev) => prev.filter((item) => item.ornament.id !== ornId));
   };
 
-  // Totals
+  const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalPaise = cart.reduce((sum, item) => sum + item.totalPaise, 0);
   const gstPaise = Math.round(subtotalPaise * 0.03); // 3% GST
   const grandTotalPaise = Math.max(0, subtotalPaise + gstPaise - discountPaise);
+  const grandTotalRs = Math.round(grandTotalPaise / 100);
   const effectivePaid = paidPaise !== null ? paidPaise : grandTotalPaise;
   const balancePaise = Math.max(0, grandTotalPaise - effectivePaid);
+  const changeDueRs =
+    paymentMode === "CASH" && cashTendered !== null && cashTendered > grandTotalRs
+      ? cashTendered - grandTotalRs
+      : 0;
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
-      message.error("Please add at least one ornament to checkout.");
+      message.error("Cart is empty");
       return;
     }
     if (!shopId) {
-      message.error("Shop not found.");
+      message.error("No active shop found");
       return;
     }
 
     setSubmitting(true);
     try {
-      const invNumber = `INV-${dayjs().format("YYMMDD")}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const invNum = `INV-${dayjs().format("YYYYMMDD-HHmmss")}`;
 
       // 1. Create Invoice
-      const invRes = await createInvoice({
+      const invoiceRes = await createInvoice({
         resource: "invoices",
         values: {
           shop_id: shopId,
           customer_id: selectedCustomerId || null,
-          invoice_number: invNumber,
-          invoice_date: today,
-          subtotal_paise: subtotalPaise,
-          tax_amount_paise: gstPaise,
-          discount_paise: discountPaise,
+          invoice_number: invNum,
+          invoice_date: dayjs().format("YYYY-MM-DD"),
+          subtotal_amount_paise: subtotalPaise,
+          total_making_charges_paise: cart.reduce((sum, i) => sum + i.makingChargePaise, 0),
+          discount_amount_paise: discountPaise,
           total_amount_paise: grandTotalPaise,
           paid_amount_paise: effectivePaid,
           balance_amount_paise: balancePaise,
           payment_method: paymentMode,
           payment_status: balancePaise === 0 ? "PAID" : effectivePaid > 0 ? "PARTIAL" : "UNPAID",
-          created_by: user?.id || null,
+          is_cancelled: false,
         },
       });
 
-      const newInvId = (invRes?.data as any)?.id;
+      const newInvId = invoiceRes?.data?.id;
 
-      // 2. Create Invoice Items
-      if (newInvId && cart.length > 0) {
-        const itemsToCreate = cart.map((item) => ({
-          invoice_id: newInvId,
-          ornament_id: item.ornament.id,
-          item_name: item.ornament.name,
-          quantity: item.quantity,
-          gross_weight_grams: item.ornament.gross_weight_grams || item.weightGrams,
-          net_weight_grams: item.weightGrams,
-          rate_per_gram_paise: item.ratePerGram,
-          making_charge_paise: item.makingChargePaise,
-          total_price_paise: item.totalPaise,
-        }));
-
-        await createItems({
+      // 2. Create Items
+      for (const item of cart) {
+        await createInvoiceItem({
           resource: "invoice_items",
-          values: itemsToCreate,
+          values: {
+            invoice_id: newInvId,
+            ornament_id: item.ornament.id,
+            item_name: item.ornament.name,
+            quantity: item.quantity,
+            weight_mg: item.ornament.weight_mg || Math.round(item.weightGrams * 1000),
+            rate_per_gram_paise: item.ratePerGram,
+            making_charge_per_gram_paise: Math.round(item.makingChargePaise / item.weightGrams),
+            metal_amount_paise: item.totalPaise - item.makingChargePaise,
+            making_charge_amount_paise: item.makingChargePaise,
+            line_total_paise: item.totalPaise,
+          },
         });
       }
 
-      message.success("Sale completed successfully!");
-      setCheckoutDrawerOpen(false);
+      message.success(`Bill #${invNum} created successfully!`);
       setCart([]);
-      if (newInvId) {
-        navigate(`/invoices/show/${newInvId}`);
-      } else {
-        navigate("/invoices");
-      }
-    } catch (err: any) {
-      console.error("Sale creation error:", err);
-      message.error(err.message || "Failed to create invoice.");
+      setCheckoutDrawerOpen(false);
+      navigate(`/invoices/show/${newInvId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create invoice";
+      message.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const paymentModes = [
+    { key: "CASH", label: "Cash", icon: Banknote, color: "#16a34a" },
+    { key: "UPI", label: "UPI / QR", icon: QrCode, color: "#2563eb" },
+    { key: "CARD", label: "Card", icon: CreditCard, color: "#9333ea" },
+    { key: "NET_BANKING", label: "Bank Transfer", icon: Building2, color: "#d97706" },
+  ];
 
   return (
     <div
@@ -282,16 +307,16 @@ export const MobilePOS: React.FC<{
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        paddingBottom: 90, // safe space for sticky bottom checkout dock
+        paddingBottom: 96,
       }}
     >
-      {/* Top Header bar with Customer and Back button */}
+      {/* Top Header bar */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 8,
+          padding: "2px 0",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -302,46 +327,94 @@ export const MobilePOS: React.FC<{
             style={{ padding: "4px 8px" }}
           />
           <Title level={4} style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            POS Sale
+            POS Checkout
           </Title>
         </div>
 
-        {/* Customer Selector Badge */}
-        <button
-          type="button"
-          onClick={() => setCustomerDrawerOpen(true)}
+        <Tag
+          color="gold"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 12px",
-            borderRadius: 20,
-            background: token.colorFillAlter,
-            border: `1px solid ${token.colorBorderSecondary}`,
-            fontSize: 12,
+            margin: 0,
+            borderRadius: 12,
+            padding: "2px 8px",
+            fontSize: 11,
             fontWeight: 600,
-            cursor: "pointer",
-            color: token.colorText,
           }}
         >
-          <User size={14} color={token.colorPrimary} />
-          <span style={{ maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {selectedCustomer ? selectedCustomer.name : "Walk-in Client"}
+          {dayjs().format("D MMM")}
+        </Tag>
+      </div>
+
+      {/* Prominent Full-Width Customer Selection Banner Strip */}
+      <div
+        onClick={() => setCustomerDrawerOpen(true)}
+        role="button"
+        tabIndex={0}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 14px",
+          borderRadius: 14,
+          backgroundColor: selectedCustomer ? token.colorPrimaryBg : token.colorBgElevated,
+          border: `1px solid ${selectedCustomer ? token.colorPrimaryBorder : token.colorBorderSecondary}`,
+          cursor: "pointer",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+          <Avatar
+            size={36}
+            style={{
+              backgroundColor: selectedCustomer ? token.colorPrimary : token.colorFillAlter,
+              color: selectedCustomer ? "#fff" : token.colorTextSecondary,
+              fontWeight: 700,
+              fontSize: 14,
+              flexShrink: 0,
+            }}
+          >
+            {selectedCustomer ? selectedCustomer.name[0]?.toUpperCase() : <User size={18} />}
+          </Avatar>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <Text
+              strong
+              style={{
+                fontSize: 13,
+                display: "block",
+                lineHeight: 1.2,
+                color: selectedCustomer ? token.colorPrimaryText : token.colorText,
+              }}
+              ellipsis
+            >
+              {selectedCustomer ? selectedCustomer.name : "Walk-in Customer"}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 2 }}>
+              {selectedCustomer
+                ? selectedCustomer.phone || selectedCustomer.customer_code || "Linked Client"
+                : "Tap to link a client to bill"}
+            </Text>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 4, color: token.colorPrimary, flexShrink: 0 }}>
+          <span style={{ fontSize: 12, fontWeight: 600 }}>
+            {selectedCustomer ? "Change" : "Select"}
           </span>
-          <ChevronRight size={12} />
-        </button>
+          <ChevronRight size={14} />
+        </div>
       </div>
 
       {/* Search Input & Category Pills */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <Input
           prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-          placeholder="Search ornaments or item code..."
+          placeholder="Search ornaments or SKU..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           allowClear
+          inputMode="search"
           style={{
-            height: 44,
+            height: 42,
             borderRadius: 12,
             fontSize: 14,
             background: token.colorBgElevated,
@@ -351,10 +424,10 @@ export const MobilePOS: React.FC<{
         <div
           style={{
             display: "flex",
-            gap: 8,
+            gap: 6,
             overflowX: "auto",
-            paddingBottom: 4,
             scrollbarWidth: "none",
+            paddingBottom: 2,
           }}
         >
           {["all", "gold", "silver", "diamond"].map((cat) => (
@@ -363,19 +436,25 @@ export const MobilePOS: React.FC<{
               type="button"
               onClick={() => setSelectedMetalFilter(cat)}
               style={{
-                padding: "6px 14px",
-                borderRadius: 16,
+                padding: "8px 16px",
+                minHeight: 36,
+                borderRadius: 18,
                 border: "none",
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
                 textTransform: "capitalize",
+                whiteSpace: "nowrap",
                 backgroundColor:
                   selectedMetalFilter === cat
                     ? token.colorPrimary
-                    : token.colorFillAlter,
+                    : token.colorBgElevated,
                 color:
                   selectedMetalFilter === cat ? "#fff" : token.colorTextSecondary,
+                boxShadow:
+                  selectedMetalFilter === cat
+                    ? "0 2px 6px rgba(0,0,0,0.12)"
+                    : "none",
               }}
             >
               {cat === "all" ? "All Items" : cat}
@@ -384,20 +463,23 @@ export const MobilePOS: React.FC<{
         </div>
       </div>
 
-      {/* Cart Items (if any in cart) */}
+      {/* Cart Summary Card */}
       {cart.length > 0 && (
         <div
           style={{
             backgroundColor: token.colorBgElevated,
             borderRadius: 14,
-            padding: 12,
+            padding: "12px 14px",
             border: `1px solid ${token.colorBorderSecondary}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text strong style={{ fontSize: 13 }}>
-              Cart ({cart.reduce((s, i) => s + i.quantity, 0)} items)
-            </Text>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: token.colorText }}>
+              Cart ({totalItemsCount} items)
+            </span>
             <Button
               type="link"
               size="small"
@@ -417,63 +499,93 @@ export const MobilePOS: React.FC<{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "8px 10px",
-                  borderRadius: 10,
+                  padding: "10px 12px",
+                  borderRadius: 12,
                   backgroundColor: token.colorFillAlter,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+                <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                   <Text strong style={{ fontSize: 13, display: "block" }} ellipsis>
                     {item.ornament.name}
                   </Text>
                   <Text type="secondary" style={{ fontSize: 11 }}>
-                    {item.weightGrams.toFixed(2)}g • ₹{(item.totalPaise / 100).toLocaleString("en-IN")}
+                    {item.weightGrams}g • ₹{(item.totalPaise / 100).toLocaleString("en-IN")}
                   </Text>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* Stepper with generous 36px touch target */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 6,
+                      gap: 4,
                       background: token.colorBgContainer,
                       borderRadius: 8,
-                      padding: "2px 6px",
+                      padding: "2px",
                       border: `1px solid ${token.colorBorderSecondary}`,
                     }}
                   >
                     <button
                       type="button"
+                      aria-label="Decrease quantity"
                       onClick={() => handleUpdateQty(item.ornament.id, -1)}
-                      style={{ background: "none", border: "none", cursor: "pointer", display: "flex", padding: 2 }}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 6,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
-                      <Minus size={12} />
+                      <Minus size={14} />
                     </button>
-                    <span style={{ fontSize: 12, fontWeight: 600, minWidth: 16, textAlign: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: "center" }}>
                       {item.quantity}
                     </span>
                     <button
                       type="button"
+                      aria-label="Increase quantity"
                       onClick={() => handleUpdateQty(item.ornament.id, 1)}
-                      style={{ background: "none", border: "none", cursor: "pointer", display: "flex", padding: 2 }}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 6,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                     >
-                      <Plus size={12} />
+                      <Plus size={14} />
                     </button>
                   </div>
 
+                  {/* Distinct Danger Delete Button */}
                   <button
                     type="button"
+                    aria-label="Remove item"
                     onClick={() => handleRemoveItem(item.ornament.id)}
                     style={{
-                      background: "none",
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      background: "rgba(239, 68, 68, 0.1)",
                       border: "none",
                       cursor: "pointer",
                       color: token.colorError,
-                      padding: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
@@ -482,14 +594,14 @@ export const MobilePOS: React.FC<{
         </div>
       )}
 
-      {/* Ornament Product Catalog Grid */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Text strong style={{ fontSize: 14 }}>
-          Available Ornaments ({filteredOrnaments.length})
+      {/* Catalog Items Grid */}
+      <div>
+        <Text strong style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5, color: token.colorTextSecondary }}>
+          Catalog Items ({filteredOrnaments.length})
         </Text>
 
-        {ornamentsQuery?.isLoading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
+        {ornamentsQuery.isLoading ? (
+          <div style={{ textAlign: "center", padding: 24 }}>
             <Spin />
           </div>
         ) : filteredOrnaments.length === 0 ? (
@@ -500,10 +612,11 @@ export const MobilePOS: React.FC<{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 10,
+              marginTop: 8,
             }}
           >
             {filteredOrnaments.map((orn) => {
-              const weight = orn.net_weight_grams || orn.gross_weight_grams || 1;
+              const weight = orn.weight_mg ? (orn.weight_mg / 1000).toFixed(2) : "1.00";
               const calc = calculateItemTotal(orn, 1);
               const inCartItem = cart.find((i) => i.ornament.id === orn.id);
 
@@ -513,48 +626,51 @@ export const MobilePOS: React.FC<{
                   style={{
                     backgroundColor: token.colorBgElevated,
                     borderRadius: 14,
-                    padding: 12,
-                    border: `1px solid ${token.colorBorderSecondary}`,
+                    padding: "10px 10px 12px",
+                    border: `1px solid ${inCartItem ? token.colorPrimary : token.colorBorderSecondary}`,
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     gap: 8,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
                   }}
                 >
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 4 }}>
-                      <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: "0 6px", borderRadius: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Tag color="gold" style={{ margin: 0, fontSize: 10, borderRadius: 6 }}>
                         {orn.purity_level?.display_name || "22K"}
                       </Tag>
-                      <Text type="secondary" style={{ fontSize: 10 }}>
+                      <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
                         {weight}g
-                      </Text>
+                      </span>
                     </div>
 
                     <Text strong style={{ fontSize: 13, display: "block", marginTop: 4 }} ellipsis>
                       {orn.name}
                     </Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>
-                      #{orn.item_code || "ORN"}
+                      #{orn.sku || "ORN"}
                     </Text>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-                    <Text strong style={{ fontSize: 13, color: token.colorPrimary }}>
-                      ₹{(calc.totalPaise / 100).toLocaleString("en-IN")}
-                    </Text>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: token.colorText, display: "block", marginBottom: 6 }}>
+                      ₹{Math.round(calc.totalPaise / 100).toLocaleString("en-IN")}
+                    </span>
 
                     <Button
                       data-testid="mobile-pos-add-item"
-                      type={inCartItem ? "default" : "primary"}
+                      type={inCartItem ? "primary" : "default"}
                       size="small"
-                      icon={<Plus size={14} />}
+                      icon={inCartItem ? <CheckCircle size={12} /> : <Plus size={12} />}
                       onClick={() => handleAddToCart(orn)}
                       style={{
+                        width: "100%",
                         borderRadius: 8,
                         fontWeight: 600,
                         fontSize: 11,
-                        height: 28,
+                        height: 32,
+                        padding: "0 10px",
                       }}
                     >
                       {inCartItem ? inCartItem.quantity : "Add"}
@@ -568,63 +684,71 @@ export const MobilePOS: React.FC<{
       </div>
 
       {/* Sticky Bottom Checkout Dock */}
-      <div
-        data-testid="mobile-pos-checkout-dock"
-        style={{
-          position: "fixed",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 64px)", // sits above mobile tab bar
-          left: 0,
-          right: 0,
-          padding: "10px 16px",
-          backgroundColor: token.colorBgElevated,
-          borderTop: `1px solid ${token.colorBorderSecondary}`,
-          boxShadow: "0 -4px 12px rgba(0,0,0,0.06)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          zIndex: 1000,
-        }}
-      >
-        <div>
-          <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-            {cart.reduce((s, i) => s + i.quantity, 0)} items in cart
-          </Text>
-          <Text strong style={{ fontSize: 17, color: token.colorPrimary }}>
-            ₹{(grandTotalPaise / 100).toLocaleString("en-IN")}
-          </Text>
-        </div>
-
-        <Button
-          type="primary"
-          size="large"
-          disabled={cart.length === 0}
-          onClick={() => setCheckoutDrawerOpen(true)}
+      {cart.length > 0 && (
+        <div
+          data-testid="mobile-pos-checkout-dock"
           style={{
-            height: 44,
-            padding: "0 20px",
-            borderRadius: 12,
-            fontWeight: 700,
-            fontSize: 14,
+            position: "fixed",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 64px)",
+            left: 0,
+            right: 0,
+            padding: "10px 16px",
+            backgroundColor: token.colorBgElevated,
+            borderTop: `1px solid ${token.colorBorderSecondary}`,
             display: "flex",
             alignItems: "center",
-            gap: 6,
+            justifyContent: "space-between",
+            boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
+            zIndex: 99,
           }}
         >
-          <span>Checkout</span>
-          <ChevronRight size={16} />
-        </Button>
-      </div>
+          <div>
+            <span style={{ fontSize: 11, color: token.colorTextSecondary, display: "block" }}>
+              {totalItemsCount} {totalItemsCount === 1 ? "item" : "items"} in cart
+            </span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: token.colorText }}>
+              ₹{(grandTotalPaise / 100).toLocaleString("en-IN")}
+            </span>
+          </div>
 
-      {/* Customer Selection Drawer */}
+          <Button
+            type="primary"
+            icon={<ShoppingCart size={16} />}
+            onClick={() => setCheckoutDrawerOpen(true)}
+            style={{
+              height: 44,
+              borderRadius: 12,
+              padding: "0 20px",
+              fontWeight: 700,
+              fontSize: 14,
+              boxShadow: "0 2px 8px rgba(37, 99, 235, 0.25)",
+            }}
+          >
+            Review & Pay
+          </Button>
+        </div>
+      )}
+
+      {/* Customer Selection Drawer with Search */}
       <Drawer
         title="Select Customer"
         placement="bottom"
-        height="70%"
+        height="75%"
         open={customerDrawerOpen}
         onClose={() => setCustomerDrawerOpen(false)}
         styles={{ body: { padding: "16px 16px" } }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Customer Search Bar */}
+          <Input
+            prefix={<Search size={16} color={token.colorTextPlaceholder} />}
+            placeholder="Search name, phone or code..."
+            value={customerSearchTerm}
+            onChange={(e) => setCustomerSearchTerm(e.target.value)}
+            allowClear
+            style={{ height: 42, borderRadius: 10 }}
+          />
+
           {/* Walk-in Option */}
           <div
             onClick={() => {
@@ -632,25 +756,38 @@ export const MobilePOS: React.FC<{
               setCustomerDrawerOpen(false);
             }}
             style={{
-              padding: 12,
+              padding: "12px 14px",
               borderRadius: 12,
               backgroundColor: !selectedCustomerId ? token.colorPrimaryBg : token.colorFillAlter,
               border: `1px solid ${!selectedCustomerId ? token.colorPrimary : token.colorBorderSecondary}`,
               cursor: "pointer",
             }}
           >
-            <Text strong>Walk-in Customer</Text>
-            <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+            <Text strong style={{ fontSize: 13 }}>Walk-in Customer</Text>
+            <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
               Standard counter sale without customer profile
             </Text>
           </div>
 
-          <Text strong style={{ fontSize: 13, marginTop: 4 }}>
-            Saved Customers ({customers.length})
-          </Text>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+            <Text strong style={{ fontSize: 13 }}>
+              Saved Clients ({filteredCustomers.length})
+            </Text>
+            <Button
+              type="link"
+              size="small"
+              icon={<UserPlus size={14} />}
+              onClick={() => {
+                setCustomerDrawerOpen(false);
+                navigate("/customers");
+              }}
+            >
+              Add Client
+            </Button>
+          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "40vh", overflowY: "auto" }}>
-            {customers.map((c) => (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "42vh", overflowY: "auto" }}>
+            {filteredCustomers.map((c) => (
               <div
                 key={c.id}
                 onClick={() => {
@@ -658,32 +795,34 @@ export const MobilePOS: React.FC<{
                   setCustomerDrawerOpen(false);
                 }}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
                   padding: "10px 12px",
                   borderRadius: 10,
                   backgroundColor: selectedCustomerId === c.id ? token.colorPrimaryBg : token.colorFillAlter,
                   border: `1px solid ${selectedCustomerId === c.id ? token.colorPrimary : token.colorBorderSecondary}`,
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
                 <div>
-                  <Text strong style={{ fontSize: 13 }}>
+                  <Text strong style={{ fontSize: 13, display: "block" }}>
                     {c.name}
                   </Text>
-                  <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                  <Text type="secondary" style={{ fontSize: 11 }}>
                     {c.phone || c.customer_code}
                   </Text>
                 </div>
-                {selectedCustomerId === c.id && <CheckCircle size={16} color={token.colorPrimary} />}
+                {selectedCustomerId === c.id && (
+                  <CheckCircle size={16} color={token.colorPrimary} />
+                )}
               </div>
             ))}
           </div>
         </div>
       </Drawer>
 
-      {/* Checkout & Payment Drawer */}
+      {/* Checkout & Payment Drawer with 2x2 Payment Grid and Cash Tendered */}
       <Drawer
         title="Order Summary & Payment"
         placement="bottom"
@@ -692,88 +831,139 @@ export const MobilePOS: React.FC<{
         onClose={() => setCheckoutDrawerOpen(false)}
         styles={{ body: { padding: "16px 16px 24px" } }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Price Breakdown */}
           <div
             style={{
-              backgroundColor: token.colorFillAlter,
-              borderRadius: 12,
               padding: 14,
+              borderRadius: 12,
+              backgroundColor: token.colorFillAlter,
               display: "flex",
               flexDirection: "column",
               gap: 8,
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <Text type="secondary">Subtotal (Gold & Making)</Text>
-              <Text strong>₹{(subtotalPaise / 100).toLocaleString("en-IN")}</Text>
+              <Text type="secondary">Subtotal ({totalItemsCount} items)</Text>
+              <Text>₹{(subtotalPaise / 100).toLocaleString("en-IN")}</Text>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <Text type="secondary">GST (3%)</Text>
               <Text>₹{(gstPaise / 100).toLocaleString("en-IN")}</Text>
             </div>
-            {discountPaise > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", color: token.colorSuccess }}>
-                <Text type="success">Discount</Text>
-                <Text type="success">-₹{(discountPaise / 100).toLocaleString("en-IN")}</Text>
-              </div>
-            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Text type="secondary">Discount (₹)</Text>
+              <InputNumber
+                min={0}
+                value={discountPaise / 100}
+                onChange={(val) => setDiscountPaise(Math.round((val || 0) * 100))}
+                style={{ width: 110 }}
+                size="small"
+              />
+            </div>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                borderTop: `1px solid ${token.colorBorderSecondary}`,
                 paddingTop: 8,
+                borderTop: `1px dashed ${token.colorBorderSecondary}`,
               }}
             >
-              <Text strong style={{ fontSize: 15 }}>
-                Net Amount
-              </Text>
-              <Text strong style={{ fontSize: 17, color: token.colorPrimary }}>
+              <Text strong style={{ fontSize: 15 }}>Grand Total</Text>
+              <Text strong style={{ fontSize: 16, color: token.colorPrimary }}>
                 ₹{(grandTotalPaise / 100).toLocaleString("en-IN")}
               </Text>
             </div>
           </div>
 
-          {/* Payment Method Selector */}
+          {/* 2x2 Payment Method Tiles */}
           <div>
             <Text strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
-              Payment Mode
+              Select Payment Mode
             </Text>
-            <Radio.Group
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              buttonStyle="solid"
-              style={{ width: "100%", display: "flex" }}
-            >
-              <Radio.Button value="CASH" style={{ flex: 1, textAlign: "center" }}>
-                Cash
-              </Radio.Button>
-              <Radio.Button value="UPI" style={{ flex: 1, textAlign: "center" }}>
-                UPI
-              </Radio.Button>
-              <Radio.Button value="CARD" style={{ flex: 1, textAlign: "center" }}>
-                Card
-              </Radio.Button>
-              <Radio.Button value="NET_BANKING" style={{ flex: 1, textAlign: "center" }}>
-                Bank
-              </Radio.Button>
-            </Radio.Group>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {paymentModes.map((mode) => {
+                const Icon = mode.icon;
+                const isSelected = paymentMode === mode.key;
+                return (
+                  <button
+                    key={mode.key}
+                    type="button"
+                    onClick={() => setPaymentMode(mode.key)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      backgroundColor: isSelected ? token.colorPrimaryBg : token.colorBgElevated,
+                      border: `1.5px solid ${isSelected ? token.colorPrimary : token.colorBorderSecondary}`,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <Icon size={18} color={isSelected ? token.colorPrimary : mode.color} />
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: isSelected ? 700 : 500,
+                        color: isSelected ? token.colorPrimary : token.colorText,
+                      }}
+                    >
+                      {mode.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Cash Tendered Calculator if Cash is Selected */}
+          {paymentMode === "CASH" && (
+            <div
+              style={{
+                padding: "12px",
+                borderRadius: 10,
+                backgroundColor: token.colorFillAlter,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 12 }}>Cash Tendered (₹)</Text>
+                <InputNumber
+                  placeholder={grandTotalRs.toString()}
+                  value={cashTendered}
+                  onChange={(val) => setCashTendered(val)}
+                  style={{ width: 130 }}
+                  min={0}
+                />
+              </div>
+              {changeDueRs > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text strong style={{ fontSize: 12, color: token.colorSuccess }}>
+                    Change to Return:
+                  </Text>
+                  <Text strong style={{ fontSize: 14, color: token.colorSuccess }}>
+                    ₹{changeDueRs.toLocaleString("en-IN")}
+                  </Text>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Complete Sale CTA */}
           <Button
             type="primary"
-            size="large"
             loading={submitting}
             onClick={handleCompleteSale}
-            block
             style={{
               height: 48,
               borderRadius: 12,
               fontWeight: 700,
               fontSize: 15,
-              marginTop: 10,
+              marginTop: 6,
             }}
           >
             Confirm & Generate Bill (₹{(grandTotalPaise / 100).toLocaleString("en-IN")})

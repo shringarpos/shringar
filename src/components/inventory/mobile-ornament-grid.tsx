@@ -5,20 +5,18 @@ import {
   Typography,
   Input,
   Button,
-  Tag,
-  Skeleton,
   theme,
   Empty,
-  Badge,
 } from "antd";
 import {
   Search,
   Plus,
-  Eye,
-  Edit,
+  Edit2,
   Gem,
   Sparkles,
   Scale,
+  CircleDot,
+  RotateCcw,
 } from "lucide-react";
 import type { IOrnament, IOrnamentWithDetails } from "../../libs/interfaces";
 import { useShopCheck } from "../../hooks/use-shop-check";
@@ -26,6 +24,43 @@ import { OrnamentDrawer } from "./ornaments/ornament-drawer";
 import { OrnamentShowDrawer } from "./ornaments/ornament-show-drawer";
 
 const { Title, Text } = Typography;
+
+// Helper: Metal-specific aesthetic styling
+const getMetalTheme = (metalName?: string) => {
+  const metal = metalName?.toLowerCase() || "gold";
+  if (metal.includes("silver")) {
+    return {
+      name: "Silver",
+      badgeBg: "#f1f5f9",
+      badgeText: "#334155",
+      badgeBorder: "#cbd5e1",
+      accent: "#64748b",
+      gradient: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+      icon: CircleDot,
+    };
+  }
+  if (metal.includes("diamond") || metal.includes("gem")) {
+    return {
+      name: "Diamond",
+      badgeBg: "#f0f9ff",
+      badgeText: "#0369a1",
+      badgeBorder: "#bae6fd",
+      accent: "#0284c7",
+      gradient: "linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)",
+      icon: Sparkles,
+    };
+  }
+  // Default Gold
+  return {
+    name: "Gold",
+    badgeBg: "#fef3c7",
+    badgeText: "#92400e",
+    badgeBorder: "#fde68a",
+    accent: "#d97706",
+    gradient: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
+    icon: Gem,
+  };
+};
 
 export const MobileOrnamentGrid: React.FC = () => {
   const { token } = theme.useToken();
@@ -56,7 +91,8 @@ export const MobileOrnamentGrid: React.FC = () => {
   const { query } = useList<IOrnamentWithDetails>({
     resource: "ornaments",
     meta: {
-      select: "*, metal_type:metal_types(id,name), purity_level:purity_levels(id,purity_value,display_name), category:categories(id,name)",
+      select:
+        "*, metal_type:metal_types(id,name), purity_level:purity_levels(id,purity_value,display_name), category:ornament_categories(id,name)",
     },
     filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
     sorters: [{ field: "created_at", order: "desc" }],
@@ -72,7 +108,7 @@ export const MobileOrnamentGrid: React.FC = () => {
       const matchSearch =
         !searchTerm ||
         orn.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        orn.item_code?.toLowerCase().includes(searchTerm.toLowerCase());
+        orn.sku?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchMetal =
         selectedMetal === "all" ||
@@ -88,10 +124,18 @@ export const MobileOrnamentGrid: React.FC = () => {
     showDrawer();
   };
 
-  const handleEdit = (orn: IOrnamentWithDetails) => {
+  const handleEdit = (e: React.MouseEvent, orn: IOrnamentWithDetails) => {
+    e.stopPropagation();
     setEditingOrnament(orn);
     showDrawer(orn.id);
   };
+
+  const metalPills = [
+    { key: "all", label: "All", icon: null },
+    { key: "gold", label: "Gold", icon: Gem },
+    { key: "silver", label: "Silver", icon: CircleDot },
+    { key: "diamond", label: "Diamond", icon: Sparkles },
+  ];
 
   return (
     <div
@@ -99,8 +143,8 @@ export const MobileOrnamentGrid: React.FC = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 12,
-        paddingBottom: 40,
+        gap: 14,
+        paddingBottom: "calc(88px + env(safe-area-inset-bottom, 16px))",
       }}
     >
       {/* Header */}
@@ -109,31 +153,32 @@ export const MobileOrnamentGrid: React.FC = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "2px 0",
+          paddingTop: 2,
         }}
       >
         <div>
-          <Title level={4} style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+          <Title level={4} style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>
             Showcase Catalog
           </Title>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {filteredOrnaments.length} {filteredOrnaments.length === 1 ? "piece" : "pieces"}
+            {filteredOrnaments.length} {filteredOrnaments.length === 1 ? "piece" : "pieces"} available
           </Text>
         </div>
 
         <Button
           data-testid="mobile-new-ornament-btn"
           type="primary"
-          icon={<Plus size={16} />}
+          icon={<Plus size={16} strokeWidth={2.5} />}
           onClick={handleCreateNew}
           style={{
-            height: 38,
-            borderRadius: 10,
+            height: 40,
+            borderRadius: 12,
             fontWeight: 600,
             fontSize: 13,
             display: "flex",
             alignItems: "center",
             gap: 4,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
           }}
         >
           Add Item
@@ -142,135 +187,293 @@ export const MobileOrnamentGrid: React.FC = () => {
 
       {/* Search Input */}
       <Input
-        prefix={<Search size={16} color={token.colorTextPlaceholder} />}
-        placeholder="Search ornaments or item code..."
+        prefix={<Search size={16} color={token.colorTextPlaceholder} style={{ marginRight: 4 }} />}
+        placeholder="Search by name or SKU..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         allowClear
+        inputMode="search"
         style={{
-          height: 42,
-          borderRadius: 12,
+          height: 44,
+          borderRadius: 14,
           fontSize: 14,
-          background: token.colorBgElevated,
+          backgroundColor: token.colorBgElevated,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
         }}
       />
 
-      {/* Category Pills */}
+      {/* Category / Metal Pills */}
       <div
         style={{
           display: "flex",
-          gap: 6,
+          gap: 8,
           overflowX: "auto",
           paddingBottom: 4,
           scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
         }}
       >
-        {["all", "gold", "silver", "diamond"].map((metal) => (
-          <button
-            key={metal}
-            type="button"
-            onClick={() => setSelectedMetal(metal)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 14,
-              border: "none",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              textTransform: "capitalize",
-              whiteSpace: "nowrap",
-              backgroundColor:
-                selectedMetal === metal
-                  ? token.colorPrimary
-                  : token.colorFillAlter,
-              color:
-                selectedMetal === metal ? "#fff" : token.colorTextSecondary,
-            }}
-          >
-            {metal === "all" ? "All" : metal}
-          </button>
-        ))}
+        {metalPills.map(({ key, label, icon: Icon }) => {
+          const isSelected = selectedMetal === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSelectedMetal(key)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "8px 16px",
+                minHeight: 38,
+                borderRadius: 20,
+                border: isSelected ? "none" : `1px solid ${token.colorBorderSecondary}`,
+                fontSize: 13,
+                fontWeight: isSelected ? 600 : 500,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                backgroundColor: isSelected ? token.colorPrimary : token.colorBgElevated,
+                color: isSelected ? "#fff" : token.colorTextSecondary,
+                boxShadow: isSelected ? "0 2px 6px rgba(0,0,0,0.12)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {Icon && <Icon size={13} strokeWidth={2.2} />}
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2-Column Grid */}
+      {/* 2-Column Showcase Grid */}
       {isLoading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Skeleton active paragraph={{ rows: 2 }} />
-          <Skeleton active paragraph={{ rows: 2 }} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[1, 2, 3, 4].map((n) => (
+            <div
+              key={n}
+              style={{
+                backgroundColor: token.colorBgElevated,
+                borderRadius: 16,
+                padding: 12,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  height: 90,
+                  borderRadius: 10,
+                  backgroundColor: token.colorFillTertiary,
+                }}
+              />
+              <div style={{ height: 14, width: "70%", borderRadius: 4, backgroundColor: token.colorFillSecondary }} />
+              <div style={{ height: 10, width: "40%", borderRadius: 4, backgroundColor: token.colorFillTertiary }} />
+            </div>
+          ))}
         </div>
       ) : filteredOrnaments.length === 0 ? (
-        <Empty description="No ornaments found" style={{ margin: "32px 0" }} />
+        <div
+          style={{
+            backgroundColor: token.colorBgElevated,
+            borderRadius: 16,
+            padding: "36px 16px",
+            textAlign: "center",
+            border: `1px dashed ${token.colorBorderSecondary}`,
+            margin: "12px 0",
+          }}
+        >
+          <Empty
+            description={
+              <div>
+                <Text strong style={{ fontSize: 14, display: "block" }}>
+                  No ornaments match your filter
+                </Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Try changing your search term or category
+                </Text>
+              </div>
+            }
+          >
+            {(searchTerm || selectedMetal !== "all") && (
+              <Button
+                size="small"
+                icon={<RotateCcw size={13} />}
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedMetal("all");
+                }}
+                style={{ marginTop: 8, borderRadius: 8 }}
+              >
+                Reset Filters
+              </Button>
+            )}
+          </Empty>
+        </div>
       ) : (
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: 10,
+            gap: 12,
           }}
         >
           {filteredOrnaments.map((orn) => {
-            const weight = orn.net_weight_grams || orn.gross_weight_grams || 0;
+            const weightG = orn.weight_mg != null ? (orn.weight_mg / 1000).toFixed(3) : "0.000";
             const purity = orn.purity_level?.display_name || "22K";
+            const metalTheme = getMetalTheme(orn.metal_type?.name);
+            const isOutOfStock = orn.quantity <= 0;
 
             return (
               <div
                 key={orn.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setShowOrnament(orn)}
                 style={{
                   backgroundColor: token.colorBgElevated,
-                  borderRadius: 14,
-                  padding: "12px 10px",
+                  borderRadius: 16,
+                  padding: "12px",
                   border: `1px solid ${token.colorBorderSecondary}`,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  gap: 8,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
+                  gap: 10,
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                  cursor: "pointer",
+                  transition: "transform 0.1s ease, box-shadow 0.15s ease",
+                  WebkitTapHighlightColor: "transparent",
+                  position: "relative",
+                  opacity: isOutOfStock ? 0.75 : 1,
                 }}
               >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Tag color="gold" style={{ margin: 0, fontSize: 10, borderRadius: 6, padding: "0 5px" }}>
-                      {purity}
-                    </Tag>
-                    <span style={{ fontSize: 10, color: token.colorTextSecondary }}>
-                      Qty: {orn.quantity}
-                    </span>
-                  </div>
+                {/* Visual Header / Thumbnail Placeholder */}
+                <div
+                  style={{
+                    height: 84,
+                    borderRadius: 12,
+                    background: metalTheme.gradient,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden",
+                    border: `1px solid ${metalTheme.badgeBorder}`,
+                  }}
+                >
+                  <metalTheme.icon size={36} color={metalTheme.accent} style={{ opacity: 0.65 }} />
 
-                  <Text strong style={{ fontSize: 13, display: "block", marginTop: 6 }} ellipsis>
+                  {/* Purity Tag (Top Left) */}
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      left: 6,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 6px",
+                      borderRadius: 6,
+                      backgroundColor: metalTheme.badgeBg,
+                      color: metalTheme.badgeText,
+                      border: `1px solid ${metalTheme.badgeBorder}`,
+                      letterSpacing: 0.2,
+                    }}
+                  >
+                    {purity}
+                  </span>
+
+                  {/* Edit Icon Button (Top Right, 32px touch target) */}
+                  <button
+                    type="button"
+                    title="Edit Ornament"
+                    onClick={(e) => handleEdit(e, orn)}
+                    style={{
+                      position: "absolute",
+                      top: 5,
+                      right: 5,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: "rgba(255,255,255,0.85)",
+                      border: "1px solid rgba(0,0,0,0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                      color: token.colorTextSecondary,
+                    }}
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                </div>
+
+                {/* Details Section */}
+                <div>
+                  <Text
+                    strong
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 1.3,
+                      display: "block",
+                      marginBottom: 2,
+                    }}
+                    ellipsis
+                  >
                     {orn.name}
                   </Text>
-                  <Text type="secondary" style={{ fontSize: 10 }}>
-                    #{orn.item_code || "ORN"}
+                  <Text
+                    type="secondary"
+                    style={{
+                      fontSize: 11,
+                      fontFamily: "monospace",
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    #{orn.sku || "ORN"}
                   </Text>
                 </div>
 
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, margin: "2px 0 6px" }}>
-                    <Scale size={11} color="#d97706" />
-                    <span style={{ fontSize: 11, fontWeight: 600, color: token.colorText }}>
-                      {weight}g
+                {/* Metric Strip: Weight & Stock Status */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingTop: 6,
+                    borderTop: `1px dashed ${token.colorBorderSecondary}`,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <Scale size={12} color={metalTheme.accent} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: token.colorText }}>
+                      {weightG}
+                      <span style={{ fontSize: 10, fontWeight: 400, color: token.colorTextSecondary }}>
+                        {" "}g
+                      </span>
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <Button
-                      size="small"
-                      type="primary"
-                      ghost
-                      onClick={() => setShowOrnament(orn)}
-                      style={{ flex: 1, borderRadius: 8, fontSize: 11, height: 28 }}
+                  {isOutOfStock ? (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: "#ef4444",
+                        backgroundColor: "#fef2f2",
+                        padding: "1px 5px",
+                        borderRadius: 4,
+                      }}
                     >
-                      View
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => handleEdit(orn)}
-                      style={{ borderRadius: 8, fontSize: 11, height: 28, padding: "0 8px" }}
-                    >
-                      <Edit size={12} />
-                    </Button>
-                  </div>
+                      Out of stock
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 11, fontWeight: 500, color: token.colorTextSecondary }}>
+                      Qty: <strong>{orn.quantity}</strong>
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -281,20 +484,29 @@ export const MobileOrnamentGrid: React.FC = () => {
       {/* Show Ornament Drawer */}
       <OrnamentShowDrawer
         open={!!showOrnament}
-        ornament={showOrnament}
+        record={showOrnament}
         onClose={() => setShowOrnament(null)}
+        onEdit={() => {
+          const target = showOrnament;
+          setShowOrnament(null);
+          if (target) {
+            setEditingOrnament(target);
+            showDrawer(target.id);
+          }
+        }}
       />
 
       {/* Create / Edit Ornament Drawer */}
       <OrnamentDrawer
+        action={editingOrnament ? "edit" : "create"}
         drawerProps={drawerProps}
         formProps={formProps}
-        ornament={editingOrnament}
         shopId={shopId}
-        onClose={() => {
+        close={() => {
           setEditingOrnament(null);
           closeDrawer();
         }}
+        onFinish={formProps.onFinish as any}
       />
     </div>
   );
