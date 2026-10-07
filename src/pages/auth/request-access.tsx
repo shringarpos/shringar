@@ -9,16 +9,19 @@ import {
   Result,
   theme,
   Tag,
+  Grid,
 } from "antd";
 import {
   MailOutlined,
   SendOutlined,
   LockOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router";
 import { supabaseClient } from "../../providers/supabase-client";
 
 const { Title, Text, Paragraph } = Typography;
+const { useBreakpoint } = Grid;
 
 export const RequestAccessPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
@@ -26,6 +29,8 @@ export const RequestAccessPage: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { token } = theme.useToken();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   const handleRequestSubmit = async (values: { email: string }) => {
     setSubmitting(true);
@@ -104,19 +109,48 @@ export const RequestAccessPage: React.FC = () => {
       style={{
         minHeight: "100vh",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        padding: "24px 16px",
+        justifyContent: isMobile ? "flex-start" : "center",
+        padding: isMobile ? "16px 12px 32px" : "24px 16px",
         background: token.colorBgLayout,
       }}
     >
+      {/* Top back navigation on mobile */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          display: "flex",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate("/login")}
+          style={{
+            fontSize: 14,
+            fontWeight: 500,
+            padding: "4px 8px",
+            color: token.colorTextSecondary,
+          }}
+        >
+          Back to Login
+        </Button>
+      </div>
+
       <Card
         style={{
           width: "100%",
           maxWidth: 440,
-          boxShadow: "0 10px 32px rgba(0,0,0,0.06)",
+          boxShadow: isMobile ? "0 2px 12px rgba(0,0,0,0.04)" : "0 10px 32px rgba(0,0,0,0.06)",
           borderRadius: 16,
           border: `1px solid ${token.colorBorderSecondary}`,
+        }}
+        bodyStyle={{
+          padding: isMobile ? "20px 16px" : "28px 24px",
         }}
       >
         {/* Brand Header */}
@@ -124,12 +158,12 @@ export const RequestAccessPage: React.FC = () => {
           <img
             src="/logo.png"
             alt="Shringar POS"
-            style={{ width: 140, height: "auto", marginBottom: 12 }}
+            style={{ width: 130, height: "auto", marginBottom: 10 }}
             onError={(e) => {
               (e.target as HTMLElement).style.display = "none";
             }}
           />
-          <Title level={3} style={{ margin: "4px 0 2px" }}>
+          <Title level={3} style={{ margin: "4px 0 2px", fontSize: isMobile ? 20 : 24 }}>
             Shringar POS
           </Title>
           <div style={{ marginTop: 6 }}>
@@ -140,7 +174,7 @@ export const RequestAccessPage: React.FC = () => {
         </div>
 
         {submittedEmail ? (
-          /* Clean Minimal Confirmation Screen without "What happens next" box */
+          /* Confirmation Screen */
           <Result
             status="success"
             title="Access Request Sent!"
@@ -149,6 +183,9 @@ export const RequestAccessPage: React.FC = () => {
                 <Paragraph style={{ fontSize: 14, color: token.colorTextSecondary, margin: 0 }}>
                   We've received your request for <Text strong>{submittedEmail}</Text>.
                 </Paragraph>
+                <Text type="secondary" style={{ fontSize: 13, display: "block", marginTop: 8 }}>
+                  Sahil will review your request and you'll receive an invitation link.
+                </Text>
               </div>
             }
             extra={[
@@ -157,21 +194,22 @@ export const RequestAccessPage: React.FC = () => {
                 type="primary"
                 size="large"
                 block
+                style={{ height: 48, borderRadius: 12, fontWeight: 600, fontSize: 15 }}
                 onClick={() => navigate("/login")}
               >
-                Back to Sign In
+                Back to Login
               </Button>,
             ]}
           />
         ) : (
-          /* Ultra-Clean Single Email Field */
+          /* Single Email Field */
           <div>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <Title level={4} style={{ margin: "0 0 6px" }}>
+              <Title level={4} style={{ margin: "0 0 6px", fontSize: 18 }}>
                 Request Access
               </Title>
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                Account creation is currently invite-only. Enter your email to request an invitation.
+              <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.4, display: "block" }}>
+                Account creation is invite-only. Enter your email to request an invitation.
               </Text>
             </div>
 
@@ -189,9 +227,13 @@ export const RequestAccessPage: React.FC = () => {
                 ]}
               >
                 <Input
-                  prefix={<MailOutlined style={{ color: token.colorTextTertiary }} />}
+                  prefix={<MailOutlined style={{ color: token.colorTextTertiary, marginRight: 6 }} />}
                   placeholder="Enter your email address"
                   size="large"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  style={{ fontSize: 16, height: 48, borderRadius: 10 }}
                   autoFocus
                 />
               </Form.Item>
@@ -204,7 +246,7 @@ export const RequestAccessPage: React.FC = () => {
                   icon={<SendOutlined />}
                   loading={submitting}
                   block
-                  style={{ height: 44, borderRadius: 8, fontWeight: 500 }}
+                  style={{ height: 48, borderRadius: 12, fontWeight: 600, fontSize: 15 }}
                 >
                   Request Access
                 </Button>
@@ -214,8 +256,8 @@ export const RequestAccessPage: React.FC = () => {
             <div style={{ textAlign: "center", marginTop: 16 }}>
               <Text type="secondary" style={{ fontSize: 13 }}>
                 Already have an approved account?{" "}
-                <Link to="/login" style={{ fontWeight: 500 }}>
-                  Sign in
+                <Link to="/login" style={{ fontWeight: 600 }}>
+                  Back to Login
                 </Link>
               </Text>
             </div>
@@ -225,4 +267,5 @@ export const RequestAccessPage: React.FC = () => {
     </div>
   );
 };
+
 export default RequestAccessPage;
