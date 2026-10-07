@@ -1,10 +1,11 @@
 import React from "react";
-import { Col, Row, Skeleton, Typography } from "antd";
+import { Col, Grid, Row, Skeleton, Typography } from "antd";
 import dayjs from "dayjs";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import {
   InventorySummary,
   MetalRatesWidget,
+  MobileDashboard,
   QuickActions,
   RecentInvoices,
   RevenueChart,
@@ -13,8 +14,10 @@ import {
 } from "../../components/dashboard";
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid;
 
 export default function Dashboard() {
+  const screens = useBreakpoint();
   const { shops, isLoading } = useShopCheck();
   const shopId = shops?.[0]?.id;
   const shopName = shops?.[0]?.name;
@@ -35,6 +38,12 @@ export default function Dashboard() {
     );
   }
 
+  // Native Mobile App View
+  if (!screens.md) {
+    return <MobileDashboard shopId={shopId} shopName={shopName} />;
+  }
+
+  // Desktop Responsive View
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: "100%", overflowX: "hidden" }}>
 
@@ -51,10 +60,10 @@ export default function Dashboard() {
       {/* ── KPI Stats ────────────────────────────────────────────────────── */}
       <StatsCards shopId={shopId} />
 
-      {/* ── Quick Actions ──────────────────────────────────────────────── */}
+      {/* ── Quick Actions ────────────────────────────────────────────────── */}
       <QuickActions />
 
-      {/* ── Revenue Chart + Metal Rates ─────────────────────────────── */}
+      {/* ── Revenue Chart + Metal Rates ──────────────────────────────────── */}
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
           <RevenueChart shopId={shopId} />
@@ -64,10 +73,10 @@ export default function Dashboard() {
         </Col>
       </Row>
 
-      {/* ── Recent Invoices ─────────────────────────────────────────────── */}
+      {/* ── Recent Invoices ──────────────────────────────────────────────── */}
       <RecentInvoices shopId={shopId} />
 
-      {/* ── Inventory + Top Customers ──────────────────────────────────── */}
+      {/* ── Inventory + Top Customers ────────────────────────────────────── */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <InventorySummary shopId={shopId} />

@@ -5,3 +5,4 @@ export { RecentInvoices } from "./recent-invoices";
 export { InventorySummary } from "./inventory-summary";
 export { QuickActions } from "./quick-actions";
 export { TopCustomers } from "./top-customers";
+export { MobileDashboard } from "./mobile-dashboard";
