@@ -27,6 +27,7 @@ import type { FilterDropdownProps } from "antd/es/table/interface";
 import {
     App,
     Button,
+    Grid,
     Input,
     Popconfirm,
     Radio,
@@ -42,9 +43,13 @@ import dayjs from "dayjs";
 import { LoanDrawer } from "../../components/gold-ledger/loan-drawer";
 import { LoanShowDrawer } from "../../components/gold-ledger/loan-show-drawer";
 import { LoanStatsCards } from "../../components/gold-ledger/loan-stats-cards";
+import { MobileGoldLedger } from "../../components/gold-ledger/mobile-gold-ledger";
 import type { IGoldLoan } from "../../libs/interfaces";
 
+const { useBreakpoint } = Grid;
+
 export default function GoldLedger() {
+    const screens = useBreakpoint();
     const { token } = theme.useToken();
     const { notification } = App.useApp();
     const { data: identity } = useGetIdentity<{ id: string }>();
@@ -73,635 +78,339 @@ export default function GoldLedger() {
         sorters: {
             initial: [{ field: "loan_date", order: "desc" }],
         },
-        syncWithLocation: true,
-        queryOptions: { enabled: !!userId },
+        meta: {
+            select: "*, customer:customers(id,name,customer_code,phone)",
+        },
     });
 
-    const allLoans = (tableQuery?.data?.data || []) as IGoldLoan[];
-    const isLoansLoading = tableQuery?.isLoading;
+    if (!screens.md) {
+        return <MobileGoldLedger />;
+    }
 
-    const { mutate: deleteLoan } = useDelete();
     const { mutate: updateLoan } = useUpdate<IGoldLoan>();
+    const { mutate: deleteLoan } = useDelete<IGoldLoan>();
 
-    // Slide-over Drawer Forms (replacing heavy modals to keep UX smooth and within screen bounds)
-    const {
-        drawerProps: createDrawerProps,
-        formProps: createFormProps,
-        saveButtonProps: createSaveButtonProps,
-        show: showCreate,
-        close: closeCreate,
-    } = useDrawerForm<IGoldLoan>({
-        action: "create",
+    const { triggerExport, isLoading: isExporting } = useExport<IGoldLoan>({
         resource: "gold_loans",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "create-loan", syncId: false },
-    });
-
-    const {
-        drawerProps: editDrawerProps,
-        formProps: editFormProps,
-        saveButtonProps: editSaveButtonProps,
-        show: showEdit,
-        close: closeEdit,
-    } = useDrawerForm<IGoldLoan>({
-        action: "edit",
-        resource: "gold_loans",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "edit-loan", syncId: true },
-    });
-
-    const {
-        drawerProps: cloneDrawerProps,
-        formProps: cloneFormProps,
-        saveButtonProps: cloneSaveButtonProps,
-        show: showClone,
-        close: closeClone,
-    } = useDrawerForm<IGoldLoan>({
-        action: "clone",
-        resource: "gold_loans",
-        warnWhenUnsavedChanges: true,
-        syncWithLocation: { key: "clone-loan", syncId: true },
-    });
-
-    // Export CSV
-    const { triggerExport, isLoading: exportLoading } = useExport<IGoldLoan>({
-        resource: "gold_loans",
-        filters: userId ? [{ field: "user_id", operator: "eq", value: userId }] : [],
-        mapData: (item) => ({
-            "Customer Name": item.customer_name,
-            "Contact No": item.contact_no,
-            "Address": item.address,
-            "Nominee": item.nominee,
-            "Metal Type": item.metal_type,
-            "Purity": item.purity,
-            "Ornament Details": item.ornament_details,
-            "Loan Date": item.loan_date,
-            "Closure Date": item.closure_date || "—",
-            "Loan Amount (₹)": item.loan_amount,
-            "Duration (Months)": item.duration_months,
-            "Interest Rate (%)": item.interest_rate,
-            "Interest Amount (₹)": item.interest_amount,
-            "Total Amount (₹)": item.total_amount,
-            "Status": item.status,
-            "Created At": new Date(item.created_at).toLocaleDateString("en-IN"),
+        filters: {
+            permanent: userId
+                ? [{ field: "user_id", operator: "eq", value: userId }]
+                : [],
+        },
+        mapData: (record) => ({
+            "Loan Number": record.loan_number,
+            Customer: record.customer?.name ?? record.customer_id,
+            "Customer Code": record.customer?.customer_code ?? "",
+            "Customer Phone": record.customer?.phone ?? "",
+            "Principal Amount": (record.principal_amount_paise / 100).toFixed(2),
+            "Interest Rate (%)": record.interest_rate_percent,
+            "Loan Date": record.loan_date,
+            "Due Date": record.due_date ?? "",
+            "Closed Date": record.closed_date ?? "",
+            Status: record.status,
+            "Gross Weight (g)": record.gross_weight_grams ?? "",
+            "Net Weight (g)": record.net_weight_grams ?? "",
+            "Item Description": record.item_description,
         }),
+        exportOptions: {
+            filename: `gold-loans-${dayjs().format("YYYY-MM-DD")}`,
+        },
     });
 
-    // Multi-criteria filter applicator
-    const applyCombinedFilters = (
-        search: string,
-        metal: string,
-        purity: string,
-        status: string
-    ) => {
-        const next = [];
-        if (search.trim()) {
-            next.push({ field: "customer_name", operator: "contains" as const, value: search.trim() });
-        }
-        if (metal !== "all") {
-            next.push({ field: "metal_type", operator: "eq" as const, value: metal });
-        }
-        if (purity !== "all") {
-            next.push({ field: "purity", operator: "eq" as const, value: purity });
-        }
-        if (status !== "all") {
-            next.push({ field: "status", operator: "eq" as const, value: status });
-        }
-        setFilters(next, "replace");
-    };
+    // Refine Drawer Form for Loan create & edit
+    const {
+        drawerProps,
+        formProps,
+        show: showFormDrawer,
+        close: closeFormDrawer,
+        id: activeDrawerId,
+    } = useDrawerForm<IGoldLoan>({
+        resource: "gold_loans",
+        action: editingLoan ? "edit" : "create",
+        id: editingLoan?.id,
+        redirect: false,
+        meta: {
+            select: "*, customer:customers(id,name,customer_code,phone)",
+        },
+        onMutationSuccess: () => {
+            setEditingLoan(null);
+            closeFormDrawer();
+        },
+    });
 
-    const handleCreateFinish = (values: Partial<IGoldLoan>) => {
-        return createFormProps.onFinish?.({
-            ...values,
-            user_id: userId,
-        });
-    };
-
-    const handleEditFinish = async (values: Partial<IGoldLoan>) => {
-        const res = await editFormProps.onFinish?.({
-            ...values,
-            user_id: userId,
-        });
+    const handleCreateNew = () => {
         setEditingLoan(null);
-        return res;
-    };
-
-    const handleCloneFinish = async (values: Partial<IGoldLoan>) => {
-        const res = await cloneFormProps.onFinish?.({
-            ...values,
-            user_id: userId,
-        });
         setCloningLoan(null);
-        return res;
+        formProps.form?.resetFields();
+        showFormDrawer();
     };
 
-    // Quick Settle & Close Loan
+    const handleEdit = (record: IGoldLoan) => {
+        setEditingLoan(record);
+        setCloningLoan(null);
+        showFormDrawer(record.id);
+    };
+
+    const handleClone = (record: IGoldLoan) => {
+        setEditingLoan(null);
+        setCloningLoan(record);
+        formProps.form?.resetFields();
+        showFormDrawer();
+    };
+
     const handleCloseLoan = (record: IGoldLoan) => {
         updateLoan(
             {
                 resource: "gold_loans",
                 id: record.id,
                 values: {
-                    status: "closed",
-                    closure_date: dayjs().format("YYYY-MM-DD"),
+                    status: "CLOSED",
+                    closed_date: dayjs().format("YYYY-MM-DD"),
+                    updated_by: userId,
                 },
-                successNotification: () => ({
-                    message: `Loan for ${record.customer_name} marked as closed`,
-                    type: "success",
-                }),
             },
             {
-                onError: (err) => {
-                    notification.error({
-                        message: "Failed to close loan",
-                        description: err.message,
+                onSuccess: () => {
+                    notification.success({
+                        message: "Loan Closed",
+                        description: `Loan #${record.loan_number} has been closed.`,
                     });
                 },
             }
         );
     };
 
-    // Delete Loan
-    const handleDeleteLoan = (record: IGoldLoan) => {
-        deleteLoan({
-            resource: "gold_loans",
-            id: record.id,
-            successNotification: () => ({
-                message: "Loan record deleted successfully",
-                type: "success",
-            }),
-        });
+    const handleDelete = (id: string) => {
+        deleteLoan(
+            {
+                resource: "gold_loans",
+                id,
+            },
+            {
+                onSuccess: () => {
+                    notification.success({
+                        message: "Loan Deleted",
+                        description: "Loan record has been removed.",
+                    });
+                },
+            }
+        );
     };
 
-    // Generic Column Filter with theme tokens
-    const makeColumnFilter = (field: string, placeholder: string) =>
-        ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
-            <div style={{ padding: 10, minWidth: 200, background: token.colorBgElevated, borderRadius: token.borderRadius }}>
-                <Input
-                    autoFocus
-                    placeholder={placeholder}
-                    value={selectedKeys[0] as string}
-                    onChange={(e) =>
-                        setSelectedKeys(e.target.value ? [e.target.value] : [])
-                    }
-                    onPressEnter={() => {
-                        setFilters(
-                            [{ field, operator: "contains" as const, value: selectedKeys[0] || undefined }],
-                            "merge"
-                        );
-                        confirm();
-                    }}
-                    style={{ marginBottom: 8, display: "block" }}
-                />
-                <Space>
-                    <Button
-                        type="primary"
-                        size="small"
-                        onClick={() => {
-                            setFilters(
-                                [{ field, operator: "contains" as const, value: selectedKeys[0] || undefined }],
-                                "merge"
-                            );
-                            confirm();
-                        }}
-                    >
-                        Filter
-                    </Button>
-                    <Button
-                        size="small"
-                        onClick={() => {
-                            clearFilters?.();
-                            setFilters(
-                                [{ field, operator: "contains" as const, value: undefined }],
-                                "merge"
-                            );
-                            confirm();
-                        }}
-                    >
-                        Reset
-                    </Button>
+    const columns = [
+        {
+            title: "Loan #",
+            dataIndex: "loan_number",
+            key: "loan_number",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("loan_number", sorters),
+            render: (value: string, record: IGoldLoan) => (
+                <Button
+                    type="link"
+                    style={{ padding: 0, fontWeight: 600 }}
+                    onClick={() => setShowRecord(record)}
+                >
+                    #{value}
+                </Button>
+            ),
+        },
+        {
+            title: "Customer",
+            dataIndex: ["customer", "name"],
+            key: "customer.name",
+            render: (_: any, record: IGoldLoan) => (
+                <Space direction="vertical" size={0}>
+                    <Typography.Text strong>
+                        {record.customer?.name ?? "—"}
+                    </Typography.Text>
+                    {record.customer?.phone && (
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            {record.customer.phone}
+                        </Typography.Text>
+                    )}
                 </Space>
-            </div>
-        );
+            ),
+        },
+        {
+            title: "Item / Weight",
+            key: "item_weight",
+            render: (_: any, record: IGoldLoan) => (
+                <Space orientation="vertical" size={0}>
+                    <Typography.Text style={{ fontSize: 13 }}>
+                        {record.item_description}
+                    </Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {record.net_weight_grams ? `${record.net_weight_grams}g net` : "—"}
+                    </Typography.Text>
+                </Space>
+            ),
+        },
+        {
+            title: "Principal",
+            dataIndex: "principal_amount_paise",
+            key: "principal_amount_paise",
+            align: "right" as const,
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("principal_amount_paise", sorters),
+            render: (value: number) => (
+                <Typography.Text strong>
+                    ₹{(value / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </Typography.Text>
+            ),
+        },
+        {
+            title: "Interest",
+            dataIndex: "interest_rate_percent",
+            key: "interest_rate_percent",
+            align: "right" as const,
+            render: (value: number) => `${value}% / mo`,
+        },
+        {
+            title: "Loan Date",
+            dataIndex: "loan_date",
+            key: "loan_date",
+            sorter: true,
+            defaultSortOrder: getDefaultSortOrder("loan_date", sorters),
+            render: (value: string) => dayjs(value).format("DD MMM YYYY"),
+        },
+        {
+            title: "Status",
+            dataIndex: "status",
+            key: "status",
+            render: (status: string, record: IGoldLoan) => {
+                const isOverdue =
+                    status === "ACTIVE" &&
+                    record.due_date &&
+                    dayjs(record.due_date).isBefore(dayjs(), "day");
+                if (isOverdue) {
+                    return <Tag color="error">OVERDUE</Tag>;
+                }
+                const colorMap: Record<string, string> = {
+                    ACTIVE: "processing",
+                    CLOSED: "default",
+                };
+                return <Tag color={colorMap[status] ?? "default"}>{status}</Tag>;
+            },
+        },
+        {
+            title: "Actions",
+            key: "actions",
+            align: "right" as const,
+            render: (_: any, record: IGoldLoan) => (
+                <Space size={4}>
+                    <Tooltip title="View Details">
+                        <Button
+                            type="text"
+                            icon={<EyeOutlined />}
+                            size="small"
+                            onClick={() => setShowRecord(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Edit">
+                        <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={() => handleEdit(record)}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Clone">
+                        <Button
+                            type="text"
+                            icon={<CopyOutlined />}
+                            size="small"
+                            onClick={() => handleClone(record)}
+                        />
+                    </Tooltip>
+                    {record.status === "ACTIVE" && (
+                        <Popconfirm
+                            title="Close Loan"
+                            description={`Mark Loan #${record.loan_number} as closed?`}
+                            onConfirm={() => handleCloseLoan(record)}
+                            okText="Yes, Close"
+                            cancelText="No"
+                        >
+                            <Tooltip title="Mark as Closed">
+                                <Button
+                                    type="text"
+                                    icon={<CheckCircleOutlined style={{ color: token.colorSuccess }} />}
+                                    size="small"
+                                />
+                            </Tooltip>
+                        </Popconfirm>
+                    )}
+                    <Popconfirm
+                        title="Delete Loan"
+                        description="Are you sure you want to delete this loan record?"
+                        onConfirm={() => handleDelete(record.id)}
+                        okText="Yes, Delete"
+                        okButtonProps={{ danger: true }}
+                        cancelText="No"
+                    >
+                        <Tooltip title="Delete">
+                            <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                size="small"
+                            />
+                        </Tooltip>
+                    </Popconfirm>
+                </Space>
+            ),
+        },
+    ];
 
     return (
-        <>
-            <RefineList
-                title="Gold Ledger"
-                headerButtons={({ defaultButtons }) => (
-                    <>
-                        {defaultButtons}
-                        <ExportButton onClick={triggerExport} loading={exportLoading} />
-                    </>
-                )}
-                createButtonProps={{
-                    onClick: () => showCreate(),
-                    children: "Add New Loan",
-                    icon: <PlusOutlined />,
-                }}
-            >
-                {/* Stats Summary Cards (Theme Aware) */}
-                <LoanStatsCards loans={allLoans} loading={isLoansLoading} />
-
-                {/* Filter Toolbar (Theme Aware) */}
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 16,
-                        flexWrap: "wrap",
-                        gap: 12,
-                        background: token.colorBgContainer,
-                        padding: "12px 16px",
-                        borderRadius: token.borderRadiusLG,
-                        border: `1px solid ${token.colorBorderSecondary}`,
-                    }}
+        <RefineList
+            title="Gold Loans Ledger"
+            headerButtons={[
+                <ExportButton
+                    key="export"
+                    onClick={() => triggerExport()}
+                    loading={isExporting}
+                />,
+                <Button
+                    key="create"
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleCreateNew}
                 >
-                    <Space wrap size="middle">
-                        <Input.Search
-                            placeholder="Search borrower name..."
-                            allowClear
-                            style={{ width: 220 }}
-                            value={searchText}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setSearchText(val);
-                                if (!val) applyCombinedFilters("", metalFilter, purityFilter, statusFilter);
-                            }}
-                            onSearch={(val) => {
-                                setSearchText(val);
-                                applyCombinedFilters(val, metalFilter, purityFilter, statusFilter);
-                            }}
-                        />
+                    New Loan
+                </Button>,
+            ]}
+        >
+            <LoanStatsCards />
 
-                        <Select
-                            value={metalFilter}
-                            style={{ width: 120 }}
-                            onChange={(val) => {
-                                setMetalFilter(val);
-                                applyCombinedFilters(searchText, val, purityFilter, statusFilter);
-                            }}
-                            options={[
-                                { label: "All Metals", value: "all" },
-                                { label: "Gold", value: "Gold" },
-                                { label: "Silver", value: "Silver" },
-                            ]}
-                        />
-
-                        <Select
-                            value={purityFilter}
-                            style={{ width: 120 }}
-                            onChange={(val) => {
-                                setPurityFilter(val);
-                                applyCombinedFilters(searchText, metalFilter, val, statusFilter);
-                            }}
-                            options={[
-                                { label: "All Purity", value: "all" },
-                                { label: "24K", value: "24K" },
-                                { label: "22K", value: "22K" },
-                                { label: "18K", value: "18K" },
-                                { label: "99.9%", value: "99.9%" },
-                                { label: "92.5%", value: "92.5%" },
-                            ]}
-                        />
-
-                        <Radio.Group
-                            value={statusFilter}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setStatusFilter(val);
-                                applyCombinedFilters(searchText, metalFilter, purityFilter, val);
-                            }}
-                            optionType="button"
-                            buttonStyle="solid"
-                            size="middle"
-                        >
-                            <Radio.Button value="all">All</Radio.Button>
-                            <Radio.Button value="running">Running</Radio.Button>
-                            <Radio.Button value="closed">Closed</Radio.Button>
-                        </Radio.Group>
-                    </Space>
-
-                    <Tooltip title="Reset all filters">
-                        <Button
-                            icon={<ReloadOutlined />}
-                            onClick={() => {
-                                setSearchText("");
-                                setMetalFilter("all");
-                                setPurityFilter("all");
-                                setStatusFilter("all");
-                                setFilters([], "replace");
-                            }}
-                        >
-                            Reset
-                        </Button>
-                    </Tooltip>
-                </div>
-
-                {/* Loans Data Table */}
-                <Table
-                    {...tableProps}
-                    rowKey="id"
-                    size="small"
-                    scroll={{ x: 1350 }}
-                    onChange={(pagination, _columnFilters, sorter, extra) => {
-                        tableProps.onChange?.(pagination, {}, sorter, extra);
-                    }}
-                    onRow={(record) => ({
-                        style: { cursor: "pointer" },
-                        onClick: () => setShowRecord(record),
-                    })}
-                >
-                    {/* Loan Date */}
-                    <Table.Column<IGoldLoan>
-                        key="loan_date"
-                        dataIndex="loan_date"
-                        title="Date"
-                        width={105}
-                        sorter
-                        defaultSortOrder={getDefaultSortOrder("loan_date", sorters)}
-                        render={(val: string) => (
-                            <Typography.Text style={{ fontSize: 13, color: token.colorText }}>
-                                {dayjs(val).format("YYYY-MM-DD")}
-                            </Typography.Text>
-                        )}
-                    />
-
-                    {/* Customer & Nominee */}
-                    <Table.Column<IGoldLoan>
-                        key="customer_name"
-                        dataIndex="customer_name"
-                        title="Customer"
-                        width={200}
-                        sorter
-                        filterDropdown={makeColumnFilter("customer_name", "Filter by name...")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? token.colorPrimary : undefined }} />
-                        )}
-                        render={(_: unknown, record: IGoldLoan) => (
-                            <div>
-                                <Typography.Text strong style={{ color: token.colorText }}>
-                                    {record.customer_name}
-                                </Typography.Text>
-                                <div style={{ fontSize: 11, color: token.colorTextSecondary }}>
-                                    {record.nominee} (Nominee)
-                                </div>
-                            </div>
-                        )}
-                    />
-
-                    {/* Contact */}
-                    <Table.Column<IGoldLoan>
-                        key="contact_no"
-                        dataIndex="contact_no"
-                        title="Contact"
-                        width={130}
-                        filterDropdown={makeColumnFilter("contact_no", "Filter by contact...")}
-                        filterIcon={(active) => (
-                            <FilterOutlined style={{ color: active ? token.colorPrimary : undefined }} />
-                        )}
-                        render={(val: string) => (
-                            <Typography.Text copyable={{ text: val }} style={{ color: token.colorText }}>
-                                {val}
-                            </Typography.Text>
-                        )}
-                    />
-
-                    {/* Metal */}
-                    <Table.Column<IGoldLoan>
-                        key="metal_type"
-                        dataIndex="metal_type"
-                        title="Metal"
-                        width={90}
-                        render={(val: string) => (
-                            <Tag color={val === "Gold" ? "gold" : "default"}>
-                                {val}
-                            </Tag>
-                        )}
-                    />
-
-                    {/* Purity */}
-                    <Table.Column<IGoldLoan>
-                        key="purity"
-                        dataIndex="purity"
-                        title="Purity"
-                        width={90}
-                        render={(val: string) => <Tag color="cyan">{val}</Tag>}
-                    />
-
-                    {/* Ornament Details */}
-                    <Table.Column<IGoldLoan>
-                        key="ornament_details"
-                        dataIndex="ornament_details"
-                        title="Ornament"
-                        width={220}
-                        ellipsis
-                    />
-
-                    {/* Loan Amount */}
-                    <Table.Column<IGoldLoan>
-                        key="loan_amount"
-                        dataIndex="loan_amount"
-                        title="Loan Amount"
-                        width={130}
-                        sorter
-                        render={(val: number) => (
-                            <Typography.Text strong style={{ color: token.colorText }}>
-                                ₹{Number(val).toLocaleString("en-IN")}
-                            </Typography.Text>
-                        )}
-                    />
-
-                    {/* Duration */}
-                    <Table.Column<IGoldLoan>
-                        key="duration_months"
-                        dataIndex="duration_months"
-                        title="Duration"
-                        width={100}
-                        render={(val: number) => (
-                            <Typography.Text style={{ color: token.colorText }}>
-                                {val} mo
-                            </Typography.Text>
-                        )}
-                    />
-
-                    {/* Interest */}
-                    <Table.Column<IGoldLoan>
-                        key="interest_amount"
-                        dataIndex="interest_amount"
-                        title="Interest"
-                        width={120}
-                        render={(_: unknown, record: IGoldLoan) => (
-                            <div>
-                                <Typography.Text style={{ fontSize: 11, display: "block", color: token.colorTextSecondary }}>
-                                    {record.interest_rate}%
-                                </Typography.Text>
-                                <Typography.Text style={{ color: token.colorWarning, fontWeight: 600 }}>
-                                    ₹{Number(record.interest_amount).toLocaleString("en-IN")}
-                                </Typography.Text>
-                            </div>
-                        )}
-                    />
-
-                    {/* Total Amount */}
-                    <Table.Column<IGoldLoan>
-                        key="total_amount"
-                        dataIndex="total_amount"
-                        title="Total"
-                        width={130}
-                        sorter
-                        render={(val: number) => (
-                            <Typography.Text strong style={{ color: token.colorSuccess }}>
-                                ₹{Number(val).toLocaleString("en-IN")}
-                            </Typography.Text>
-                        )}
-                    />
-
-                    {/* Status */}
-                    <Table.Column<IGoldLoan>
-                        key="status"
-                        dataIndex="status"
-                        title="Status"
-                        width={100}
-                        render={(val: string) => (
-                            <Tag color={val === "running" ? "processing" : "success"} style={{ textTransform: "capitalize" }}>
-                                {val}
-                            </Tag>
-                        )}
-                    />
-
-                    {/* Actions */}
-                    <Table.Column<IGoldLoan>
-                        title="Actions"
-                        dataIndex="actions"
-                        key="actions"
-                        width={180}
-                        fixed="right"
-                        render={(_: unknown, record: IGoldLoan) => (
-                            <Space size={4} onClick={(e) => e.stopPropagation()}>
-                                {record.status === "running" && (
-                                    <Popconfirm
-                                        title="Close loan?"
-                                        description={`Mark loan for ${record.customer_name} as settled?`}
-                                        onConfirm={() => handleCloseLoan(record)}
-                                        okText="Yes, Close"
-                                        cancelText="Cancel"
-                                    >
-                                        <Button
-                                            size="small"
-                                            style={{
-                                                color: token.colorWarning,
-                                                borderColor: token.colorWarningBorder || token.colorWarning,
-                                                fontWeight: 600,
-                                            }}
-                                        >
-                                            Close
-                                        </Button>
-                                    </Popconfirm>
-                                )}
-                                <Tooltip title="View Details">
-                                    <Button
-                                        icon={<EyeOutlined />}
-                                        size="small"
-                                        onClick={() => setShowRecord(record)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Edit">
-                                    <Button
-                                        icon={<EditOutlined />}
-                                        size="small"
-                                        onClick={() => {
-                                            setEditingLoan(record);
-                                            showEdit(record.id);
-                                        }}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Clone">
-                                    <Button
-                                        icon={<CopyOutlined />}
-                                        size="small"
-                                        onClick={() => {
-                                            setCloningLoan(record);
-                                            showClone(record.id);
-                                        }}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                    <Popconfirm
-                                        title="Delete loan record?"
-                                        description="Are you sure you want to permanently delete this loan?"
-                                        onConfirm={() => handleDeleteLoan(record)}
-                                        okText="Delete"
-                                        okButtonProps={{ danger: true }}
-                                        cancelText="Cancel"
-                                    >
-                                        <Button
-                                            icon={<DeleteOutlined />}
-                                            size="small"
-                                            danger
-                                        />
-                                    </Popconfirm>
-                                </Tooltip>
-                            </Space>
-                        )}
-                    />
-                </Table>
-            </RefineList>
-
-            {/* Slide-over Drawers for clean, bounded, responsive form experience */}
-            <LoanDrawer
-                action="create"
-                drawerProps={createDrawerProps}
-                formProps={createFormProps}
-                saveButtonProps={createSaveButtonProps}
-                onFinish={handleCreateFinish}
-                close={closeCreate}
-            />
-
-            <LoanDrawer
-                action="edit"
-                drawerProps={editDrawerProps}
-                formProps={editFormProps}
-                saveButtonProps={editSaveButtonProps}
-                onFinish={handleEditFinish}
-                close={() => {
-                    closeEdit();
-                    setEditingLoan(null);
+            <Table
+                {...tableProps}
+                rowKey="id"
+                columns={columns}
+                pagination={{
+                    ...tableProps.pagination,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Total ${total} loans`,
                 }}
-                initialRecord={editingLoan}
             />
 
-            <LoanDrawer
-                action="clone"
-                drawerProps={cloneDrawerProps}
-                formProps={cloneFormProps}
-                saveButtonProps={cloneSaveButtonProps}
-                onFinish={handleCloneFinish}
-                close={() => {
-                    closeClone();
-                    setCloningLoan(null);
-                }}
-                initialRecord={cloningLoan}
-            />
-
-            {/* Slide-over Loan Show Details Drawer */}
             <LoanShowDrawer
-                record={showRecord}
                 open={!!showRecord}
+                record={showRecord}
                 onClose={() => setShowRecord(null)}
-                onEdit={
-                    showRecord
-                        ? () => {
-                              const rec = showRecord;
-                              setShowRecord(null);
-                              setEditingLoan(rec);
-                              showEdit(rec.id);
-                          }
-                        : undefined
-                }
-                onCloseLoan={handleCloseLoan}
             />
-        </>
+
+            <LoanDrawer
+                drawerProps={drawerProps}
+                formProps={formProps}
+                editingLoan={editingLoan}
+                cloningLoan={cloningLoan}
+                userId={userId}
+                onClose={() => {
+                    setEditingLoan(null);
+                    setCloningLoan(null);
+                    closeFormDrawer();
+                }}
+            />
+        </RefineList>
     );
 }
