@@ -27,6 +27,7 @@ import { OnboardingGuard } from "./components/onboarding-guard";
 import Categories from "./pages/inventory/categories";
 import MetalRates from "./pages/metal-rates";
 import { Header } from "./components";
+import { MobileShell } from "./components/mobile/mobile-shell";
 import CreateSale from "./pages/pos";
 import Invoices from "./pages/invoices";
 import InvoiceShow from "./pages/invoices/show";
@@ -171,18 +172,9 @@ function App() {
                         fallback={<CatchAllNavigate to="/login" />}
                       >
                         <OnboardingGuard>
-                          <ThemedLayout
-                            Header={Header}
-                            Sider={(props) => (
-                              <ThemedSider
-                                {...props}
-                                Title={SidebarTitle}
-                                fixed
-                              />
-                            )}
-                          >
+                          <MobileShell SidebarTitle={SidebarTitle}>
                             <Outlet />
-                          </ThemedLayout>
+                          </MobileShell>
                         </OnboardingGuard>
                       </Authenticated>
                     }
