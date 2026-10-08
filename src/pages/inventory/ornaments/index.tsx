@@ -523,7 +523,7 @@ const OrnamentList: React.FC = () => {
                     {...tableProps}
                     rowKey="id"
                     size="small"
-                    scroll={{ x: 1400 }}
+                    scroll={{ x: 1100 }}
                     onChange={(pagination, _columnFilters, sorter, extra) => {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}
@@ -631,7 +631,22 @@ const OrnamentList: React.FC = () => {
                             <FilterOutlined style={{ color: active ? "#1677ff" : undefined }} />
                         )}
                         render={(_: unknown, record: IOrnamentWithDetails) => (
-                            <Tag color="geekblue">{record.category?.name ?? "—"}</Tag>
+                            <Tooltip title={record.category?.name ?? "—"}>
+                                <Tag
+                                    color="geekblue"
+                                    style={{
+                                        margin: 0,
+                                        maxWidth: 130,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                        display: "inline-block",
+                                        verticalAlign: "middle",
+                                    }}
+                                >
+                                    {record.category?.name ?? "—"}
+                                </Tag>
+                            </Tooltip>
                         )}
                     />
 
@@ -668,7 +683,7 @@ const OrnamentList: React.FC = () => {
                                 >
                                     <Tag
                                         color={qty === 0 ? "error" : qty <= 2 ? "warning" : "success"}
-                                        style={{ margin: 0, marginRight: 20 }}
+                                        style={{ margin: 0 }}
                                     >
                                         {qty} pcs
                                     </Tag>
@@ -687,12 +702,13 @@ const OrnamentList: React.FC = () => {
                         }}
                     />
 
-                    {/* Total Cost + breakdown */}
+                    {/* Total Cost + breakdown (hidden below lg to fit 1366) */}
                     <Table.Column<IOrnamentWithDetails>
                         key="purchase_total_cost_paise"
                         dataIndex="purchase_total_cost_paise"
                         title="Total Cost"
                         width={160}
+                        responsive={["lg"]}
                         sorter
                         defaultSortOrder={getDefaultSortOrder("purchase_total_cost_paise", sorters)}
                         render={(_: unknown, record: IOrnamentWithDetails) => {

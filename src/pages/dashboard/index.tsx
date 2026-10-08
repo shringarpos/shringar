@@ -63,12 +63,12 @@ export default function Dashboard() {
       {/* ── Quick Actions ────────────────────────────────────────────────── */}
       <QuickActions />
 
-      {/* ── Revenue Chart + Metal Rates ──────────────────────────────────── */}
+      {/* ── Revenue Chart + Metal Rates (stack until xxl so 1366 gets full width) ── */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
+        <Col xs={24} xxl={16}>
           <RevenueChart shopId={shopId} />
         </Col>
-        <Col xs={24} xl={8}>
+        <Col xs={24} xxl={8}>
           <MetalRatesWidget shopId={shopId} />
         </Col>
       </Row>

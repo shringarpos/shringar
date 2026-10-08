@@ -432,7 +432,7 @@ function DesktopGoldLedger() {
                         key="customer_name"
                         dataIndex="customer_name"
                         title="Customer"
-                        width={200}
+                        width={150}
                         sorter
                         filterDropdown={makeColumnFilter("customer_name", "Filter by name...")}
                         filterIcon={(active) => (
@@ -494,7 +494,7 @@ function DesktopGoldLedger() {
                         key="ornament_details"
                         dataIndex="ornament_details"
                         title="Ornament"
-                        width={220}
+                        width={160}
                         ellipsis
                     />
 
@@ -512,12 +512,13 @@ function DesktopGoldLedger() {
                         )}
                     />
 
-                    {/* Duration */}
+                    {/* Duration (hidden below xxl ≈ 1400px to fit 1366) */}
                     <Table.Column<IGoldLoan>
                         key="duration_months"
                         dataIndex="duration_months"
                         title="Duration"
                         width={100}
+                        responsive={["xxl"]}
                         render={(val: number) => (
                             <Typography.Text style={{ color: token.colorText }}>
                                 {val} mo
@@ -525,12 +526,13 @@ function DesktopGoldLedger() {
                         )}
                     />
 
-                    {/* Interest */}
+                    {/* Interest (hidden below xxl ≈ 1400px to fit 1366) */}
                     <Table.Column<IGoldLoan>
                         key="interest_amount"
                         dataIndex="interest_amount"
                         title="Interest"
                         width={120}
+                        responsive={["xxl"]}
                         render={(_: unknown, record: IGoldLoan) => (
                             <div>
                                 <Typography.Text style={{ fontSize: 11, display: "block", color: token.colorTextSecondary }}>

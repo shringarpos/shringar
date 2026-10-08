@@ -316,8 +316,8 @@ const CustomerList: React.FC = () => {
                     </Radio.Group>
                 </div>
 
-                {/* Table */}
-                <Table {...tableProps} rowKey="id" size="middle">
+                {/* Table (inner scroll + titled ellipsis for 1366) */}
+                <Table {...tableProps} rowKey="id" size="middle" scroll={{ x: 900 }}>
                     <Table.Column
                         title="Code"
                         dataIndex="customer_code"
@@ -338,7 +338,7 @@ const CustomerList: React.FC = () => {
                         defaultSortOrder={getDefaultSortOrder("name", sorters)}
                     />
                     <Table.Column title="Phone" dataIndex="phone" key="phone" />
-                    <Table.Column title="Address" dataIndex="address" key="address" ellipsis />
+                    <Table.Column title="Address" dataIndex="address" key="address" ellipsis={{ showTitle: true }} />
                     <Table.Column
                         title="Referred By"
                         key="reference_by"

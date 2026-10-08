@@ -756,8 +756,8 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
 
       <Form form={form} layout="vertical" initialValues={{ invoice_date: dayjs(), discount: 0 }}>
         <Row gutter={[16, 16]}>
-          {/* ── Left (8/12) ── */}
-          <Col xs={24} lg={16}>
+          {/* ── Left (8/12, stacked until xl so Summary isn't squeezed at 1366) ── */}
+          <Col xs={24} xl={16}>
             {/* Customer / Date / Notes card */}
             <Card style={{ marginBottom: 16 }}>
               <Row gutter={16}>
@@ -894,8 +894,8 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
             )}
           </Col>
 
-          {/* ── Right (4/12) ── */}
-          <Col xs={24} lg={8}>
+          {/* ── Right (4/12, stacked until xl) ── */}
+          <Col xs={24} xl={8}>
             <Card title="Invoice Summary" style={{ position: "sticky", top: 80 }}>
               {items.length > 0 && (
                 <>

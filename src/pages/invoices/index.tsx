@@ -374,7 +374,7 @@ const InvoiceList: React.FC = () => {
           {...tableProps}
           rowKey="id"
           size="small"
-          scroll={{ x: 900 }}
+          scroll={{ x: 1100 }}
           pagination={{
             ...tableProps.pagination,
             pageSizeOptions: ["10", "20", "50"],
@@ -407,11 +407,12 @@ const InvoiceList: React.FC = () => {
             )}
           />
 
-          {/* Customer */}
+          {/* Customer (single-line ellipsis + inline code to halve row height) */}
           <Table.Column<IInvoiceRow>
             key="customer"
             dataIndex="customer"
             title="Customer"
+            ellipsis
             sorter
             defaultSortOrder={getDefaultSortOrder("customer", sorters)}
             filterDropdown={makeColumnFilter("customers.name", "Filter by customer name...")}
@@ -420,8 +421,10 @@ const InvoiceList: React.FC = () => {
             )}
             render={(customer: IInvoiceRow["customer"]) =>
               customer ? (
-                <Space direction="vertical" size={0}>
-                  <Text strong>{customer.name}</Text>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <Text strong ellipsis style={{ minWidth: 0, flex: "1 1 auto" }}>
+                    {customer.name}
+                  </Text>
                   <Tag
                     color="blue"
                     style={{
@@ -429,11 +432,13 @@ const InvoiceList: React.FC = () => {
                       fontSize: 10,
                       padding: "0 5px",
                       lineHeight: "18px",
+                      margin: 0,
+                      flexShrink: 0,
                     }}
                   >
                     {customer.customer_code}
                   </Tag>
-                </Space>
+                </div>
               ) : (
                 <Text type="secondary">—</Text>
               )
@@ -451,11 +456,13 @@ const InvoiceList: React.FC = () => {
             render={(v: number) => <Text>₹{p2Rs(v)}</Text>}
           />
 
-          {/* Making */}
+          {/* Making (single-line header + ellipsis to stop 2-line wrap) */}
           <Table.Column<IInvoiceRow>
             key="total_making_charges_paise"
             dataIndex="total_making_charges_paise"
-            title="Making Charges"
+            title={<span style={{ whiteSpace: "nowrap" }}>Making Charges</span>}
+            width={130}
+            ellipsis
             align="right"
             sorter
             defaultSortOrder={getDefaultSortOrder("total_making_charges_paise", sorters)}
