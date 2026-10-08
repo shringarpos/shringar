@@ -127,7 +127,7 @@ export const MobileCustomerList: React.FC = () => {
           icon={<Plus size={16} />}
           onClick={handleCreateNew}
           style={{
-            height: 38,
+            height: 44,
             borderRadius: 10,
             fontWeight: 600,
             fontSize: 13,
@@ -187,7 +187,11 @@ export const MobileCustomerList: React.FC = () => {
                 <Text type="secondary">No clients found matching your query</Text>
                 {searchTerm && (
                   <div style={{ marginTop: 8 }}>
-                    <Button size="small" onClick={() => setSearchTerm("")}>
+                    <Button
+                      size="small"
+                      onClick={() => setSearchTerm("")}
+                      style={{ height: 44, padding: "0 14px", fontSize: 12 }}
+                    >
                       Clear Search
                     </Button>
                   </div>

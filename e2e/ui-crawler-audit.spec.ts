@@ -235,7 +235,15 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
         // 1. DASHBOARD (/dashboard)
         // ==========================================
         await page.goto("/dashboard");
-        await expect(page.locator("text=Welcome back").first()).toBeVisible({ timeout: 15000 });
+        await expect(page).toHaveURL(/\/dashboard/);
+        await expect(page.locator(".ant-result-404")).toHaveCount(0);
+        if (vp.width < 768) {
+          // Small viewports render the app-first mobile dashboard variant (no "Welcome back").
+          await expect(page.locator('[data-testid="mobile-dashboard"]')).toBeVisible({ timeout: 15000 });
+          await expect(page.locator("text=Today's Net Sales").first()).toBeVisible();
+        } else {
+          await expect(page.locator("text=Welcome back").first()).toBeVisible({ timeout: 15000 });
+        }
         await page.waitForTimeout(600);
 
         await inspectHorizontalOverflow(page, "/dashboard", vp.name, theme, "Dashboard");
@@ -305,27 +313,31 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
         }
 
         // ==========================================
-        // 3. INVENTORY ORNAMENTS (/inventory/ornaments)
+        // 3. ORNAMENTS (/ornaments — canonical route)
         // ==========================================
-        await page.goto("/inventory/ornaments");
-        await expect(page.locator("text=Ornaments").first()).toBeVisible({ timeout: 15000 });
+        await page.goto("/ornaments");
+        await expect(page).toHaveURL(/\/ornaments/);
+        await expect(page.locator(".ant-result-404")).toHaveCount(0);
+        await expect(
+          page.locator('[data-testid="mobile-ornaments"]').or(page.getByRole("button", { name: /New Ornament/i })).first()
+        ).toBeVisible({ timeout: 15000 });
         await page.waitForTimeout(600);
 
-        await inspectHorizontalOverflow(page, "/inventory/ornaments", vp.name, theme, "Ornaments Table");
-        await inspectThemeBleed(page, "/inventory/ornaments", vp.name, theme, "Ornaments Table");
+        await inspectHorizontalOverflow(page, "/ornaments", vp.name, theme, "Ornaments Table");
+        await inspectThemeBleed(page, "/ornaments", vp.name, theme, "Ornaments Table");
 
         await page.screenshot({
           path: path.join(screenshotsDir, `ornaments-${vp.name}-${theme}.png`),
         });
 
-        // Click "New Ornament" (drawer)
-        const newOrnBtn = page.getByRole("button", { name: /New Ornament/i });
+        // Click "New Ornament" (drawer on desktop; Add Item full-screen form on mobile)
+        const newOrnBtn = page.locator('[data-testid="mobile-new-ornament-btn"]').or(page.getByRole("button", { name: /New Ornament/i })).first();
         if (await newOrnBtn.isVisible()) {
           await newOrnBtn.click();
           await page.waitForTimeout(500);
 
-          await inspectOverlayBounds(page, "/inventory/ornaments", vp.name, theme, "Ornament Drawer");
-          await inspectThemeBleed(page, "/inventory/ornaments", vp.name, theme, "Ornament Drawer");
+          await inspectOverlayBounds(page, "/ornaments", vp.name, theme, "Ornament Drawer");
+          await inspectThemeBleed(page, "/ornaments", vp.name, theme, "Ornament Drawer");
 
           await page.screenshot({
             path: path.join(screenshotsDir, `ornament-drawer-${vp.name}-${theme}.png`),
@@ -340,14 +352,16 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
         }
 
         // ==========================================
-        // 4. INVENTORY CATEGORIES (/inventory/categories)
+        // 4. CATEGORIES (/categories — canonical route)
         // ==========================================
-        await page.goto("/inventory/categories");
-        await expect(page.locator("text=Categories").first()).toBeVisible({ timeout: 15000 });
+        await page.goto("/categories");
+        await expect(page).toHaveURL(/\/categories/);
+        await expect(page.locator(".ant-result-404")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: /New Category/i }).first()).toBeVisible({ timeout: 15000 });
         await page.waitForTimeout(600);
 
-        await inspectHorizontalOverflow(page, "/inventory/categories", vp.name, theme, "Categories Grid");
-        await inspectThemeBleed(page, "/inventory/categories", vp.name, theme, "Categories Grid");
+        await inspectHorizontalOverflow(page, "/categories", vp.name, theme, "Categories Grid");
+        await inspectThemeBleed(page, "/categories", vp.name, theme, "Categories Grid");
 
         if (theme === "dark") {
           const placeholderBleed = await page.evaluate(() => {
@@ -363,7 +377,7 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
               category: "THEME_BLEED",
               severity: "High",
               title: "CategoryCard image placeholder uses hardcoded '#f5f5f5' in Dark Mode",
-              route: "/inventory/categories",
+              route: "/categories",
               component: "CategoryCard (/pages/inventory/categories/index.tsx)",
               viewport: vp.name,
               theme,
@@ -384,7 +398,7 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
         if (await newCatBtn.isVisible()) {
           await newCatBtn.click();
           await page.waitForTimeout(400);
-          await inspectOverlayBounds(page, "/inventory/categories", vp.name, theme, "Category Modal");
+          await inspectOverlayBounds(page, "/categories", vp.name, theme, "Category Modal");
           await page.screenshot({
             path: path.join(screenshotsDir, `category-modal-${vp.name}-${theme}.png`),
           });
@@ -423,7 +437,14 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
         // 6. GOLD LEDGER (/gold-ledger)
         // ==========================================
         await page.goto("/gold-ledger");
-        await expect(page.locator("text=Gold Ledger").first()).toBeVisible({ timeout: 15000 });
+        await expect(page).toHaveURL(/\/gold-ledger/);
+        await expect(page.locator(".ant-result-404")).toHaveCount(0);
+        if (vp.width < 768) {
+          // Small viewports render the mobile ledger ("Gold Loan Ledger" hero).
+          await expect(page.locator('[data-testid="mobile-gold-ledger"]')).toBeVisible({ timeout: 15000 });
+        } else {
+          await expect(page.locator("text=Gold Ledger").first()).toBeVisible({ timeout: 15000 });
+        }
         await page.waitForTimeout(600);
 
         await inspectHorizontalOverflow(page, "/gold-ledger", vp.name, theme, "Gold Ledger");
@@ -433,8 +454,8 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
           path: path.join(screenshotsDir, `gold-ledger-${vp.name}-${theme}.png`),
         });
 
-        // Open Add New Loan drawer
-        const addLoanBtn = page.getByRole("button", { name: /Add New Loan/i });
+        // Open Add New Loan drawer (desktop) / New Loan form (mobile)
+        const addLoanBtn = page.getByRole("button", { name: /New Loan/i });
         if (await addLoanBtn.isVisible()) {
           await addLoanBtn.click();
           await page.waitForTimeout(500);

@@ -51,11 +51,15 @@ test.describe("Console-error contract (F4: shops.shop_id 400s)", () => {
   test("no uncaught page errors on list pages", async ({ page }) => {
     await setupAuthenticatedContext(page);
     const errs: string[] = [];
+    let reqCount = 0;
     page.on("pageerror", (e) => errs.push(String(e)));
+    page.on("request", () => reqCount++);
     for (const route of LIST_ROUTES) {
       await page.goto(route);
       await page.waitForTimeout(800);
     }
+    // Guard against vacuous pass: pages must actually load.
+    expect(reqCount).toBeGreaterThan(0);
     expect(errs).toEqual([]);
   });
 });

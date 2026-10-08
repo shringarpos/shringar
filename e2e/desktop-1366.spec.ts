@@ -265,5 +265,15 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
     await page.waitForSelector('[data-testid="mobile-customer-form-page"]', { timeout: 15000 });
     const saveBox = await page.locator('[data-testid="mobile-customer-form-page"] header button:has-text("Save")').boundingBox();
     expect(saveBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await page.goto("/customers");
+    await page.waitForSelector('[data-testid="mobile-new-customer-btn"]', { timeout: 15000 });
+    const clientBox = await page.locator('[data-testid="mobile-new-customer-btn"]').boundingBox();
+    expect(clientBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    // Empty-state Clear Search is a real button too — force the empty state.
+    await page.locator('input[placeholder*="Search by name"]').fill("zzz-no-match-xyz");
+    await page.waitForSelector("button:has-text('Clear Search')", { timeout: 10000 });
+    const clearBox = await page.locator("button:has-text('Clear Search')").first().boundingBox();
+    expect(clearBox?.height ?? 0).toBeGreaterThanOrEqual(44);
   });
 });
