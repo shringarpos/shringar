@@ -36,8 +36,44 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
     await page.goto("/invoices");
     await expect(page.locator("table").first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator("tbody tr[data-row-key]").first()).toBeVisible({ timeout: 15000 });
-    const ellipsisCells = await page.locator("table td.ant-table-cell-ellipsis").count();
-    expect(ellipsisCells).toBeGreaterThan(0);
+    // Pin the Customer cell specifically (not just any ellipsis cell): the td holding the
+    // customer code tag must carry the column ellipsis class, and the customer name itself
+    // must render single-line ellipsis styles.
+    const customerCell = await page.evaluate(() => {
+      const codeTag = [...document.querySelectorAll("tbody td .ant-tag")].find((el) =>
+        /^CUST-/.test(el.textContent ?? "")
+      );
+      const td = codeTag?.closest("td");
+      const nameEl = td?.querySelector(".ant-typography-ellipsis");
+      if (!td || !nameEl) return null;
+      const cs = getComputedStyle(nameEl);
+      return {
+        tdHasEllipsisClass: td.classList.contains("ant-table-cell-ellipsis"),
+        whiteSpace: cs.whiteSpace,
+        overflow: cs.overflow,
+        textOverflow: cs.textOverflow,
+      };
+    });
+    expect(customerCell).not.toBeNull();
+    expect(customerCell?.tdHasEllipsisClass).toBe(true);
+    expect(customerCell?.whiteSpace).toBe("nowrap");
+    expect(customerCell?.overflow).toBe("hidden");
+    expect(customerCell?.textOverflow).toBe("ellipsis");
+  });
+
+  test("ornaments Total Cost visible at 1366, hidden below lg", async ({ page }) => {
+    // NOTE: antd responsive={["lg"]} means visible at >=992px, so at 1366 the column is shown
+    // and the 1366 relief comes from scroll.x=1100, not from hiding. Hiding only kicks in on
+    // narrow viewports (e.g. 800px tablet, where the desktop table still renders — the mobile
+    // grid only takes over below md=768).
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/ornaments");
+    await expect(page.locator("tbody tr[data-row-key]").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("th:has-text('Total Cost')").first()).toBeVisible();
+    await page.setViewportSize({ width: 800, height: 768 });
+    await expect(page.locator("table").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("th:has-text('Total Cost')")).toHaveCount(0);
   });
 
   test("1366px: gold ledger hides Duration+Interest, keeps Actions on screen", async ({ page }) => {
