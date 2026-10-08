@@ -120,9 +120,9 @@ export const MobileCustomerForm: React.FC = () => {
             data-testid="mobile-form-back-btn"
             onClick={() => navigate(-1)}
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
               border: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.12)",
               backgroundColor: isDark ? "#18181b" : "#ffffff",
               display: "flex",

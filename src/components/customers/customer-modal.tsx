@@ -46,17 +46,25 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     const [showQuickCreate, setShowQuickCreate] = useState(false);
     const [quickForm] = Form.useForm();
     const [form] = Form.useForm();
+    // Single source of truth: prefer the caller's live form (Refine useModalForm
+    // on mobile, with async prefill) and fall back to the local instance on
+    // desktop. This keeps quick-create setFieldsValue + footer submit on the
+    // same instance the user actually sees.
+    const activeForm = formProps.form ?? form;
 
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
 
-    // Close quick-create whenever the main modal closes
+    // Close quick-create whenever the main modal closes + clear stale values so
+    // Edit A → close → Edit B cannot render A's values (preserve={false} on the
+    // Form covers remounts; resetFields covers the persistent instance).
     useEffect(() => {
         if (!modalProps.open) {
             setShowQuickCreate(false);
             quickForm.resetFields();
+            activeForm.resetFields();
         }
-    }, [modalProps.open, quickForm]);
+    }, [modalProps.open, quickForm, activeForm]);
 
     const {
         selectProps: refSelectProps,
@@ -109,7 +117,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
             {
                 onSuccess: (data) => {
                     const newId = data.data.id;
-                    formProps.form?.setFieldsValue({ reference_by: newId });
+                    activeForm.setFieldsValue({ reference_by: newId });
                     refQuery.refetch();
                     setShowQuickCreate(false);
                     quickForm.resetFields();
@@ -153,12 +161,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                     <Button key="cancel" onClick={(e) => modalProps.onCancel?.(e as React.MouseEvent<HTMLButtonElement>)}>
                         Cancel
                     </Button>,
-                    <Button key="submit" type="primary" onClick={() => form.submit()}>
+                    <Button key="submit" type="primary" onClick={() => activeForm.submit()}>
                         {action === "edit" ? "Save" : action === "clone" ? "Clone" : "Add"}
                     </Button>,
                 ]}
             >
-                <Form {...formProps} form={form} layout="vertical" onFinish={handleFinish}>
+                <Form {...formProps} form={activeForm} preserve={false} layout="vertical" onFinish={handleFinish}>
                     <Row gutter={[16, 0]}>
                         {/* Name */}
                         <Col xs={24} sm={12}>

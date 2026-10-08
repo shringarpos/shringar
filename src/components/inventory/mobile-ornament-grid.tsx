@@ -241,7 +241,7 @@ export const MobileOrnamentGrid: React.FC = () => {
                     setSearchTerm("");
                     setSelectedMetal("all");
                   }}
-                  size="small"
+                  style={{ height: 44, padding: "0 16px", fontSize: 13, display: "inline-flex", alignItems: "center" }}
                 >
                   Clear Filters
                 </Button>
