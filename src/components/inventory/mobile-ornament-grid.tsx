@@ -149,7 +149,7 @@ export const MobileOrnamentGrid: React.FC = () => {
           icon={<Plus size={16} strokeWidth={2.5} />}
           onClick={handleCreateNew}
           style={{
-            height: 40,
+            height: 44,
             borderRadius: 12,
             fontWeight: 600,
             fontSize: 13,
@@ -212,7 +212,7 @@ export const MobileOrnamentGrid: React.FC = () => {
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 backgroundColor: isSelected ? token.colorPrimary : token.colorBgElevated,
-                color: isSelected ? "#fff" : token.colorTextSecondary,
+                color: isSelected ? token.colorTextLightSolid : token.colorTextSecondary,
                 boxShadow: isSelected ? "0 2px 6px rgba(0,0,0,0.12)" : "none",
                 transition: "all 0.15s ease",
               }}
@@ -350,9 +350,9 @@ export const MobileOrnamentGrid: React.FC = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
                       border: `1px solid ${token.colorBorderSecondary}`,
                       backgroundColor: token.colorBgLayout,
                       color: token.colorTextSecondary,

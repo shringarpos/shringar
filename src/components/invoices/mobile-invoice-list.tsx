@@ -136,7 +136,7 @@ export const MobileInvoiceList: React.FC = () => {
           icon={<Plus size={16} />}
           onClick={() => navigate("/sales/new")}
           style={{
-            height: 38,
+            height: 44,
             borderRadius: 10,
             fontWeight: 600,
             fontSize: 13,
@@ -201,7 +201,7 @@ export const MobileInvoiceList: React.FC = () => {
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 backgroundColor: isSelected ? token.colorPrimary : token.colorBgElevated,
-                color: isSelected ? "#fff" : token.colorTextSecondary,
+                color: isSelected ? token.colorTextLightSolid : token.colorTextSecondary,
                 boxShadow: isSelected ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
                 transition: "all 0.15s ease",
               }}

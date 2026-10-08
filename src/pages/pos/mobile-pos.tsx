@@ -489,7 +489,7 @@ export const MobilePOS: React.FC<{
             size={36}
             style={{
               backgroundColor: selectedCustomer ? token.colorPrimary : token.colorFillAlter,
-              color: selectedCustomer ? "#fff" : token.colorTextSecondary,
+              color: selectedCustomer ? token.colorTextLightSolid : token.colorTextSecondary,
               flexShrink: 0,
             }}
           >
@@ -582,7 +582,7 @@ export const MobilePOS: React.FC<{
                     ? token.colorPrimary
                     : token.colorBgElevated,
                 color:
-                  selectedMetalFilter === cat ? "#fff" : token.colorTextSecondary,
+                  selectedMetalFilter === cat ? token.colorTextLightSolid : token.colorTextSecondary,
                 boxShadow:
                   selectedMetalFilter === cat
                     ? "0 2px 6px rgba(37, 99, 235, 0.2)"

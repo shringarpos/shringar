@@ -221,7 +221,7 @@ export const MobileGoldLedger: React.FC = () => {
           icon={<Plus size={16} />}
           onClick={handleCreateNew}
           style={{
-            height: 38,
+            height: 44,
             borderRadius: 10,
             fontWeight: 600,
             fontSize: 13,
@@ -240,7 +240,7 @@ export const MobileGoldLedger: React.FC = () => {
           borderRadius: 14,
           padding: "12px 14px",
           background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-          color: "#fff",
+          color: token.colorTextLightSolid,
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: 12,

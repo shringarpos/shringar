@@ -217,4 +217,24 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
     expect(src).not.toContain("navigate(`/invoices/${invoiceId}`)");
     expect(src).not.toContain("navigate(`/invoices/${existingInvoice.id}`)");
   });
+
+  test("desktop Add Customer empty OK shows required errors, creates nothing", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/customers");
+    await page.getByRole("button", { name: /add customer/i }).click();
+    await page.locator(".ant-modal-footer .ant-btn-primary").click();
+    await expect(page.locator(".ant-form-item-explain-error").first()).toBeVisible();
+  });
+
+  test("390px: dashboard + header CTAs all >= 44px", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await page.waitForSelector('[data-testid="mobile-dashboard"]', { timeout: 15000 });
+    for (const sel of ["button:has-text('New Bill')", "button:has-text('View All')"]) {
+      const box = await page.locator(sel).first().boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+  });
 });

@@ -45,6 +45,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     const screens = Grid.useBreakpoint();
     const [showQuickCreate, setShowQuickCreate] = useState(false);
     const [quickForm] = Form.useForm();
+    const [form] = Form.useForm();
 
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
@@ -148,8 +149,16 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 title={actionTitles[action] ?? "Customer"}
                 destroyOnHidden
                 width={screens.sm ? 700 : "96%"}
+                footer={[
+                    <Button key="cancel" onClick={(e) => modalProps.onCancel?.(e as React.MouseEvent<HTMLButtonElement>)}>
+                        Cancel
+                    </Button>,
+                    <Button key="submit" type="primary" onClick={() => form.submit()}>
+                        {action === "edit" ? "Save" : action === "clone" ? "Clone" : "Add"}
+                    </Button>,
+                ]}
             >
-                <Form {...formProps} layout="vertical" onFinish={handleFinish}>
+                <Form form={form} {...formProps} layout="vertical" onFinish={handleFinish}>
                     <Row gutter={[16, 0]}>
                         {/* Name */}
                         <Col xs={24} sm={12}>

@@ -236,7 +236,7 @@ export const MobileCustomerList: React.FC = () => {
                     <Avatar
                       style={{
                         backgroundColor: token.colorPrimary,
-                        color: "#fff",
+                        color: token.colorTextLightSolid,
                         fontWeight: 700,
                         fontSize: 13,
                         flexShrink: 0,

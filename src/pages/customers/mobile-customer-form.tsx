@@ -152,7 +152,7 @@ export const MobileCustomerForm: React.FC = () => {
           loading={isSubmitting}
           onClick={() => form.submit()}
           style={{
-            height: 38,
+            height: 44,
             borderRadius: 12,
             fontWeight: 700,
             fontSize: 13,

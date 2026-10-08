@@ -264,7 +264,8 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
               color: "#1e3a8a",
               border: "none",
               borderRadius: 10,
-              padding: "5px 12px",
+              minHeight: 44,
+              padding: "10px 14px",
               fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",
@@ -478,7 +479,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
             type="link"
             size="small"
             onClick={() => navigate("/invoices")}
-            style={{ padding: 0, fontSize: 12 }}
+            style={{ padding: "10px 12px", minHeight: 44, fontSize: 12, display: "inline-flex", alignItems: "center" }}
           >
             View All
           </Button>
