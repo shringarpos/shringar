@@ -47,4 +47,15 @@ test.describe("Console-error contract (F4: shops.shop_id 400s)", () => {
     expect(shopsRequests.length).toBeGreaterThan(0);
     expect(badRequests).toEqual([]);
   });
+
+  test("no uncaught page errors on list pages", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+    const errs: string[] = [];
+    page.on("pageerror", (e) => errs.push(String(e)));
+    for (const route of LIST_ROUTES) {
+      await page.goto(route);
+      await page.waitForTimeout(800);
+    }
+    expect(errs).toEqual([]);
+  });
 });

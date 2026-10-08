@@ -286,6 +286,7 @@ export const MobileGoldLedger: React.FC = () => {
             <button
               key={tab.key}
               type="button"
+              data-testid={`mobile-loan-filter-${tab.key.toLowerCase()}`}
               onClick={() => setStatusFilter(tab.key)}
               style={{
                 flexShrink: 0,

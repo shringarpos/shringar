@@ -110,20 +110,20 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     await page.screenshot({ path: "test-results/mobile-pos.png", fullPage: true });
   });
 
-  test("4. Mobile Customers search and Add Client modal", async ({ page }) => {
+  test("4. Mobile Customers search and Add Client form page", async ({ page }) => {
     await page.goto("/customers");
     await page.waitForSelector('[data-testid="mobile-customers"]', { timeout: 10000 });
 
     // Verify Add Client button
-    const addBtn = page.locator('[data-testid="mobile-add-customer-btn"]');
+    const addBtn = page.locator('[data-testid="mobile-new-customer-btn"]');
     await expect(addBtn).toBeVisible();
     await addBtn.click();
 
-    // Modal should be opened
-    const modal = page.locator(".ant-modal-content");
-    await expect(modal).toBeVisible();
-    await expect(modal.getByText("Full Name")).toBeVisible();
-    await expect(modal.getByText("Phone", { exact: true })).toBeVisible();
+    // Dedicated form page should open
+    await expect(page).toHaveURL(/\/customers\/new/);
+    await expect(page.locator(".ant-result-404")).toHaveCount(0);
+    const formPage = page.locator('[data-testid="mobile-customer-form-page"]');
+    await expect(formPage).toBeVisible();
 
     // Check no horizontal overflow
     const hasOverflow = await page.evaluate(() => {
@@ -131,14 +131,10 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     });
     expect(hasOverflow).toBe(false);
 
-    await page.screenshot({ path: "test-results/mobile-customers-modal.png" });
-
-    // Close modal
-    await page.keyboard.press("Escape");
-    await page.screenshot({ path: "test-results/mobile-customers.png", fullPage: true });
+    await page.screenshot({ path: "test-results/mobile-customers-form.png", fullPage: true });
   });
 
-  test("5. Mobile Ornaments stock, metal filters, and Add Piece drawer", async ({ page }) => {
+  test("5. Mobile Ornaments stock, metal filters, and Add Piece form page", async ({ page }) => {
     await page.goto("/ornaments");
     await page.waitForSelector('[data-testid="mobile-ornaments"]', { timeout: 10000 });
 
@@ -150,13 +146,15 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     // Click Gold filter pill
     await ornPage.getByRole("button", { name: "Gold" }).click();
 
-    // Click Add Piece button
+    // Click Add Item button
     const addBtn = page.locator('[data-testid="mobile-new-ornament-btn"]');
     await expect(addBtn).toBeVisible();
     await addBtn.click();
 
-    // Drawer should open
-    await expect(page.locator(".ant-drawer-content")).toBeVisible();
+    // Dedicated form page should open
+    await expect(page).toHaveURL(/\/ornaments\/new/);
+    await expect(page.locator(".ant-result-404")).toHaveCount(0);
+    await expect(page.locator('[data-testid="mobile-ornament-form-page"]')).toBeVisible();
 
     // Check no horizontal overflow
     const hasOverflow = await page.evaluate(() => {
@@ -164,14 +162,10 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     });
     expect(hasOverflow).toBe(false);
 
-    await page.screenshot({ path: "test-results/mobile-ornaments-drawer.png" });
-
-    // Close drawer
-    await page.keyboard.press("Escape");
-    await page.screenshot({ path: "test-results/mobile-ornaments.png", fullPage: true });
+    await page.screenshot({ path: "test-results/mobile-ornaments-form.png", fullPage: true });
   });
 
-  test("6. Mobile Gold Ledger tabs and New Loan drawer", async ({ page }) => {
+  test("6. Mobile Gold Ledger tabs and New Loan form page", async ({ page }) => {
     await page.goto("/gold-ledger");
     await page.waitForSelector('[data-testid="mobile-gold-ledger"]', { timeout: 10000 });
 
@@ -180,12 +174,14 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     await expect(page.locator("button:has-text('Closed')")).toBeVisible();
 
     // Click New Loan button
-    const addBtn = page.locator('[data-testid="mobile-add-loan-btn"]');
+    const addBtn = page.locator('[data-testid="mobile-new-loan-btn"]');
     await expect(addBtn).toBeVisible();
     await addBtn.click();
 
-    // Drawer should open
-    await expect(page.locator(".ant-drawer-content")).toBeVisible();
+    // Dedicated form page should open
+    await expect(page).toHaveURL(/\/gold-ledger\/new/);
+    await expect(page.locator(".ant-result-404")).toHaveCount(0);
+    await expect(page.locator('[data-testid="mobile-gold-loan-form-page"]')).toBeVisible();
 
     // Check no horizontal overflow
     const hasOverflow = await page.evaluate(() => {
@@ -193,11 +189,7 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     });
     expect(hasOverflow).toBe(false);
 
-    await page.screenshot({ path: "test-results/mobile-gold-ledger-drawer.png" });
-
-    // Close drawer
-    await page.keyboard.press("Escape");
-    await page.screenshot({ path: "test-results/mobile-gold-ledger.png", fullPage: true });
+    await page.screenshot({ path: "test-results/mobile-gold-ledger-form.png", fullPage: true });
   });
 
   test("7. Mobile Invoices list and navigation", async ({ page }) => {

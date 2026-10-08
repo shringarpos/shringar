@@ -499,46 +499,23 @@ test.describe("Exhaustive Shringar POS Crawl & UX Inspection", () => {
         }
 
         // ==========================================
-        // 8. POS CREATE SALE (/create-sale & check /pos/create)
+        // 8. POS CREATE SALE (/sales/new — canonical route)
         // ==========================================
-        // TODO(canonical: /sales/new — Task-1 follow-up to refresh route table):
-        // dead routes /pos/create + /create-sale quarantined; skip surface kept minimal.
-        await test.step.skip("quarantined dead routes /pos/create + /create-sale", async () => {
-          // Verify /pos/create routing status
-          await page.goto("/pos/create");
-          await page.waitForTimeout(800);
-          const isErrorPage =
-            (await page.locator(".ant-result-404, .ant-result-error").count() > 0) ||
-            (await page.getByText("Sorry", { exact: false }).count() > 0);
-          if (isErrorPage) {
-            persistIssue({
-              id: "ROUTING-POS-CREATE-NOT-FOUND",
-              category: "ROUTING",
-              severity: "High",
-              title: "Standard route '/pos/create' results in 404 Error page",
-              route: "/pos/create",
-              component: "App.tsx",
-              viewport: vp.name,
-              theme,
-              details:
-                "The POS Create Sale route is defined as '/create-sale' in App.tsx. Visiting '/pos/create' hits Refine's CatchAll <ErrorComponent />, resulting in a 404 page.",
-              recommendation: "Add '<Route path=\"/pos/create\" element={<Navigate to=\"/create-sale\" replace />} />' in App.tsx.",
-            });
-          }
+        await page.goto("/sales/new");
+        await expect(page).toHaveURL(/\/sales\/new/);
+        await expect(page.locator(".ant-result-404")).toHaveCount(0);
+        await expect(
+          page.locator("text=Create Sale").or(page.locator("text=POS Checkout")).first()
+        ).toBeVisible({ timeout: 15000 });
+        await page.waitForTimeout(600);
 
-          // Test POS create sale route: /create-sale
-          await page.goto("/create-sale");
-          await expect(page.locator("text=Create Sale").first()).toBeVisible({ timeout: 15000 });
-          await page.waitForTimeout(600);
+        await inspectHorizontalOverflow(page, "/sales/new", vp.name, theme, "POS Create Sale");
+        await inspectThemeBleed(page, "/sales/new", vp.name, theme, "POS Create Sale");
 
-          await inspectHorizontalOverflow(page, "/create-sale", vp.name, theme, "POS Create Sale");
-          await inspectThemeBleed(page, "/create-sale", vp.name, theme, "POS Create Sale");
-
-          await page.screenshot({
-            path: path.join(screenshotsDir, `pos-create-sale-${vp.name}-${theme}.png`),
-            fullPage: vp.name === "mobile",
-          });
-        }); // end quarantined dead-route block
+        await page.screenshot({
+          path: path.join(screenshotsDir, `pos-create-sale-${vp.name}-${theme}.png`),
+          fullPage: vp.name === "mobile",
+        });
 
         // ==========================================
         // 9. INVOICES (/invoices)
