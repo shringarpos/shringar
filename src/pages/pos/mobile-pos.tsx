@@ -567,7 +567,10 @@ export const MobilePOS: React.FC<{
               onClick={() => setSelectedMetalFilter(cat)}
               style={{
                 padding: "8px 16px",
-                minHeight: 36,
+                minHeight: 44,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
                 borderRadius: 18,
                 border: "none",
                 fontSize: 12,
@@ -728,7 +731,7 @@ export const MobilePOS: React.FC<{
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
               gap: 10,
               marginTop: 8,
             }}
@@ -751,21 +754,28 @@ export const MobilePOS: React.FC<{
                     justifyContent: "space-between",
                     gap: 8,
                     boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                    overflow: "hidden",
                   }}
                 >
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Tag color="gold" style={{ margin: 0, fontSize: 10, borderRadius: 6 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      <Tag color="gold" style={{ margin: 0, fontSize: 10, borderRadius: 6, flexShrink: 0 }}>
                         {orn.purity_level?.display_name || "22K"}
                       </Tag>
-                      <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
+                      <span style={{ fontSize: 11, color: token.colorTextSecondary, whiteSpace: "nowrap" }}>
                         {weight}g
                       </span>
                     </div>
 
-                    <Text strong style={{ fontSize: 13, display: "block", marginTop: 4 }} ellipsis>
+                    <Typography.Paragraph
+                      strong
+                      ellipsis={{ rows: 2, tooltip: orn.name }}
+                      style={{ fontSize: 13, marginTop: 4, marginBottom: 0, minHeight: 36, lineHeight: "18px", overflowWrap: "break-word" }}
+                    >
                       {orn.name}
-                    </Text>
+                    </Typography.Paragraph>
                     <Text type="secondary" style={{ fontSize: 11 }}>
                       #{orn.sku || "ORN"}
                     </Text>
@@ -787,7 +797,8 @@ export const MobilePOS: React.FC<{
                         borderRadius: 8,
                         fontWeight: 600,
                         fontSize: 11,
-                        height: 32,
+                        height: 44,
+                        minHeight: 44,
                         padding: "0 10px",
                       }}
                     >

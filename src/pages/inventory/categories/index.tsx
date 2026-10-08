@@ -10,6 +10,7 @@ import {
 import {
     App,
     Card,
+    Grid,
     Input,
     List,
     Radio,
@@ -37,6 +38,9 @@ const CategoryList: React.FC = () => {
     const { notification, modal } = App.useApp();
     const { shops } = useShopCheck();
     const shopId = shops?.[0]?.id;
+    const screens = Grid.useBreakpoint();
+    // Stacked full-width toolbar below md; >=md keeps the desktop toolbar unchanged.
+    const isMobile = !screens.md;
 
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
@@ -208,7 +212,41 @@ const CategoryList: React.FC = () => {
                     children: "New Category",
                 }}
             >
-                {/* Toolbar */}
+                {/* Toolbar: stacked full-width search + scrollable pills below md */}
+                {isMobile ? (
+                    <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 12, maxWidth: "100%" }}>
+                        <Input.Search
+                            placeholder="Search by name…"
+                            allowClear
+                            style={{ width: "100%", height: 44 }}
+                            onSearch={(value) => {
+                                setSearchText(value);
+                                applyFilters(value, statusFilter);
+                            }}
+                            onChange={(e) => {
+                                if (!e.target.value) {
+                                    setSearchText("");
+                                    applyFilters("", statusFilter);
+                                }
+                            }}
+                        />
+
+                        <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", maxWidth: "100%" }}>
+                            <Radio.Group
+                                value={statusFilter}
+                                onChange={(e) => handleStatusFilter(e.target.value)}
+                                optionType="button"
+                                buttonStyle="solid"
+                                size="middle"
+                                style={{ display: "flex", flexWrap: "nowrap" }}
+                            >
+                                <Radio.Button value="all" style={{ height: 44, lineHeight: "42px", flexShrink: 0 }}>All</Radio.Button>
+                                <Radio.Button value="active" style={{ height: 44, lineHeight: "42px", flexShrink: 0 }}>Active</Radio.Button>
+                                <Radio.Button value="inactive" style={{ height: 44, lineHeight: "42px", flexShrink: 0 }}>Inactive</Radio.Button>
+                            </Radio.Group>
+                        </div>
+                    </div>
+                ) : (
                 <Space style={{ marginBottom: 16, flexWrap: "wrap" }}>
                     <Input.Search
                         placeholder="Search by name…"
@@ -238,6 +276,7 @@ const CategoryList: React.FC = () => {
                         <Radio.Button value="inactive">Inactive</Radio.Button>
                     </Radio.Group>
                 </Space>
+                )}
 
                 {/* Card grid */}
                 <List
@@ -305,16 +344,19 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     onCardClick,
 }) => {
     const { token } = theme.useToken();
+    const screens = Grid.useBreakpoint();
+    // Compact 96px covers below md; >=md keeps the 160px desktop covers unchanged.
+    const coverHeight = screens.md ? 160 : 96;
     const coverImage = record.image_url ? (
         <img
             alt={record.name}
             src={record.image_url}
-            style={{ height: 160, objectFit: "cover", width: "100%" }}
+            style={{ height: coverHeight, objectFit: "cover", width: "100%" }}
         />
     ) : (
         <div
             style={{
-                height: 160,
+                height: coverHeight,
                 background: token.colorFillAlter,
                 display: "flex",
                 alignItems: "center",

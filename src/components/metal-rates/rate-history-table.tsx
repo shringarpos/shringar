@@ -1,6 +1,6 @@
 import { useExport } from "@refinedev/core";
 import { ExportButton, useTable } from "@refinedev/antd";
-import { Table, Typography } from "antd";
+import { Card, Grid, Table, Typography, theme } from "antd";
 import dayjs from "dayjs";
 import React from "react";
 import type { IMetalRate, IMetalType } from "../../libs/interfaces";
@@ -64,6 +64,75 @@ export const RateHistoryTable: React.FC<RateHistoryTableProps> = ({
 
   // Destructure out dataSource/onRow so we can provide our own typed versions
   const { dataSource: _ds, onRow: _or, ...restTableProps } = tableProps;
+
+  const screens = Grid.useBreakpoint();
+  // Stacked date-cards below sm; sm and up render the desktop Table unchanged.
+  const isNarrow = !screens.sm;
+  const { token } = theme.useToken();
+
+  if (isNarrow) {
+    return (
+      <Card
+        size="small"
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", minWidth: 0 }}>
+            <Text strong>Rate History</Text>
+            <ExportButton onClick={triggerExport} loading={exportLoading} size="small" />
+          </div>
+        }
+        styles={{ body: { padding: "12px" } }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: "100%" }}>
+          {pivotData.length === 0 ? (
+            <Text type="secondary">No rate history found.</Text>
+          ) : (
+            pivotData.map((row) => (
+              <div
+                key={row.rate_date}
+                onClick={onRowClick ? () => onRowClick?.(row.rate_date) : undefined}
+                role={onRowClick ? "button" : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                style={{
+                  border: `1px solid ${token.colorBorderSecondary}`,
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  cursor: onRowClick ? "pointer" : undefined,
+                  minWidth: 0,
+                  maxWidth: "100%",
+                }}
+              >
+                <Text strong style={{ fontSize: 13, display: "block", marginBottom: 6 }}>
+                  {dayjs(row.rate_date).format("D MMM YYYY")}
+                </Text>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                  {metals.map((metal) => {
+                    const paise = row[metal.id];
+                    return (
+                      <div
+                        key={metal.id}
+                        style={{ display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}
+                      >
+                        <Text type="secondary" style={{ fontSize: 12, overflowWrap: "break-word", minWidth: 0 }}>
+                          {metal.name.toUpperCase() === "GOLD" ? `${metal.name} (₹/10g)` : `${metal.name} (₹/g)`}
+                        </Text>
+                        {paise === undefined ? (
+                          <Text type="secondary" style={{ fontSize: 12 }}>—</Text>
+                        ) : (
+                          <Text strong style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+                            {formatRateDisplay(paise as number, metal.name)}
+                          </Text>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Table

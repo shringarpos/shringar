@@ -15,6 +15,7 @@ import {
 import {
     Card,
     Col,
+    Grid,
     Radio,
     Row,
     Statistic,
@@ -28,10 +29,14 @@ import type { IGoldLoan } from "../../libs/interfaces";
 
 export default function GoldLedgerReports() {
     const { token } = theme.useToken();
+    const screens = Grid.useBreakpoint();
+    // Mobile card fallback below md; >=md renders the desktop Table unchanged.
+    const isMobile = !screens.md;
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
 
     const [activeTab, setActiveTab] = useState<"running" | "closed">("running");
+    const reportTitle = `Gold Ledger Reports — ${activeTab === "running" ? "Running Loans" : "Closed Loans"}`;
 
     const { tableProps, tableQuery } = useTable<IGoldLoan, HttpError>(
         {
@@ -95,7 +100,20 @@ export default function GoldLedgerReports() {
 
     return (
         <RefineList
-            title={`Gold Ledger Reports — ${activeTab === "running" ? "Running Loans" : "Closed Loans"}`}
+            title={isMobile ? (
+                <span
+                    style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        whiteSpace: "normal",
+                        overflowWrap: "break-word",
+                    }}
+                >
+                    {reportTitle}
+                </span>
+            ) : reportTitle}
             headerButtons={() => (
                 <ExportButton onClick={triggerExport} loading={exportLoading}>
                     Export Report
@@ -173,7 +191,79 @@ export default function GoldLedgerReports() {
                 </Col>
             </Row>
 
-            {/* Loans Table */}
+            {/* Loans Table (desktop) / stacked loan cards (below md) */}
+            {isMobile ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: "100%" }}>
+                    {isLoading ? (
+                        <>
+                            <Card bordered={false} loading style={cardStyle} />
+                            <Card bordered={false} loading style={cardStyle} />
+                        </>
+                    ) : loans.length === 0 ? (
+                        <Typography.Text type="secondary">No loans found.</Typography.Text>
+                    ) : (
+                        loans.map((loan: IGoldLoan) => (
+                            <Card
+                                key={loan.id}
+                                bordered={false}
+                                style={{ ...cardStyle, maxWidth: "100%" }}
+                                styles={{ body: { padding: "14px 16px" } }}
+                            >
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, minWidth: 0 }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <Typography.Text strong ellipsis style={{ display: "block", overflowWrap: "break-word" }}>
+                                            {loan.customer_name}
+                                        </Typography.Text>
+                                        <Typography.Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+                                            {loan.contact_no}
+                                        </Typography.Text>
+                                    </div>
+                                    <Tag color={loan.metal_type === "Gold" ? "gold" : "default"} style={{ margin: 0, flexShrink: 0 }}>
+                                        {loan.metal_type} ({loan.purity})
+                                    </Tag>
+                                </div>
+                                <Typography.Paragraph
+                                    type="secondary"
+                                    ellipsis={{ rows: 2, tooltip: loan.ornament_details }}
+                                    style={{ fontSize: 12, whiteSpace: "normal", overflowWrap: "break-word", marginTop: 8, marginBottom: 8 }}
+                                >
+                                    {loan.ornament_details}
+                                </Typography.Paragraph>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, paddingTop: 8, borderTop: `1px dashed ${token.colorBorderSecondary}`, minWidth: 0 }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={titleStyle}>Principal</div>
+                                        <Typography.Text strong style={{ color: token.colorText }}>
+                                            ₹{Number(loan.loan_amount || 0).toLocaleString("en-IN")}
+                                        </Typography.Text>
+                                    </div>
+                                    <div style={{ minWidth: 0, textAlign: "center" }}>
+                                        <div style={titleStyle}>Interest</div>
+                                        <Typography.Text style={{ color: token.colorWarning }}>
+                                            ₹{Number(loan.interest_amount || 0).toLocaleString("en-IN")}
+                                        </Typography.Text>
+                                    </div>
+                                    <div style={{ minWidth: 0, textAlign: "right" }}>
+                                        <div style={titleStyle}>Total</div>
+                                        <Typography.Text strong style={{ color: token.colorSuccess }}>
+                                            ₹{Number(loan.total_amount || 0).toLocaleString("en-IN")}
+                                        </Typography.Text>
+                                    </div>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 8, minWidth: 0 }}>
+                                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                        {dayjs(loan.loan_date).format("YYYY-MM-DD")}
+                                    </Typography.Text>
+                                    {activeTab === "closed" && (
+                                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                            Closed: {loan.closure_date ? dayjs(loan.closure_date).format("YYYY-MM-DD") : "—"}
+                                        </Typography.Text>
+                                    )}
+                                </div>
+                            </Card>
+                        ))
+                    )}
+                </div>
+            ) : (
             <Table
                 {...tableProps}
                 rowKey="id"
@@ -285,6 +375,7 @@ export default function GoldLedgerReports() {
                     )}
                 />
             </Table>
+            )}
         </RefineList>
     );
 }

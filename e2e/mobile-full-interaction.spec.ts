@@ -216,4 +216,19 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
 
     await page.screenshot({ path: "test-results/mobile-invoices.png", fullPage: true });
   });
+
+  test("8. 390px: reports, history, categories, pos have no page overflow and tappable CTAs", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const route of ["/gold-ledger/reports", "/metal-rates", "/categories", "/sales/new"]) {
+      await page.goto(route);
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(1500);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 3);
+      expect(overflow).toBe(false);
+    }
+    await page.goto("/sales/new");
+    await page.waitForSelector('[data-testid="mobile-pos-add-item"]', { timeout: 15000 });
+    const addH = await page.locator('[data-testid="mobile-pos-add-item"]').first().boundingBox();
+    expect(addH?.height ?? 0).toBeGreaterThanOrEqual(44);
+  });
 });
