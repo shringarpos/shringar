@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import { setupAuthenticatedContext } from "./fixtures/mock-auth";
 
 /**
@@ -140,5 +141,74 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
     expect(
       summaryBox && customerBox ? Math.abs(summaryBox.x - customerBox.x) < 60 : false
     ).toBe(true);
+  });
+
+  test("1920px: content capped, tables use viewport with fixed action cols", async ({
+    page,
+  }) => {
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 1920, height: 1080 });
+
+    // hp#8 — settings content capped + centered (settings root maxWidth 1280).
+    // NOTE: brief drafts `main`, but `main` is antd Layout.Content (full-bleed
+    // layout chrome by design, 1720px at 1920w) and Refine adds one more
+    // full-width wrapper; the cap applies to the page root, so locate the
+    // capped wrapper by computed style instead of by DOM depth.
+    await page.goto("/settings");
+    await expect(page.getByText("Making Charges").first()).toBeVisible({
+      timeout: 15000,
+    });
+    const contentW = await page.evaluate(() => {
+      const capped = [...document.querySelectorAll("main div")].find(
+        (el) => getComputedStyle(el).maxWidth === "1280px"
+      );
+      return capped?.getBoundingClientRect().width ?? 9999;
+    });
+    expect(contentW).toBeLessThanOrEqual(1600);
+
+    // hp#1 — KPI cards stretch past the old 240px cap (auto-fit grid).
+    await page.goto("/dashboard");
+    const kpiCard = page.locator(".ant-card", { hasText: "Today's Revenue" }).first();
+    await expect(kpiCard).toBeVisible({ timeout: 15000 });
+    const kpiW = (await kpiCard.boundingBox())?.width ?? 0;
+    expect(kpiW).toBeGreaterThan(245);
+
+    // hp#2 — single Save CTA on the sale form (no duplicate in summary).
+    await page.goto("/sales/new");
+    await expect(page.locator(".ant-card", { hasText: "Invoice Summary" }).first()).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      page.getByRole("button", { name: "Save & Add Another", exact: true })
+    ).toHaveCount(1);
+
+    // hp#3 — customers: Address capped (no ballooning), Referred By hidden < xl.
+    await page.goto("/customers");
+    await expect(page.locator("table").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("tbody tr[data-row-key]").first()).toBeVisible({
+      timeout: 15000,
+    });
+    const addrW = await page.evaluate(
+      () =>
+        document
+          .querySelector("tbody tr[data-row-key] td:nth-child(4)")
+          ?.getBoundingClientRect().width ?? 9999
+    );
+    expect(addrW).toBeLessThan(600);
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await expect(page.locator("th:has-text('Referred By')")).toHaveCount(0);
+  });
+
+  test("sale form post-save navigates to /invoices/show/:id (F2-class fix)", async () => {
+    // Post-save navigation cannot be exercised in E2E without creating real
+    // records, so pin the route string at the source level instead.
+    const src = readFileSync(
+      new URL("../src/components/invoices/sale-form.tsx", import.meta.url),
+      "utf8"
+    );
+    expect(src).toContain("/invoices/show/${invoiceId}");
+    expect(src).toContain("/invoices/show/${existingInvoice.id}");
+    expect(src).not.toContain("navigate(`/invoices/${invoiceId}`)");
+    expect(src).not.toContain("navigate(`/invoices/${existingInvoice.id}`)");
   });
 });
