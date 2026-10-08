@@ -123,7 +123,6 @@ export const MobileOrnamentGrid: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: 14,
-        paddingBottom: "calc(88px + env(safe-area-inset-bottom, 16px))",
       }}
     >
       {/* Header */}

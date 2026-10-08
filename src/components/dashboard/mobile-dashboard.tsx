@@ -170,7 +170,7 @@ export const MobileDashboard: React.FC<MobileDashboardProps> = ({
         display: "flex",
         flexDirection: "column",
         gap: 16,
-        paddingBottom: 24,
+        paddingBottom: "calc(96px + env(safe-area-inset-bottom, 16px))",
       }}
     >
       {/* Hero: Today's Net Sales Card */}

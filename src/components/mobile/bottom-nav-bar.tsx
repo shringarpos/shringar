@@ -69,7 +69,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         zIndex: 999,
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",
-        backgroundColor: isDark ? "rgba(0, 0, 0, 0.88)" : "rgba(255, 255, 255, 0.92)",
+        backgroundColor: isDark ? "#000000" : "#ffffff",
         borderTop: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
         paddingBottom: "max(env(safe-area-inset-bottom, 0px), 10px)",
         paddingTop: 8,

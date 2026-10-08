@@ -59,7 +59,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
     textPrimary: isDark ? "#f8fafc" : "#0f172a",
     textSecondary: isDark ? "#94a3b8" : "#64748b",
     labelColor: isDark ? "#f1f5f9" : "#1e293b",
-    dockBg: isDark ? "rgba(0, 0, 0, 0.92)" : "rgba(255, 255, 255, 0.92)",
+    dockBg: isDark ? "#000000" : "#ffffff",
     dockBorder: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
     buttonSecondaryBg: isDark ? "#27272a" : "#f1f5f9",
     buttonSecondaryColor: isDark ? "#f8fafc" : "#334155",
@@ -309,7 +309,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
         minHeight: "100vh",
         backgroundColor: themeStyles.pageBg,
         color: themeStyles.textPrimary,
-        paddingBottom: "calc(100px + env(safe-area-inset-bottom, 16px))",
+        paddingBottom: "calc(120px + env(safe-area-inset-bottom, 16px))",
       }}
     >
       {/* ── Native Sticky Top App Bar with Frosted Glass Blur ── */}
@@ -748,6 +748,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
             padding: "16px",
             border: themeStyles.cardBorder,
             boxShadow: themeStyles.cardShadow,
+            scrollMarginBottom: "calc(120px + env(safe-area-inset-bottom, 16px))",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -840,8 +841,9 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
         </div>
       </Form>
 
-      {/* ── Native Sticky Bottom Action Dock with Translucent Frosted Glass ── */}
+      {/* ── Native Sticky Bottom Action Dock with Opaque Solid Background ── */}
       <div
+        data-testid="mobile-form-dock"
         style={{
           position: "fixed",
           bottom: 0,

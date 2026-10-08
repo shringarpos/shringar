@@ -183,7 +183,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
           flex: 1,
           padding: isDedicatedFormPage
             ? 0
-            : "14px 16px calc(76px + env(safe-area-inset-bottom, 16px))",
+            : "14px 16px calc(96px + env(safe-area-inset-bottom, 16px))",
           maxWidth: "100%",
           boxSizing: "border-box",
           overflowX: "hidden",

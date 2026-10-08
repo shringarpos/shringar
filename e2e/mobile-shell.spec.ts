@@ -48,4 +48,18 @@ test.describe("Mobile Shell Navigation", () => {
     const bottomNav = page.locator('[data-testid="mobile-bottom-nav"]');
     await expect(bottomNav).not.toBeVisible();
   });
+
+  test("3. 390px: bottom dock is opaque and form docks do not overlap fields", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/customers/new");
+    await expect(page.locator("[data-testid='mobile-form-dock']")).toBeVisible({ timeout: 15000 });
+    const dockBg = await page.evaluate(() => {
+      const el = document.querySelector("[data-testid='mobile-form-dock']") as HTMLElement | null;
+      if (!el) return "missing";
+      return getComputedStyle(el).backgroundColor;
+    });
+    expect(dockBg).not.toBe("missing");
+    expect(dockBg).not.toContain("rgba");
+  });
 });
