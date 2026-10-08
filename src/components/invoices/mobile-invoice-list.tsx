@@ -111,7 +111,6 @@ export const MobileInvoiceList: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        paddingBottom: "calc(88px + env(safe-area-inset-bottom, 16px))",
       }}
     >
       {/* Top Header */}

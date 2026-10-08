@@ -428,7 +428,6 @@ export const MobilePOS: React.FC<{
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        paddingBottom: 96,
       }}
     >
       {/* Top Header bar */}
