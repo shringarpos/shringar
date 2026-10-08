@@ -158,7 +158,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                     </Button>,
                 ]}
             >
-                <Form form={form} {...formProps} layout="vertical" onFinish={handleFinish}>
+                <Form {...formProps} form={form} layout="vertical" onFinish={handleFinish}>
                     <Row gutter={[16, 0]}>
                         {/* Name */}
                         <Col xs={24} sm={12}>

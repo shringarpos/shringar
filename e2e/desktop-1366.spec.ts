@@ -237,4 +237,33 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
     }
   });
+
+  test("390px: resized header CTAs all >= 44px", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto("/invoices");
+    await page.waitForSelector('[data-testid="mobile-invoices"]', { timeout: 15000 });
+    const saleBox = await page.locator('[data-testid="mobile-invoices"] button:has-text("New Sale")').first().boundingBox();
+    expect(saleBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await page.goto("/gold-ledger");
+    await page.waitForSelector('[data-testid="mobile-new-loan-btn"]', { timeout: 15000 });
+    const loanBox = await page.locator('[data-testid="mobile-new-loan-btn"]').boundingBox();
+    expect(loanBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await page.goto("/ornaments");
+    await page.waitForSelector('[data-testid="mobile-new-ornament-btn"]', { timeout: 15000 });
+    const addBox = await page.locator('[data-testid="mobile-new-ornament-btn"]').boundingBox();
+    expect(addBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await page.waitForSelector('button[aria-label="Edit piece"]', { timeout: 15000 });
+    const editBox = await page.locator('button[aria-label="Edit piece"]').first().boundingBox();
+    expect(editBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(editBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+
+    await page.goto("/customers/new");
+    await page.waitForSelector('[data-testid="mobile-customer-form-page"]', { timeout: 15000 });
+    const saveBox = await page.locator('[data-testid="mobile-customer-form-page"] header button:has-text("Save")').boundingBox();
+    expect(saveBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  });
 });
