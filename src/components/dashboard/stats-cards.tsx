@@ -112,9 +112,7 @@ const StatCard: React.FC<StatCardProps> = ({
       size="small"
       title={cardTitle}
       style={{
-        flex: "1 1 160px",
-        minWidth: 150,
-        maxWidth: 240,
+        minWidth: 0,
         cursor: isClickable ? "pointer" : "default",
       }}
       styles={{ header: { minHeight: 36, padding: "0 12px" }, body: { padding: "10px 12px" } }}
@@ -347,7 +345,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ shopId }) => {
   ];
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
       {cards.map((card) => (
         <StatCard key={card.title} {...card} loading={isLoading} />
       ))}

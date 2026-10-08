@@ -523,7 +523,7 @@ const OrnamentList: React.FC = () => {
                     {...tableProps}
                     rowKey="id"
                     size="small"
-                    scroll={{ x: 1100 }}
+                    scroll={{ x: 1600 }}
                     onChange={(pagination, _columnFilters, sorter, extra) => {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}
@@ -621,7 +621,8 @@ const OrnamentList: React.FC = () => {
                         key="category_id"
                         dataIndex="category_id"
                         title="Category"
-                        width={150}
+                        width={220}
+                        ellipsis
                         sorter
                         defaultSortOrder={getDefaultSortOrder("category_id", sorters)}
                         filterDropdown={(props) => (
@@ -655,11 +656,11 @@ const OrnamentList: React.FC = () => {
                         key="weight_mg"
                         dataIndex="weight_mg"
                         title="Weight"
-                        width={100}
+                        width={110}
                         sorter
                         defaultSortOrder={getDefaultSortOrder("weight_mg", sorters)}
                         render={(mg: number) => (
-                            <Typography.Text style={{ fontFamily: "monospace" }}>
+                            <Typography.Text style={{ fontFamily: "monospace", whiteSpace: "nowrap" }}>
                                 {mg2g(mg)} g
                             </Typography.Text>
                         )}

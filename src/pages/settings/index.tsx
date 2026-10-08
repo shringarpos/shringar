@@ -113,7 +113,7 @@ export default function Settings() {
   }
 
   return (
-    <div style={{ padding: "clamp(16px, 4vw, 40px)", fontFamily: "sans-serif" }}>
+    <div style={{ padding: "clamp(16px, 4vw, 40px)", fontFamily: "sans-serif", maxWidth: 1280, margin: "0 auto" }}>
       {/* Tabs */}
       <div
         style={{

@@ -374,7 +374,7 @@ const InvoiceList: React.FC = () => {
           {...tableProps}
           rowKey="id"
           size="small"
-          scroll={{ x: 1100 }}
+          scroll={{ x: 1400 }}
           pagination={{
             ...tableProps.pagination,
             pageSizeOptions: ["10", "20", "50"],
@@ -489,6 +489,7 @@ const InvoiceList: React.FC = () => {
             key="total_amount_paise"
             dataIndex="total_amount_paise"
             title="Total"
+            width={140}
             align="right"
             sorter
             defaultSortOrder={getDefaultSortOrder("total_amount_paise", sorters)}

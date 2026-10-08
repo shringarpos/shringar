@@ -136,7 +136,7 @@ export default function DesignGallery() {
     );
 
     return (
-        <div style={{ padding: "0 4px", maxWidth: "100%", overflowX: "hidden" }}>
+        <div style={{ padding: "0 4px", maxWidth: 1600, margin: "0 auto", overflowX: "hidden" }}>
             {/* Header Section */}
             <div
                 style={{
@@ -256,7 +256,7 @@ export default function DesignGallery() {
                 {filteredAlbums.map((album: IDesignAlbum) => {
                     const count = photoCountMap[album.id] || 0;
                     return (
-                        <Col xs={24} sm={12} md={8} lg={6} key={album.id}>
+                        <Col xs={24} sm={12} md={8} lg={6} xl={6} xxl={4} key={album.id}>
                             <Card
                                 hoverable
                                 style={{
@@ -279,7 +279,7 @@ export default function DesignGallery() {
                                     <div
                                         style={{
                                             position: "relative",
-                                            height: 180,
+                                            height: 220,
                                             background: token.colorFillSecondary,
                                             overflow: "hidden",
                                             cursor: "pointer",

@@ -650,7 +650,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
         form.setFieldsValue({ invoice_date: dayjs(), discount: 0 });
         setItems([]);
       } else {
-        navigate(`/invoices/${invoiceId}`);
+        navigate(`/invoices/show/${invoiceId}`);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -686,7 +686,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
         window.localStorage.removeItem(draftKey);
       }
       notification.success({ message: "Notes updated" });
-      navigate(`/invoices/${existingInvoice.id}`);
+      navigate(`/invoices/show/${existingInvoice.id}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
       notification.error({ message: "Failed to update", description: message });
@@ -717,7 +717,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
     }));
 
   return (
-    <div style={{ maxWidth: 1400, margin: "0 auto", overflowX: "hidden" }}>
+    <div style={{ maxWidth: 1600, margin: "0 auto", overflowX: "hidden" }}>
       {/* Top bar */}
       <div
         style={{
@@ -756,8 +756,8 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
 
       <Form form={form} layout="vertical" initialValues={{ invoice_date: dayjs(), discount: 0 }}>
         <Row gutter={[16, 16]}>
-          {/* ── Left (8/12, stacked until xl so Summary isn't squeezed at 1366) ── */}
-          <Col xs={24} xl={16}>
+          {/* ── Left (18/24, stacked until xl so Summary isn't squeezed at 1366) ── */}
+          <Col xs={24} xl={18}>
             {/* Customer / Date / Notes card */}
             <Card style={{ marginBottom: 16 }}>
               <Row gutter={16}>
@@ -894,8 +894,8 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
             )}
           </Col>
 
-          {/* ── Right (4/12, stacked until xl) ── */}
-          <Col xs={24} xl={8}>
+          {/* ── Right (6/24, stacked until xl) ── */}
+          <Col xs={24} xl={6}>
             <Card title="Invoice Summary" style={{ position: "sticky", top: 80 }}>
               {items.length > 0 && (
                 <>
@@ -981,11 +981,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                 </Text>
               </div>
 
-              {!isEdit && (
-                <Button size="large" block loading={saving} onClick={onSaveAndAddAnother} style={{ marginBottom: 8 }}>
-                  Save &amp; Add Another
-                </Button>
-              )}
+              {/* Single Save CTA lives in the top bar; no duplicate here (hp-big #2) */}
               <Button type="primary" size="large" block loading={saving} onClick={onSave}>
                 {isEdit ? "Save Notes" : "Save Invoice"}
               </Button>

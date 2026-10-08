@@ -93,7 +93,7 @@ export default function MakingChargesSettings() {
       ) : (
         <Row gutter={[20, 20]}>
           {metals.map((metal) => (
-            <Col key={metal.id} xs={24} sm={24} md={12} lg={12}>
+            <Col key={metal.id} xs={24} sm={24} md={24} lg={12}>
               <MetalCard
                 metal={metal}
                 purities={purities.filter((p) => p.metal_type_id === metal.id)}

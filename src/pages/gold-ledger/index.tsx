@@ -403,7 +403,7 @@ function DesktopGoldLedger() {
                     {...tableProps}
                     rowKey="id"
                     size="small"
-                    scroll={{ x: 1350 }}
+                    scroll={{ x: 1650 }}
                     onChange={(pagination, _columnFilters, sorter, extra) => {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}
@@ -494,7 +494,7 @@ function DesktopGoldLedger() {
                         key="ornament_details"
                         dataIndex="ornament_details"
                         title="Ornament"
-                        width={160}
+                        width={260}
                         ellipsis
                     />
 
