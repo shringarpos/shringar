@@ -175,12 +175,20 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
 
     // hp#2 — single Save CTA on the sale form (no duplicate in summary).
     await page.goto("/sales/new");
-    await expect(page.locator(".ant-card", { hasText: "Invoice Summary" }).first()).toBeVisible({
+    const summaryCard = page
+      .locator(".ant-card", { hasText: "Invoice Summary" })
+      .first();
+    await expect(summaryCard).toBeVisible({
       timeout: 15000,
     });
     await expect(
       page.getByRole("button", { name: "Save & Add Another", exact: true })
     ).toHaveCount(1);
+    // Summary singularity: the sticky summary holds exactly 1 real CTA button
+    // (Save Invoice); the surviving Save & Add Another lives in the top bar only.
+    // NOTE: count <button> elements, not role=button — the Discount InputNumber
+    // exposes 2 spin-handler spans with role=button.
+    await expect(summaryCard.locator("button")).toHaveCount(1);
 
     // hp#3 — customers: Address capped (no ballooning), Referred By hidden < xl.
     await page.goto("/customers");
@@ -188,13 +196,11 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
     await expect(page.locator("tbody tr[data-row-key]").first()).toBeVisible({
       timeout: 15000,
     });
-    const addrW = await page.evaluate(
-      () =>
-        document
-          .querySelector("tbody tr[data-row-key] td:nth-child(4)")
-          ?.getBoundingClientRect().width ?? 9999
-    );
-    expect(addrW).toBeLessThan(600);
+    // Address column pinned at width 280 + ellipsis (mirrors the Task-5
+    // category-tag 130px pin): pre-fix the unpropertioned column measured 239px.
+    const addrCell = page.locator("tbody tr[data-row-key] td:nth-child(4)").first();
+    await expect(addrCell).toHaveCSS("width", "280px");
+    await expect(addrCell).toHaveClass(/ant-table-cell-ellipsis/);
     await page.setViewportSize({ width: 1100, height: 800 });
     await expect(page.locator("th:has-text('Referred By')")).toHaveCount(0);
   });
