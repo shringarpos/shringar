@@ -205,7 +205,7 @@ export const MobileOrnamentGrid: React.FC = () => {
                 alignItems: "center",
                 gap: 5,
                 padding: "8px 16px",
-                minHeight: 38,
+                minHeight: 44,
                 borderRadius: 20,
                 border: isSelected ? "none" : `1px solid ${token.colorBorderSecondary}`,
                 fontSize: 13,

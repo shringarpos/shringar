@@ -141,12 +141,9 @@ export const MobileCustomerList: React.FC = () => {
         </Button>
       </div>
 
-      {/* Sticky Search Input */}
+      {/* Search Input (shell header already sticky — no nested sticky here) */}
       <div
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
           backgroundColor: token.colorBgLayout,
           padding: "4px 0",
         }}
@@ -297,9 +294,9 @@ export const MobileCustomerList: React.FC = () => {
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
                           backgroundColor: "#f0fdf4",
                           color: "#16a34a",
                           border: "1px solid #bbf7d0",
@@ -319,7 +316,7 @@ export const MobileCustomerList: React.FC = () => {
                           justifyContent: "center",
                           gap: 4,
                           padding: "0 10px",
-                          height: 36,
+                          height: 44,
                           backgroundColor: token.colorPrimaryBg,
                           color: token.colorPrimary,
                           border: `1px solid ${token.colorPrimaryBorder}`,
@@ -382,7 +379,7 @@ export const MobileCustomerList: React.FC = () => {
                     style={{
                       borderRadius: 8,
                       fontSize: 12,
-                      height: 36,
+                      height: 44,
                       padding: "0 14px",
                     }}
                   >
@@ -395,7 +392,7 @@ export const MobileCustomerList: React.FC = () => {
                     style={{
                       borderRadius: 8,
                       fontSize: 12,
-                      height: 36,
+                      height: 44,
                       padding: "0 14px",
                     }}
                   >

@@ -194,7 +194,7 @@ export const MobileInvoiceList: React.FC = () => {
               onClick={() => setStatusFilter(filter.key)}
               style={{
                 padding: "8px 16px",
-                minHeight: 38,
+                minHeight: 44,
                 borderRadius: 20,
                 border: isSelected ? "none" : `1px solid ${token.colorBorderSecondary}`,
                 fontSize: 12,
@@ -381,7 +381,7 @@ export const MobileInvoiceList: React.FC = () => {
                       borderRadius: 8,
                       fontSize: 12,
                       fontWeight: 600,
-                      height: 34,
+                      height: 44,
                     }}
                   >
                     View Bill
@@ -394,7 +394,7 @@ export const MobileInvoiceList: React.FC = () => {
                     style={{
                       borderRadius: 8,
                       fontSize: 12,
-                      height: 34,
+                      height: 44,
                       padding: "0 12px",
                       display: "flex",
                       alignItems: "center",
@@ -405,7 +405,7 @@ export const MobileInvoiceList: React.FC = () => {
                   </Button>
 
                   <div onClick={(e) => e.stopPropagation()}>
-                    <DownloadInvoiceButton invoiceId={inv.id} />
+                    <DownloadInvoiceButton invoiceId={inv.id} iconOnly style={{ height: 44, width: 44 }} />
                   </div>
                 </div>
               </div>

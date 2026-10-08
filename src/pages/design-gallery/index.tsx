@@ -5,6 +5,7 @@ import {
     Card,
     Col,
     Empty,
+    Grid,
     Input,
     Popconfirm,
     Row,
@@ -33,6 +34,8 @@ export default function DesignGallery() {
     const { token } = theme.useToken();
     const navigate = useNavigate();
     const { message } = App.useApp();
+    const screens = Grid.useBreakpoint();
+    const isXs = !screens.sm;
     const { data: identity } = useGetIdentity<{ id: string }>();
     const userId = identity?.id;
 
@@ -159,19 +162,34 @@ export default function DesignGallery() {
                     </Typography.Text>
                 </div>
 
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        alignItems: isXs ? "stretch" : "center",
+                        flexDirection: isXs ? "column" : "row",
+                        flex: isXs ? "1 1 100%" : undefined,
+                        maxWidth: isXs ? "100%" : undefined,
+                    }}
+                >
                     <Input
                         placeholder="Search albums..."
                         prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
                         allowClear
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
-                        style={{ minWidth: 150, maxWidth: 220, flex: "1 1 auto" }}
+                        style={
+                            isXs
+                                ? { flex: "1 1 100%", maxWidth: "100%" }
+                                : { minWidth: 150, maxWidth: 220, flex: "1 1 auto" }
+                        }
                     />
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={() => showCreate()}
+                        style={isXs ? { width: "100%" } : undefined}
                     >
                         Create Album
                     </Button>

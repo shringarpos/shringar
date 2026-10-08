@@ -231,4 +231,22 @@ test.describe("Mobile Full Interaction & Overflow Test Suite", () => {
     const addH = await page.locator('[data-testid="mobile-pos-add-item"]').first().boundingBox();
     expect(addH?.height ?? 0).toBeGreaterThanOrEqual(44);
   });
+
+  test("9. 390px: all mobile CTAs >= 44px and filter rows scroll without clipping", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/invoices");
+    await page.waitForSelector('[data-testid="mobile-invoices"]', { timeout: 15000 });
+    for (const sel of ["button:has-text('View Bill')", "button:has-text('WhatsApp')"]) {
+      const box = await page.locator(sel).first().boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    await page.goto("/metal-rates");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+    const clipped = await page.evaluate(() => {
+      const el = document.body.innerText;
+      return el.includes("R…");
+    });
+    expect(clipped).toBe(false);
+  });
 });

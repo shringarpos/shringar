@@ -267,10 +267,13 @@ export const MobileGoldLedger: React.FC = () => {
         style={{
           display: "flex",
           gap: 6,
+          overflowX: "auto",
           backgroundColor: token.colorBgLayout,
           padding: 4,
           borderRadius: 12,
           border: `1px solid ${token.colorBorderSecondary}`,
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {[
@@ -286,8 +289,9 @@ export const MobileGoldLedger: React.FC = () => {
               type="button"
               onClick={() => setStatusFilter(tab.key)}
               style={{
-                flex: 1,
-                padding: "6px 0",
+                flexShrink: 0,
+                padding: "8px 14px",
+                minHeight: 44,
                 borderRadius: 8,
                 border: "none",
                 fontSize: 12,
@@ -454,7 +458,7 @@ export const MobileGoldLedger: React.FC = () => {
                     >
                       {formatRs(Number(loan.loan_amount || 0))}
                     </span>
-                    <span style={{ fontSize: 11, color: token.colorTextSecondary }}>
+                    <span style={{ fontSize: 11, color: token.colorTextSecondary, whiteSpace: "nowrap" }}>
                       Due: {formatRs(totalDue)}
                     </span>
                   </div>
@@ -479,9 +483,9 @@ export const MobileGoldLedger: React.FC = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        width: 34,
-                        height: 34,
-                        borderRadius: 17,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
                         backgroundColor: token.colorPrimaryBg,
                         color: token.colorPrimary,
                         border: `1px solid ${token.colorPrimaryBorder}`,
@@ -502,9 +506,9 @@ export const MobileGoldLedger: React.FC = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        width: 34,
-                        height: 34,
-                        borderRadius: 17,
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
                         backgroundColor: "#f0fdf4",
                         color: "#16a34a",
                         border: "1px solid #bbf7d0",
@@ -531,7 +535,7 @@ export const MobileGoldLedger: React.FC = () => {
                       borderRadius: 8,
                       fontSize: 12,
                       fontWeight: 600,
-                      height: 34,
+                      height: 44,
                     }}
                   >
                     Details
@@ -554,7 +558,7 @@ export const MobileGoldLedger: React.FC = () => {
                         style={{
                           borderRadius: 8,
                           fontSize: 12,
-                          height: 34,
+                          height: 44,
                           color: token.colorSuccess,
                           borderColor: token.colorSuccess,
                         }}
@@ -570,7 +574,7 @@ export const MobileGoldLedger: React.FC = () => {
                       style={{
                         borderRadius: 8,
                         fontSize: 12,
-                        height: 34,
+                        height: 44,
                       }}
                     >
                       Edit

@@ -28,6 +28,8 @@ interface Props {
   buttonType?: "default" | "text" | "link" | "primary" | "dashed";
   /** Whether to show only icon (no text) */
   iconOnly?: boolean;
+  /** Optional style override (e.g. 44px mobile hit area) */
+  style?: React.CSSProperties;
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -39,6 +41,7 @@ export const DownloadInvoiceButton: React.FC<Props> = ({
   size = "middle",
   buttonType = "default",
   iconOnly = false,
+  style,
 }) => {
   const [loading, setLoading] = useState(false);
   const { shops } = useShopCheck();
@@ -108,6 +111,7 @@ export const DownloadInvoiceButton: React.FC<Props> = ({
           icon={<DownloadOutlined />}
           loading={loading}
           onClick={handleDownload}
+          style={style}
         />
       </Tooltip>
     );
@@ -120,6 +124,7 @@ export const DownloadInvoiceButton: React.FC<Props> = ({
       icon={<DownloadOutlined />}
       loading={loading}
       onClick={handleDownload}
+      style={style}
     >
       {label}
     </Button>

@@ -1,4 +1,4 @@
-import { Card, Radio, Space, Typography } from "antd";
+import { Card, Radio, Typography } from "antd";
 import dayjs from "dayjs";
 import React, { useMemo, useState } from "react";
 import {
@@ -75,10 +75,21 @@ export const RateChart: React.FC<RateChartProps> = ({
     `₹${paiseToDisplay(val, metalName).toLocaleString("en-IN")}`;
 
   return (
-    <Card
-      title="Rate Trend"
-      extra={
-        <Space size="small" wrap>
+    <Card title="Rate Trend" bordered={false}>
+      {/* Filter rows live in the card body (not `extra`) so they scroll
+          horizontally on narrow screens instead of truncating. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            gap: 8,
+            paddingBottom: 4,
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           <Radio.Group
             value={range}
             onChange={(e) => setRange(e.target.value as Range)}
@@ -90,6 +101,18 @@ export const RateChart: React.FC<RateChartProps> = ({
               { label: "30D", value: "30d" },
             ]}
           />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            gap: 8,
+            paddingBottom: 4,
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
           <Radio.Group
             value={activeMetal ?? "all"}
             onChange={(e) =>
@@ -102,10 +125,8 @@ export const RateChart: React.FC<RateChartProps> = ({
               ...metals.map((m) => ({ label: m.name, value: m.id })),
             ]}
           />
-        </Space>
-      }
-      bordered={false}
-    >
+        </div>
+      </div>
       {chartData.length === 0 ? (
         <Text type="secondary">No rate data available for this range.</Text>
       ) : (
