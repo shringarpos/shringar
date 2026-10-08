@@ -646,7 +646,7 @@ export const MobilePOS: React.FC<{
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Stepper with generous 36px touch target */}
+                  {/* Stepper with 44px touch targets */}
                   <div
                     style={{
                       display: "flex",
@@ -659,10 +659,11 @@ export const MobilePOS: React.FC<{
                   >
                     <button
                       type="button"
+                      data-testid="mobile-pos-qty-dec"
                       onClick={() => handleUpdateQty(item.ornament.id, -1)}
                       style={{
-                        width: 32,
-                        height: 32,
+                        width: 44,
+                        height: 44,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -678,10 +679,11 @@ export const MobilePOS: React.FC<{
                     </span>
                     <button
                       type="button"
+                      data-testid="mobile-pos-qty-inc"
                       onClick={() => handleUpdateQty(item.ornament.id, 1)}
                       style={{
-                        width: 32,
-                        height: 32,
+                        width: 44,
+                        height: 44,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -697,11 +699,16 @@ export const MobilePOS: React.FC<{
                   <button
                     type="button"
                     onClick={() => handleRemoveItem(item.ornament.id)}
+                    aria-label="Remove item"
                     style={{
                       border: "none",
                       background: "transparent",
                       color: token.colorError,
-                      padding: 6,
+                      width: 44,
+                      height: 44,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                       cursor: "pointer",
                     }}
                   >
@@ -908,7 +915,7 @@ export const MobilePOS: React.FC<{
                 type="primary"
                 loading={creatingClient}
                 onClick={handleCreateQuickClient}
-                style={{ height: 38, borderRadius: 8, fontWeight: 600 }}
+                style={{ height: 44, borderRadius: 8, fontWeight: 600 }}
               >
                 Save & Select Client
               </Button>

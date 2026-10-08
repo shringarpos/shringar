@@ -276,4 +276,29 @@ test.describe("Desktop 1366px squeeze fixes (dell-small)", () => {
     const clearBox = await page.locator("button:has-text('Clear Search')").first().boundingBox();
     expect(clearBox?.height ?? 0).toBeGreaterThanOrEqual(44);
   });
+
+  test("390px: POS stepper + quick-add Save >= 44px", async ({ page }) => {
+    await setupAuthenticatedContext(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/sales/new");
+    await page.waitForSelector('[data-testid="mobile-pos"]', { timeout: 15000 });
+    await page.waitForSelector('[data-testid="mobile-pos-add-item"]', { timeout: 15000 });
+    // Add an item so the cart stepper renders (no checkout, no submit).
+    await page.locator('[data-testid="mobile-pos-add-item"]').first().click();
+    await page.waitForSelector('[data-testid="mobile-pos-qty-inc"]', { timeout: 15000 });
+    for (const sel of ['[data-testid="mobile-pos-qty-dec"]', '[data-testid="mobile-pos-qty-inc"]']) {
+      const box = await page.locator(sel).boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    // Open quick-add-client, measure Save, close without saving.
+    // (POS auto-selects the first customer on load, so open via the banner.)
+    await page.locator('[data-testid="mobile-pos"] div[role="button"]').first().click();
+    await page.locator('.ant-drawer button:has-text("Quick Add")').click();
+    const quickSave = page.locator('.ant-drawer button:has-text("Save & Select Client")');
+    await expect(quickSave).toBeVisible({ timeout: 10000 });
+    const quickBox = await quickSave.boundingBox();
+    expect(quickBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await page.keyboard.press("Escape");
+  });
 });
