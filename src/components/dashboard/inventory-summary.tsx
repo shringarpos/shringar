@@ -105,7 +105,7 @@ export const InventorySummary: React.FC<InventorySummaryProps> = ({ shopId }) =>
         <Button
           type="link"
           size="small"
-          onClick={() => navigate("/inventory/ornaments")}
+          onClick={() => navigate("/ornaments")}
           style={{ padding: 0 }}
         >
           View All

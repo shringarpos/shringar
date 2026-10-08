@@ -305,7 +305,7 @@ const InvoiceList: React.FC = () => {
         )}
         createButtonProps={{
           icon: <PlusOutlined />,
-          onClick: () => navigate("/create-sale"),
+          onClick: () => navigate("/sales/new"),
           children: "New Invoice",
         }}
       >
@@ -383,7 +383,7 @@ const InvoiceList: React.FC = () => {
           }}
           onRow={(record) => ({
             style: { cursor: "pointer", ...(record.is_cancelled ? { opacity: 0.6 } : {}) },
-            onClick: () => navigate(`/invoices/${record.id}`),
+            onClick: () => navigate(`/invoices/show/${record.id}`),
           })}
         >
           {/* Invoice # + Date */}
@@ -519,7 +519,7 @@ const InvoiceList: React.FC = () => {
                     type="text"
                     size="small"
                     icon={<EyeOutlined />}
-                    onClick={() => navigate(`/invoices/${record.id}`)}
+                    onClick={() => navigate(`/invoices/show/${record.id}`)}
                   />
                 </Tooltip>
                 <DownloadInvoiceButton
@@ -533,7 +533,7 @@ const InvoiceList: React.FC = () => {
                     type="text"
                     size="small"
                     icon={<CopyOutlined />}
-                    onClick={() => navigate(`/create-sale?clone=${record.id}`)}
+                    onClick={() => navigate(`/sales/new?clone=${record.id}`)}
                   />
                 </Tooltip>
                 {!record.is_cancelled && (

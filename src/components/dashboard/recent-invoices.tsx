@@ -60,7 +60,7 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
       key: "invoice_number",
       render: (num: string, record) => (
         <Link
-          onClick={() => navigate(`/invoices/${record.id}`)}
+          onClick={() => navigate(`/invoices/show/${record.id}`)}
           style={{ fontWeight: 600, fontSize: 13 }}
         >
           {num}
@@ -138,7 +138,7 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
           icon={<EyeOutlined />}
           size="small"
           type="text"
-          onClick={() => navigate(`/invoices/${record.id}`)}
+          onClick={() => navigate(`/invoices/show/${record.id}`)}
         />
       ),
     },
@@ -153,7 +153,7 @@ export const RecentInvoices: React.FC<RecentInvoicesProps> = ({
             size="small"
             icon={<PlusOutlined />}
             type="primary"
-            onClick={() => navigate("/create-sale")}
+            onClick={() => navigate("/sales/new")}
           >
             New Sale
           </Button>

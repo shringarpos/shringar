@@ -24,7 +24,7 @@ const ACTIONS: QuickAction[] = [
     label: "New Sale",
     description: "Create invoice",
     icon: <ShoppingCart size={20} />,
-    path: "/create-sale",
+    path: "/sales/new",
   },
   {
     label: "Add Customer",
@@ -36,7 +36,7 @@ const ACTIONS: QuickAction[] = [
     label: "Add Ornament",
     description: "Add to inventory",
     icon: <Gem size={20} />,
-    path: "/inventory/ornaments",
+    path: "/ornaments",
   },
   {
     label: "Update Rates",
@@ -54,7 +54,7 @@ const ACTIONS: QuickAction[] = [
     label: "Categories",
     description: "Manage ornament types",
     icon: <LayoutGrid size={20} />,
-    path: "/inventory/categories",
+    path: "/categories",
   },
 ];
 

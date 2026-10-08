@@ -319,7 +319,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ shopId }) => {
     {
       title: "Active Ornaments",
       value: totalOrnaments,
-      path: buildFilteredPath("/inventory/ornaments", [
+      path: buildFilteredPath("/ornaments", [
         { field: "is_active", operator: "eq", value: true },
       ]),
       trendLabel: lowStockCount > 0 ? `${lowStockCount} low stock` : "All stocked",
@@ -328,7 +328,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ shopId }) => {
     {
       title: "Low Stock Items",
       value: lowStockCount,
-      path: buildFilteredPath("/inventory/ornaments", [
+      path: buildFilteredPath("/ornaments", [
         { field: "is_active", operator: "eq", value: true },
         { field: "quantity", operator: "lte", value: 1 },
       ]),
