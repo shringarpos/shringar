@@ -38,7 +38,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
     logo_url?: string | null;
   }>({
     resource: "shops",
-    filters: user?.id ? [{ field: "shop_id", operator: "eq", value: user.id }] : [],
+    filters: user?.id ? [{ field: "user_id", operator: "eq", value: user.id }] : [],
     pagination: { pageSize: 1 },
     queryOptions: { enabled: !!user?.id },
   });
