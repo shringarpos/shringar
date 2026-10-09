@@ -38,6 +38,7 @@ import dayjs from "dayjs";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { MakingChargePopover } from "./making-charge-popover";
+import { recordInstallment } from "../../services/payment-ledger";
 import type {
   ICustomer,
   IInvoice,
@@ -216,6 +217,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
   const [selectedOrnamentId, setSelectedOrnamentId] = useState<string | undefined>();
   const [paymentMode, setPaymentMode] = useState<string>("CASH");
   const [cashTendered, setCashTendered] = useState<number | null>(null);
+  const [amountPaidRs, setAmountPaidRs] = useState<number | null>(null);
   const watchedValues = Form.useWatch([], form) as Record<string, unknown> | undefined;
 
   const draftResolvedRef = useRef(false);
@@ -545,7 +547,11 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
   }, [items]);
 
   const discountPaise: number = rs2P(Form.useWatch("discount", form) ?? 0);
-  const grandTotalPaise = totals.subtotalPaise + totals.makingPaise - discountPaise;
+  const grandTotalPaise = Math.max(0, totals.subtotalPaise + totals.makingPaise - discountPaise);
+  const grandTotalRs = Math.round(grandTotalPaise / 100);
+  const effectivePaidRs = amountPaidRs !== null ? Math.min(grandTotalRs, Math.max(0, amountPaidRs)) : grandTotalRs;
+  const effectivePaidPaise = Math.round(effectivePaidRs * 100);
+  const balancePaise = Math.max(0, grandTotalPaise - effectivePaidPaise);
 
   // ── Save (create/clone) ───────────────────────────────────────────────────
 
@@ -607,9 +613,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
           total_making_charges_paise: makingTotalPaise,
           discount_amount_paise: discPaise,
           total_amount_paise: totalPaise,
-          notes: fv.notes?.trim()
-            ? `${fv.notes.trim()} | Paid via ${paymentMode}`
-            : `Paid via ${paymentMode}`,
+          notes: fv.notes?.trim() || null,
           created_by: userId,
           updated_by: userId,
         },
@@ -620,6 +624,28 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
 
       const invoiceId = inv?.id as string;
       const invoiceNumber = inv?.invoice_number as string;
+
+      // Record initial payment in ledger if any amount is paid
+      if (invoiceId && effectivePaidPaise > 0) {
+        try {
+          await recordInstallment(
+            {
+              id: invoiceId,
+              shop_id: shopId,
+              total_amount_paise: totalPaise,
+              notes: fv.notes?.trim() || null,
+            },
+            {
+              amountPaise: effectivePaidPaise,
+              paymentMode: paymentMode,
+              notes: balancePaise > 0 ? "Initial advance payment at checkout" : "Full payment at checkout",
+              userId: userId,
+            }
+          );
+        } catch (paymentErr) {
+          console.warn("Ledger installment recording warning:", paymentErr);
+        }
+      }
 
       // 2. Create invoice items (batch)
       await createItems({
@@ -1003,7 +1029,74 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                 </Radio.Group>
               </div>
 
-              {paymentMode === "CASH" && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    Amount Paid Now
+                  </Text>
+                  <Space size={4}>
+                    <Button
+                      size="small"
+                      type={amountPaidRs === null || amountPaidRs === grandTotalRs ? "primary" : "default"}
+                      onClick={() => setAmountPaidRs(null)}
+                      style={{ fontSize: 11, padding: "0 6px", height: 22 }}
+                    >
+                      Full
+                    </Button>
+                    <Button
+                      size="small"
+                      type={amountPaidRs === Math.round(grandTotalRs * 0.5) ? "primary" : "default"}
+                      onClick={() => setAmountPaidRs(Math.round(grandTotalRs * 0.5))}
+                      style={{ fontSize: 11, padding: "0 6px", height: 22 }}
+                    >
+                      50%
+                    </Button>
+                    <Button
+                      size="small"
+                      type={amountPaidRs === 0 ? "primary" : "default"}
+                      onClick={() => setAmountPaidRs(0)}
+                      style={{ fontSize: 11, padding: "0 6px", height: 22 }}
+                    >
+                      ₹0
+                    </Button>
+                  </Space>
+                </div>
+                <InputNumber
+                  min={0}
+                  max={grandTotalRs}
+                  precision={0}
+                  prefix="₹"
+                  placeholder={grandTotalRs.toLocaleString("en-IN")}
+                  value={effectivePaidRs}
+                  onChange={(val) => setAmountPaidRs(val ?? 0)}
+                  style={{ width: "100%" }}
+                  disabled={isEdit}
+                />
+              </div>
+
+              {balancePaise > 0 && (
+                <div
+                  style={{
+                    backgroundColor: "rgba(250, 173, 20, 0.1)",
+                    border: "1px solid rgba(250, 173, 20, 0.3)",
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: "#d46b08" }}>
+                    {effectivePaidPaise === 0 ? "Bill marked as UNPAID" : "Pending Balance"}
+                  </Text>
+                  <Text strong style={{ fontSize: 13, color: "#d46b08" }}>
+                    ₹{p2Rs(balancePaise).toLocaleString("en-IN")}
+                  </Text>
+                </div>
+              )}
+
+              {paymentMode === "CASH" && effectivePaidRs > 0 && (
                 <div
                   style={{
                     backgroundColor: "var(--ant-color-fill-alter, #f5f5f5)",
@@ -1025,11 +1118,11 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                       style={{ width: 120 }}
                     />
                   </div>
-                  {cashTendered !== null && cashTendered > p2Rs(grandTotalPaise) && (
+                  {cashTendered !== null && cashTendered > effectivePaidRs && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Text type="secondary" style={{ fontSize: 12 }}>Change Due</Text>
                       <Text strong style={{ color: "#389e0d", fontSize: 13 }}>
-                        ₹{(cashTendered - p2Rs(grandTotalPaise)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{(cashTendered - effectivePaidRs).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Text>
                     </div>
                   )}
@@ -1043,16 +1136,50 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  marginBottom: 20,
+                  marginBottom: 6,
                 }}
               >
                 <Text strong style={{ fontSize: 16 }}>
-                  Total
+                  Total Bill
                 </Text>
-                <Text strong style={{ fontSize: 22, color: "#389e0d" }}>
+                <Text strong style={{ fontSize: 20 }}>
                   ₹{p2Rs(grandTotalPaise).toLocaleString("en-IN")}
                 </Text>
               </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <Text type="secondary" style={{ fontSize: 14 }}>
+                  Amount Paid
+                </Text>
+                <Text strong style={{ fontSize: 16, color: "#389e0d" }}>
+                  ₹{p2Rs(effectivePaidPaise).toLocaleString("en-IN")}
+                </Text>
+              </div>
+
+              {balancePaise > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 16,
+                  }}
+                >
+                  <Text type="secondary" style={{ fontSize: 14 }}>
+                    Balance Due
+                  </Text>
+                  <Text strong style={{ fontSize: 16, color: "#cf1322" }}>
+                    ₹{p2Rs(balancePaise).toLocaleString("en-IN")}
+                  </Text>
+                </div>
+              )}
 
               {/* Single Save CTA lives in the top bar; no duplicate here (hp-big #2) */}
               <Button type="primary" size="large" block loading={saving} onClick={onSave}>
