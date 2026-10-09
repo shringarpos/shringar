@@ -571,7 +571,7 @@ export const MobilePOS: React.FC<{
             paddingBottom: 2,
           }}
         >
-          {["all", "gold", "silver", "diamond"].map((cat) => (
+          {["all", "gold", "silver"].map((cat) => (
             <button
               key={cat}
               type="button"
@@ -744,7 +744,33 @@ export const MobilePOS: React.FC<{
             <Spin />
           </div>
         ) : filteredOrnaments.length === 0 ? (
-          <Empty description="No ornaments found" style={{ margin: "24px 0" }} />
+          <div
+            data-testid="mobile-pos-empty-ornaments"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
+              margin: "24px 0",
+            }}
+          >
+            <Empty description="No ornaments found" style={{ margin: 0 }} />
+            <Button
+              type="primary"
+              icon={<Plus size={16} />}
+              onClick={() => navigate("/ornaments/new")}
+              style={{
+                height: 44,
+                minHeight: 44,
+                borderRadius: 12,
+                padding: "0 20px",
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              Add piece
+            </Button>
+          </div>
         ) : (
           <div
             style={{

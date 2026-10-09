@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { MOCK_USER, setupAuthenticatedContext } from "./fixtures/mock-auth";
+import { MOCK_USER, MOCK_SHOP, MOCK_METAL_TYPES, MOCK_ORNAMENTS, MOCK_CATEGORIES, MOCK_PURITY_LEVELS, setupAuthenticatedContext } from "./fixtures/mock-auth";
 
 // Task 1: customer creation errors (address 23502 + gst_number/pan schema
 // cache + pan optional + empty user text). E2E writes are forbidden, so this
@@ -345,5 +345,230 @@ test.describe("Task 2: gold-loan created_by schema error", () => {
     expect(payload.interest_amount).toBe(24000);
     expect(payload.total_amount).toBe(124000);
     expect(payload.loan_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+test.describe("Task 3: new-sale empty state + gold/silver-only scope", () => {
+  // A legacy DIAMOND metal row injected on top of the shared mock (which is
+  // gold/silver-only). Ruling R3 (binding): diamond UI *options* go away, but
+  // existing diamond records keep rendering with their badges.
+  const DIAMOND_METAL = {
+    id: "00000000-0000-0000-0000-000000000003",
+    name: "DIAMOND",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+  const METALS_WITH_DIAMOND = [...MOCK_METAL_TYPES, DIAMOND_METAL];
+
+  // Registers AFTER setupAuthenticatedContext, so these handlers win for GET
+  // (Playwright matches most-recently-registered first); other methods fall
+  // through to the fixture handlers. No writes ever reach a real backend.
+  async function setupWithDiamond(page: any) {
+    await setupAuthenticatedContext(page);
+    await page.route("**/rest/v1/metal_types*", async (route: any) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "content-range": "0-2/3" },
+        body: JSON.stringify(METALS_WITH_DIAMOND),
+      });
+    });
+    await page.route("**/rest/v1/ornaments*", async (route: any) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      const shape = (o: any) => ({
+        ...o,
+        category: MOCK_CATEGORIES.find((c) => c.id === o.category_id) || {
+          id: o.category_id,
+          name: "Jewellery",
+        },
+        metal_type: METALS_WITH_DIAMOND.find((m) => m.id === o.metal_type_id) || {
+          id: o.metal_type_id,
+          name: "GOLD",
+        },
+        purity_level: MOCK_PURITY_LEVELS.find((p) => p.id === o.purity_level_id) || {
+          id: o.purity_level_id,
+          display_name: "22K",
+          purity_value: 92,
+        },
+      });
+      const legacyDiamondPiece = {
+        id: "orn-diamond-legacy",
+        shop_id: MOCK_SHOP.id,
+        category_id: "cat-2",
+        metal_type_id: DIAMOND_METAL.id,
+        purity_level_id: "purity-g-18k",
+        name: "Legacy Diamond Pendant",
+        weight_mg: 8200,
+        quantity: 1,
+        purchase_metal_rate_paise: 560000,
+        purchase_making_charge_paise: 15000,
+        purchase_total_cost_paise: 4742000,
+        purchase_date: "2026-09-20",
+        sku: "DM-LEG-009",
+        description: "Legacy diamond piece",
+        is_active: true,
+        created_at: "2026-09-20T14:00:00Z",
+        updated_at: "2026-09-20T14:00:00Z",
+      };
+      const rows = [...MOCK_ORNAMENTS.map(shape), shape(legacyDiamondPiece)];
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "content-range": `0-${rows.length - 1}/${rows.length}` },
+        body: JSON.stringify(rows),
+      });
+    });
+  }
+
+  test("390px: empty ornament search shows Add-piece CTA to /ornaments/new", async ({
+    page,
+  }) => {
+    // Source pins: CTA navigates to the mobile dedicated form; 44px target.
+    const pos = src("../src/pages/pos/mobile-pos.tsx");
+    expect(pos).toContain('navigate("/ornaments/new")');
+    expect(pos).toMatch(/add piece/i);
+    expect(pos).toMatch(/minHeight:\s*44/);
+
+    // UI pin (390px renders MobilePOS): a hopeless search yields zero pieces
+    // and a visible Add-piece CTA; tapping it lands on /ornaments/new with
+    // zero POST traffic (add-piece flow smoke, no writes — Task 1 customer
+    // payload contract untouched: no customer POSTs in this flow).
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (
+        (r.url().includes("/rest/v1/ornaments") ||
+          r.url().includes("/rest/v1/customers")) &&
+        r.method() === "POST"
+      )
+        posts.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("Royal Kundan Choker")).toBeVisible({
+      timeout: 10000,
+    });
+    await page
+      .locator('input[placeholder="Search items or scan barcode..."]')
+      .fill("zzz-no-such-piece");
+    await expect(page.getByText("No ornaments found")).toBeVisible();
+    const cta = page.getByRole("button", { name: /add piece/i });
+    await expect(cta).toBeVisible();
+    expect((await cta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await cta.click();
+    await expect(page).toHaveURL(/\/ornaments\/new/);
+    await expect(
+      page.locator('[data-testid="mobile-ornament-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    expect(posts).toHaveLength(0);
+  });
+
+  test("no diamond filter option on POS + inventory; legacy piece keeps badge", async ({
+    page,
+  }) => {
+    // Source pins: POS pills are exactly all/gold/silver; grid keeps the
+    // diamond badge branch (R3) but drops the diamond filter key.
+    const pos = src("../src/pages/pos/mobile-pos.tsx");
+    expect(pos).toMatch(/\["all",\s*"gold",\s*"silver"\]/);
+    expect(pos).not.toMatch(/diamond/i);
+    const grid = src("../src/components/inventory/mobile-ornament-grid.tsx");
+    expect(grid).not.toMatch(/key:\s*"diamond"/);
+    expect(grid).toContain('name: "Diamond"');
+    // Desktop ornaments index + desktop sale form carry no diamond option
+    // lists (DB-driven metal selects) — verified by grep, no change needed.
+    for (const rel of [
+      "../src/pages/inventory/ornaments/index.tsx",
+      "../src/components/invoices/sale-form.tsx",
+    ]) {
+      expect(src(rel)).not.toMatch(/diamond/i);
+    }
+
+    // UI pins (even with DIAMOND in metal_types, no diamond pill is offered).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupWithDiamond(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("Royal Kundan Choker")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      page.getByRole("button", { name: /^diamond$/i })
+    ).toHaveCount(0);
+    await page.goto("/ornaments");
+    await expect(page.locator('[data-testid="mobile-ornaments"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      page.getByRole("button", { name: /^diamond$/i })
+    ).toHaveCount(0);
+    // R3: the legacy diamond record still renders, with its badge (badge shows
+    // the raw metal_types name, which is uppercase in seed data).
+    await expect(page.getByText("Legacy Diamond Pendant")).toBeVisible();
+    await expect(page.getByText(/diamond • 18k/i)).toBeVisible();
+  });
+
+  test("ornament create forms offer gold/silver only", async ({ page }) => {
+    // Source pins: both create forms scope metal options to gold/silver and
+    // carry no diamond option entries.
+    for (const rel of [
+      "../src/pages/inventory/ornaments/mobile-ornament-form.tsx",
+      "../src/components/inventory/ornaments/ornament-drawer.tsx",
+    ]) {
+      expect(src(rel)).toMatch(/gold\|silver/i);
+      expect(src(rel)).not.toMatch(/diamond/i);
+    }
+
+    // UI pin (mobile dedicated form, DIAMOND present in metal_types).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupWithDiamond(page);
+    await page.goto("/ornaments/new");
+    await expect(
+      page.locator('[data-testid="mobile-ornament-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByRole("button", { name: /^gold$/i })
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /^silver$/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^diamond$/i })
+    ).toHaveCount(0);
+
+    // UI pin (desktop drawer Metal Type select, same diamond-present data).
+    // NOTE: create/edit/clone drawers all mount hidden with the same
+    // #metal_type_id, so scope to the open drawer only.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/ornaments");
+    await page.getByRole("button", { name: /new ornament/i }).click();
+    await page.locator(".ant-drawer-open #metal_type_id").click();
+    // NOTE: hidden drawers render their own (hidden) dropdown copies, so scope
+    // option pins to the open dropdown only. Options render with zero width in
+    // this harness (attached, not visible), so pin attachment — gold/silver
+    // attaching first proves the async options loaded, making the diamond
+    // zero-count non-vacuous.
+    const openOpts = page.locator(
+      ".ant-select-dropdown:not(.ant-select-dropdown-hidden)"
+    );
+    await expect(
+      openOpts.getByRole("option", { name: /^gold$/i })
+    ).toBeAttached({ timeout: 10000 });
+    await expect(
+      openOpts.getByRole("option", { name: /^silver$/i })
+    ).toBeAttached();
+    await expect(openOpts.getByRole("option", { name: /diamond/i })).toHaveCount(
+      0
+    );
   });
 });

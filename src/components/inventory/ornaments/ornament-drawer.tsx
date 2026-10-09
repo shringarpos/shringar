@@ -122,6 +122,23 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
         queryOptions: { enabled: !!drawerProps.open },
     });
 
+    // Gold/silver-only scope: the metal select offers only gold/silver even if
+    // metal_types carries other rows. An edit/clone record already on another
+    // metal keeps its current option so the form stays truthful.
+    const scopedMetalTypeOptions = useMemo(() => {
+        const opts = (metalTypeSelectProps.options ?? []) as {
+            label: React.ReactNode;
+            value: string | number;
+        }[];
+        const scoped = opts.filter((o) => /gold|silver/i.test(String(o.label ?? "")));
+        const current = rawInitialValues?.metal_type_id;
+        if (current && !scoped.some((o) => String(o.value) === String(current))) {
+            const keep = opts.find((o) => String(o.value) === String(current));
+            return keep ? [...scoped, keep] : scoped;
+        }
+        return scoped;
+    }, [metalTypeSelectProps.options, rawInitialValues?.metal_type_id]);
+
     // All purity levels fetched once; filtered client-side by selected metal type
     const { query: purityQuery } = useList<IPurityLevel>({
         resource: "purity_levels",
@@ -376,6 +393,7 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
                         >
                             <Select
                                 {...metalTypeSelectProps}
+                                options={scopedMetalTypeOptions}
                                 placeholder="Gold / Silver…"
                                 showSearch
                                 filterOption={false}

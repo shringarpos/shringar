@@ -107,6 +107,22 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
   });
   const metalTypes = (metalsQuery?.data?.data ?? []) as IMetalType[];
 
+  // Gold/silver-only scope: the metal pill grid offers only gold/silver even
+  // if metal_types carries other rows. An edit-mode record already on another
+  // metal keeps its current value so the form stays truthful.
+  const visibleMetalTypes = useMemo(() => {
+    const scoped = metalTypes.filter((m) => /gold|silver/i.test(m.name));
+    if (
+      action === "edit" &&
+      ornament &&
+      !scoped.some((m) => m.id === ornament.metal_type_id)
+    ) {
+      const current = metalTypes.find((m) => m.id === ornament.metal_type_id);
+      return current ? [...scoped, current] : scoped;
+    }
+    return scoped;
+  }, [metalTypes, action, ornament]);
+
   // Load purity levels
   const { query: puritiesQuery } = useList<IPurityLevel>({
     resource: "purity_levels",
@@ -420,8 +436,8 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
 
           {/* Metal Type Segmented Pills */}
           <Form.Item name="metal_type_id" rules={[{ required: true, message: "Please select metal" }]} style={{ marginBottom: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(metalTypes.length, 2)}, 1fr)`, gap: 10 }}>
-              {metalTypes.map((metal) => {
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(visibleMetalTypes.length, 2)}, 1fr)`, gap: 10 }}>
+              {visibleMetalTypes.map((metal) => {
                 const isSelected = selectedMetalTypeId === metal.id;
                 const isGold = metal.name.toLowerCase().includes("gold");
                 const isSilver = metal.name.toLowerCase().includes("silver");

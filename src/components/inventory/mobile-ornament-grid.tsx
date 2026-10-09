@@ -109,11 +109,12 @@ export const MobileOrnamentGrid: React.FC = () => {
     navigate(`/ornaments/edit/${orn.id}`);
   };
 
+  // Gold/silver-only scope: no diamond filter key. getMetalTheme above keeps
+  // its legacy-metal branch so existing records still render with badges.
   const metalPills = [
     { key: "all", label: "All", icon: null },
     { key: "gold", label: "Gold", icon: Gem },
     { key: "silver", label: "Silver", icon: CircleDot },
-    { key: "diamond", label: "Diamond", icon: Sparkles },
   ];
 
   return (
