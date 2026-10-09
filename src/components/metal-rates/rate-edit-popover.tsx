@@ -1,4 +1,4 @@
-import { useCreate, useGetIdentity, useUpdate } from "@refinedev/core";
+import { useGetIdentity } from "@refinedev/core";
 import { EditOutlined } from "@ant-design/icons";
 import {
   Button,
@@ -11,6 +11,7 @@ import {
 import dayjs from "dayjs";
 import React, { useEffect, useState } from "react";
 import type { IMetalRate, IMetalType } from "../../libs/interfaces";
+import { supabaseClient } from "../../providers/supabase-client";
 import { displayToPaise, paiseToDisplay, rateUnit } from "./utils";
 
 const { Text } = Typography;
@@ -39,9 +40,6 @@ export const RateEditPopover: React.FC<RateEditPopoverProps> = ({
   const { data: identity } = useGetIdentity<{ id: string }>();
   const userId = (identity as any)?.id as string | undefined;
 
-  const { mutateAsync: createRate } = useCreate<IMetalRate>();
-  const { mutateAsync: updateRate } = useUpdate<IMetalRate>();
-
   // Sync form value whenever the popover opens or existingRate changes
   useEffect(() => {
     if (open) {
@@ -61,27 +59,20 @@ export const RateEditPopover: React.FC<RateEditPopoverProps> = ({
       const today = dayjs().format("YYYY-MM-DD");
 
       setSaving(true);
-      if (existingRate) {
-        await updateRate({
-          resource: "ornament_rates",
-          id: existingRate.id,
-          values: {
-            rate_per_gram_paise: paise,
-            updated_by: userId,
-          },
-        });
-      } else {
-        await createRate({
-          resource: "ornament_rates",
-          values: {
-            shop_id: shopId,
-            metal_type_id: metal.id,
-            rate_date: today,
-            rate_per_gram_paise: paise,
-            created_by: userId,
-            updated_by: userId,
-          },
-        });
+      const { error } = await supabaseClient.from("ornament_rates").upsert(
+        {
+          ...(existingRate?.id ? { id: existingRate.id } : {}),
+          shop_id: shopId,
+          metal_type_id: metal.id,
+          rate_date: today,
+          rate_per_gram_paise: paise,
+          updated_by: userId,
+        },
+        { onConflict: "shop_id,metal_type_id,rate_date" }
+      );
+
+      if (error) {
+        throw error;
       }
       setOpen(false);
       onSuccess?.();
