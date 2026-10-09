@@ -420,6 +420,15 @@ export default function InvoiceShow() {
               />
             )}
           </Card>
+
+          {/* Payment Ledger & History Timeline */}
+          <PaymentLedgerTimeline
+            payments={payments}
+            totalAmountPaise={invoice.total_amount_paise}
+            balancePaise={balancePaise}
+            onRecordPaymentClick={() => setRecordPaymentOpen(true)}
+            isCancelled={invoice.is_cancelled}
+          />
         </Col>
 
         {/* Right Column: Financial Summary */}
