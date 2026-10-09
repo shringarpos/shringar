@@ -61,11 +61,11 @@ export const MobileCustomerForm: React.FC = () => {
       setIsSubmitting(true);
       await createCustomer({
         resource: "customers",
-        values: {
-          name: values.name.trim(),
-          phone: values.phone?.trim() || null,
-          email: values.email?.trim() || null,
-          address: values.address?.trim(),
+          values: {
+            name: values.name.trim(),
+            phone: values.phone.trim(),
+            email: values.email?.trim() || null,
+            address: values.address.trim(),
           reference_by: values.reference_by || null,
           shop_id: shopId,
           created_by: userId,
@@ -215,6 +215,7 @@ export const MobileCustomerForm: React.FC = () => {
             label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Phone Number</span>}
             name="phone"
             rules={[
+              { required: true, whitespace: true, message: "Please enter a phone number" },
               {
                 pattern: /^[0-9+\s-]{8,15}$/,
                 message: "Please enter a valid phone number",
@@ -274,7 +275,7 @@ export const MobileCustomerForm: React.FC = () => {
             </span>
           </div>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Postal Address</span>} name="address" rules={[{ required: true, message: "Address is required" }]} style={{ marginBottom: 0 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Postal Address</span>} name="address" rules={[{ required: true, whitespace: true, message: "Address is required" }]} style={{ marginBottom: 0 }}>
             <Input.TextArea
               rows={2}
               placeholder="Street, City, Pincode"

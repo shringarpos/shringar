@@ -267,6 +267,10 @@ export const MobilePOS: React.FC<{
       message.error("Please enter client address");
       return;
     }
+    if (!quickClientPhone.trim()) {
+      message.error("Please enter client phone number");
+      return;
+    }
     if (!shopId) return;
 
     setCreatingClient(true);
@@ -275,7 +279,7 @@ export const MobilePOS: React.FC<{
         resource: "customers",
         values: {
           name: quickClientName.trim(),
-          phone: quickClientPhone.trim() || null,
+          phone: quickClientPhone.trim(),
           address: quickClientAddress.trim(),
           shop_id: shopId,
           created_by: userId,
@@ -913,10 +917,11 @@ export const MobilePOS: React.FC<{
               />
 
               <Input
-                placeholder="Phone Number (optional)"
+                data-testid="mobile-pos-quickadd-phone"
+                placeholder="Phone Number *"
                 value={quickClientPhone}
                 onChange={(e) => setQuickClientPhone(e.target.value)}
-                style={{ height: 38, borderRadius: 8 }}
+                style={{ height: 44, borderRadius: 8 }}
               />
 
               <Input

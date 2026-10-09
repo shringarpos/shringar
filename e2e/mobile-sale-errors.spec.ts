@@ -15,15 +15,21 @@ test.describe("Task 1: customer creation errors", () => {
   test("quick-add client payload has address and no gst_number key", async ({
     page,
   }) => {
-    // Source pin: quick-add ships address, never gst_number/pan keys.
+    // Source pin: quick-add ships name/phone/address trims (phone non-null),
+    // never gst_number/pan keys; trim-then-guard blocks whitespace-only input.
     const pos = src("../src/pages/pos/mobile-pos.tsx");
     expect(pos).not.toMatch(/gst_number|pan_number/);
-    expect(pos).toMatch(/address:\s*quickClientAddress\.trim\(\)/);
+    expect(pos).not.toMatch(/\bpan\s*:/);
+    expect(pos).toMatch(
+      /values:\s*\{\s*name:\s*quickClientName\.trim\(\),\s*phone:\s*quickClientPhone\.trim\(\),\s*address:\s*quickClientAddress\.trim\(\),/
+    );
+    expect(pos).toContain("Please enter client phone number");
+    expect(pos).toContain('placeholder="Phone Number *"');
 
-    // UI pin (390px renders MobilePOS): required Address input present;
-    // empty-address save is blocked client-side with zero POST traffic;
-    // a complete save POSTs address and never gst_number/pan keys (mock
-    // route fulfills in-memory — no real records).
+    // UI pin (390px renders MobilePOS): required Address + Phone inputs;
+    // empty/whitespace-only saves are blocked client-side with zero POST
+    // traffic; a complete save POSTs phone+address and never gst/pan keys
+    // (mock route fulfills in-memory — no real records).
     const posts: any[] = [];
     page.on("request", (r) => {
       if (
@@ -46,6 +52,11 @@ test.describe("Task 1: customer creation errors", () => {
     await expect(addressInput).toBeVisible();
     const box = await addressInput.boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    const phoneInput = page.locator(
+      '[data-testid="mobile-pos-quickadd-phone"]'
+    );
+    await expect(phoneInput).toBeVisible();
+    expect((await phoneInput.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     await page
       .locator('input[placeholder="Client Name *"]')
       .fill("QA Address Pin");
@@ -53,16 +64,26 @@ test.describe("Task 1: customer creation errors", () => {
     await page.waitForTimeout(800);
     expect(posts).toHaveLength(0);
     await expect(addressInput).toBeVisible();
+    // Whitespace-only address slips past `required` without trim/whitespace
+    // handling — must also block with zero POST.
+    await addressInput.fill("   ");
+    await page.getByRole("button", { name: /save & select client/i }).click();
+    await page.waitForTimeout(800);
+    expect(posts).toHaveLength(0);
     await addressInput.fill("14 Task Lane, Mumbai");
-    await page
-      .locator('input[placeholder="Phone Number (optional)"]')
-      .fill("9876543210");
+    // Address present but phone empty → still blocked, panel stays open.
+    await page.getByRole("button", { name: /save & select client/i }).click();
+    await page.waitForTimeout(800);
+    expect(posts).toHaveLength(0);
+    await expect(addressInput).toBeVisible();
+    await phoneInput.fill("9876543210");
     await page.getByRole("button", { name: /save & select client/i }).click();
     await expect
       .poll(() => posts.length, { timeout: 10000 })
       .toBeGreaterThan(0);
     const payload = posts[posts.length - 1];
     expect(payload.address).toBe("14 Task Lane, Mumbai");
+    expect(payload.phone).toBe("9876543210");
     expect(payload).not.toHaveProperty("gst_number");
     expect(payload).not.toHaveProperty("pan_number");
     expect(payload).not.toHaveProperty("pan");
@@ -71,11 +92,16 @@ test.describe("Task 1: customer creation errors", () => {
   test("mobile customer form has required address, no GSTIN/PAN inputs", async ({
     page,
   }) => {
-    // Source pin: no non-schema keys, address carries a required rule.
+    // Source pin: no non-schema keys; phone + address carry required rules
+    // (whitespace: true so " " can't slip through); phone sent non-null.
     const form = src("../src/pages/customers/mobile-customer-form.tsx");
     expect(form).not.toMatch(/gst_number|pan_number/);
-    expect(form).not.toContain("notes: values.notes");
+    expect(form).not.toMatch(/\bpan\s*:/);
+    expect(form).not.toMatch(/\bnotes\s*:/);
     expect(form).toMatch(/name="address"[\s\S]{0,300}?required/);
+    expect(form).toMatch(/name="phone"[\s\S]{0,400}?required/);
+    expect(form).toContain("whitespace: true");
+    expect(form).toContain("phone: values.phone.trim()");
 
     // UI pin.
     await page.setViewportSize({ width: 390, height: 844 });
@@ -135,9 +161,13 @@ test.describe("Task 1: customer creation errors", () => {
     await expect(page.getByText("No existing user")).toBeVisible();
   });
 
-  test("customer payload contract: no gst/pan keys; shop GSTIN untouched", async () => {
+  test("customer payload contract: no gst/pan/notes keys; shop GSTIN untouched", async () => {
     // Contract later tasks consume: customer payloads never carry
-    // gst_number/pan keys. Ruling R2: shop GSTIN stays as-is.
+    // gst_number/pan_number keys, bare `pan:` keys, or customer-scoped
+    // `notes:` keys. NOTE: `notes:` IS legitimate in invoice payloads
+    // (sale-form invoice notes, mobile-pos "Paid via …"), so the notes pin
+    // is file-wide only where no invoice builder exists, and scoped to the
+    // quick-add values block in mobile-pos. Ruling R2: shop GSTIN stays.
     for (const rel of [
       "../src/pages/pos/mobile-pos.tsx",
       "../src/components/invoices/sale-form.tsx",
@@ -145,7 +175,17 @@ test.describe("Task 1: customer creation errors", () => {
       "../src/components/customers/customer-modal.tsx",
     ]) {
       expect(src(rel)).not.toMatch(/gst_number|pan_number/);
+      expect(src(rel)).not.toMatch(/\bpan\s*:/);
     }
+    for (const rel of [
+      "../src/pages/customers/mobile-customer-form.tsx",
+      "../src/components/customers/customer-modal.tsx",
+    ]) {
+      expect(src(rel)).not.toMatch(/\bnotes\s*:/);
+    }
+    expect(src("../src/pages/pos/mobile-pos.tsx")).toMatch(
+      /values:\s*\{\s*name:\s*quickClientName\.trim\(\),\s*phone:\s*quickClientPhone\.trim\(\),\s*address:\s*quickClientAddress\.trim\(\),/
+    );
     expect(src("../src/components/settings/shop-profile-settings.tsx")).toContain(
       "gst_number"
     );
