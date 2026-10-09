@@ -310,7 +310,7 @@ export default function DesignGallery() {
                                             >
                                                 <FolderOpenOutlined style={{ fontSize: 44, marginBottom: 8 }} />
                                                 <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-                                                    {count === 0 ? "No photos yet" : `${count} designs`}
+                                                    {count === 0 ? "No photos yet" : "No cover photo"}
                                                 </Typography.Text>
                                             </div>
                                         )}
