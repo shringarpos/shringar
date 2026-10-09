@@ -11,6 +11,7 @@ interface CategoryModalProps {
     formProps: FormProps<any>;
     onFinish: (values: Partial<ICategory>) => Promise<any>;
     close: () => void;
+    existingNames?: string[];
 }
 
 const BUCKET_NAME = "category-images";
@@ -27,6 +28,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
     formProps,
     onFinish,
     close: _close,
+    existingNames = [],
 }) => {
     const screens = Grid.useBreakpoint();
     const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
@@ -61,7 +63,26 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
                         <Form.Item
                             label="Name"
                             name="name"
-                            rules={[{ required: true, message: "Please enter a category name" }]}
+                            rules={[
+                                { required: true, whitespace: true, message: "Please enter a category name" },
+                                {
+                                    validator: async (_, value: string) => {
+                                        if (!value?.trim()) return Promise.resolve();
+                                        const trimmed = value.trim().toLowerCase();
+                                        const initialTrimmed = formProps.initialValues?.name?.trim().toLowerCase();
+                                        if (action === "edit" && trimmed === initialTrimmed) {
+                                            return Promise.resolve();
+                                        }
+                                        const isDuplicate = existingNames.some(
+                                            (n) => n.trim().toLowerCase() === trimmed
+                                        );
+                                        if (isDuplicate) {
+                                            return Promise.reject(new Error("A category with this name already exists"));
+                                        }
+                                        return Promise.resolve();
+                                    },
+                                },
+                            ]}
                         >
                             <Input placeholder="e.g. Rings, Necklaces, Bracelets" />
                         </Form.Item>

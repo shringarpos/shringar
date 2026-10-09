@@ -120,9 +120,23 @@ const CategoryList: React.FC = () => {
         syncWithLocation: { key: "clone-category", syncId: true },
     });
 
+    const categoryNames = (listProps.dataSource ?? []).map((c) => c.name);
+
     const handleCreateFinish = async (values: Partial<ICategory>) => {
+        const catName = values.name?.trim().toLowerCase();
+        const existing = (listProps.dataSource ?? []).some(
+            (c) => c.name?.trim().toLowerCase() === catName
+        );
+        if (existing) {
+            notification.error({
+                message: "Category already exists",
+                description: `A category named "${values.name?.trim()}" already exists in this shop.`,
+            });
+            return;
+        }
         return createFormProps.onFinish?.({
             ...values,
+            name: values.name?.trim(),
             shop_id: shopId,
             created_by: userId,
             updated_by: userId,
@@ -131,12 +145,36 @@ const CategoryList: React.FC = () => {
     };
 
     const handleEditFinish = async (values: Partial<ICategory>) => {
-        return editFormProps.onFinish?.({ ...values, updated_by: userId });
+        const catName = values.name?.trim().toLowerCase();
+        const currentId = editFormProps.id;
+        const existing = (listProps.dataSource ?? []).some(
+            (c) => c.id !== currentId && c.name?.trim().toLowerCase() === catName
+        );
+        if (existing) {
+            notification.error({
+                message: "Category already exists",
+                description: `A category named "${values.name?.trim()}" already exists in this shop.`,
+            });
+            return;
+        }
+        return editFormProps.onFinish?.({ ...values, name: values.name?.trim(), updated_by: userId });
     };
 
     const handleCloneFinish = async (values: Partial<ICategory>) => {
+        const catName = values.name?.trim().toLowerCase();
+        const existing = (listProps.dataSource ?? []).some(
+            (c) => c.name?.trim().toLowerCase() === catName
+        );
+        if (existing) {
+            notification.error({
+                message: "Category already exists",
+                description: `A category named "${values.name?.trim()}" already exists in this shop.`,
+            });
+            return;
+        }
         return cloneFormProps.onFinish?.({
             ...values,
+            name: values.name?.trim(),
             shop_id: shopId,
             created_by: userId,
             updated_by: userId,
@@ -318,6 +356,7 @@ const CategoryList: React.FC = () => {
                 formProps={createFormProps}
                 onFinish={handleCreateFinish}
                 close={closeCreate}
+                existingNames={categoryNames}
             />
             <CategoryModal
                 action="edit"
@@ -325,6 +364,7 @@ const CategoryList: React.FC = () => {
                 formProps={editFormProps}
                 onFinish={handleEditFinish}
                 close={closeEdit}
+                existingNames={categoryNames}
             />
             <CategoryModal
                 action="clone"
@@ -332,6 +372,7 @@ const CategoryList: React.FC = () => {
                 formProps={cloneFormProps}
                 onFinish={handleCloneFinish}
                 close={closeClone}
+                existingNames={categoryNames}
             />
         </>
     );
