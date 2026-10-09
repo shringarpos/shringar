@@ -142,79 +142,127 @@ export const MobileMetalRatesBar: React.FC = () => {
         data-testid="mobile-metal-rates-bar"
         onClick={handleOpenDrawer}
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "7px 16px",
-          backgroundColor: isDark ? "#000000" : "#ffffff",
-          borderBottom: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
+          padding: "2px 16px 10px 16px",
+          borderBottom: isDark ? "1px solid #1e293b" : "1px solid rgba(15, 23, 42, 0.08)",
           cursor: "pointer",
           userSelect: "none",
           WebkitTapHighlightColor: "transparent",
-          transition: "background-color 0.15s ease",
-          fontSize: 12,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-          {/* Gold Rate Pill */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              backgroundColor: isDark ? "rgba(217, 119, 6, 0.22)" : "rgba(217, 119, 6, 0.12)",
-              padding: "3px 10px",
-              borderRadius: 8,
-              border: isDark ? "1px solid rgba(217, 119, 6, 0.45)" : "1px solid rgba(217, 119, 6, 0.25)",
-            }}
-          >
-            <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#fbbf24" : "#b45309", letterSpacing: "0.03em" }}>GOLD</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>
-              {goldRate && goldMetal
-                ? formatRateDisplay(goldRate.rate_per_gram_paise, goldMetal.name)
-                : <span style={{ color: "#d97706", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
-            </span>
-          </div>
-
-          {/* Silver Rate Pill */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              backgroundColor: isDark ? "rgba(148, 163, 184, 0.22)" : "rgba(71, 85, 105, 0.12)",
-              padding: "3px 10px",
-              borderRadius: 8,
-              border: isDark ? "1px solid rgba(148, 163, 184, 0.45)" : "1px solid rgba(71, 85, 105, 0.25)",
-            }}
-          >
-            <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#cbd5e1" : "#334155", letterSpacing: "0.03em" }}>SILVER</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>
-              {silverRate && silverMetal
-                ? formatRateDisplay(silverRate.rate_per_gram_paise, silverMetal.name)
-                : <span style={{ color: isDark ? "#94a3b8" : "#475569", fontSize: 11, fontWeight: 600 }}>Set Rate</span>}
-            </span>
-          </div>
-        </div>
-
-        {/* Edit Pill Trigger */}
         <div
-          data-testid="mobile-rate-edit-btn"
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 4,
-            padding: "3px 10px",
-            borderRadius: 8,
-            backgroundColor: isDark ? "rgba(37, 99, 235, 0.25)" : "rgba(37, 99, 235, 0.1)",
-            color: isDark ? "#60a5fa" : "#1d4ed8",
-            fontWeight: 700,
-            fontSize: 11,
-            flexShrink: 0,
+            justifyContent: "space-between",
+            padding: "6px 12px",
+            borderRadius: 12,
+            backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(15, 23, 42, 0.04)",
+            border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(15, 23, 42, 0.08)",
+            boxShadow: isDark ? "none" : "0 1px 3px rgba(0, 0, 0, 0.02)",
+            minHeight: 38,
+            boxSizing: "border-box",
+            whiteSpace: "nowrap",
           }}
         >
-          <Edit3 size={12} strokeWidth={2.5} />
-          <span>Update</span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              minWidth: 0,
+              flex: 1,
+              whiteSpace: "nowrap",
+              overflowX: "auto",
+              scrollbarWidth: "none",
+            }}
+          >
+            {/* Gold Rate */}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  backgroundColor: "#f59e0b",
+                  boxShadow: "0 0 6px rgba(245, 158, 11, 0.7)",
+                  display: "inline-block",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#fbbf24" : "#b45309", letterSpacing: "0.03em" }}>
+                GOLD
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a", whiteSpace: "nowrap" }}>
+                {goldRate && goldMetal ? (
+                  <>
+                    ₹{paiseToDisplay(goldRate.rate_per_gram_paise, goldMetal.name).toLocaleString("en-IN")}
+                    <span style={{ fontSize: 10, fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b", marginLeft: 2 }}>/10g</span>
+                  </>
+                ) : (
+                  <span style={{ color: "#f59e0b", fontSize: 11, fontWeight: 600 }}>Set Rate</span>
+                )}
+              </span>
+            </div>
+
+            {/* Subtle Divider */}
+            <span
+              style={{
+                width: 1,
+                height: 14,
+                backgroundColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)",
+                flexShrink: 0,
+              }}
+            />
+
+            {/* Silver Rate */}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  backgroundColor: "#94a3b8",
+                  boxShadow: "0 0 6px rgba(148, 163, 184, 0.7)",
+                  display: "inline-block",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569", letterSpacing: "0.03em" }}>
+                SILVER
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a", whiteSpace: "nowrap" }}>
+                {silverRate && silverMetal ? (
+                  <>
+                    ₹{paiseToDisplay(silverRate.rate_per_gram_paise, silverMetal.name).toLocaleString("en-IN")}
+                    <span style={{ fontSize: 10, fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b", marginLeft: 2 }}>/g</span>
+                  </>
+                ) : (
+                  <span style={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: 11, fontWeight: 600 }}>Set Rate</span>
+                )}
+              </span>
+            </div>
+          </div>
+
+          {/* Edit / Update Pill Trigger */}
+          <div
+            data-testid="mobile-rate-edit-btn"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 3,
+              padding: "3px 8px",
+              borderRadius: 8,
+              backgroundColor: isDark ? "rgba(59, 130, 246, 0.2)" : "rgba(37, 99, 235, 0.08)",
+              color: isDark ? "#60a5fa" : "#2563eb",
+              fontWeight: 700,
+              fontSize: 11,
+              flexShrink: 0,
+              marginLeft: 8,
+            }}
+          >
+            <Edit3 size={11} strokeWidth={2.5} />
+            <span>Update</span>
+          </div>
         </div>
       </div>
 

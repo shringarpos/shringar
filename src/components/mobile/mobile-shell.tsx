@@ -99,8 +99,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
           <header
             data-testid="mobile-top-bar"
             style={{
-              borderBottom: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
-              padding: "10px 16px",
+              padding: "10px 16px 4px 16px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
