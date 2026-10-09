@@ -73,7 +73,7 @@ export const MobileGoldLoanForm: React.FC = () => {
           loan_date: loanDateStr,
           status: "active",
           shop_id: shopId,
-          created_by: userId,
+          user_id: userId,
           updated_by: userId,
         },
       });

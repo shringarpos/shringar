@@ -192,3 +192,47 @@ test.describe("Task 1: customer creation errors", () => {
     expect(src("../src/pages/onboarding/index.tsx")).toContain("gst_number");
   });
 });
+
+test.describe("Task 2: gold-loan created_by schema error", () => {
+  test("gold loan form blocks empty submit and ships user_id, never created_by", async ({
+    page,
+  }) => {
+    // Source pin: gold_loans has NO created_by column (migration
+    // 20261005154854_add_gold_ledger_loans.sql: user_id NOT NULL, RLS
+    // user_id = auth.uid()); every gold_loans payload builder must send
+    // user_id with the same identity value, never created_by.
+    const loanForm = src("../src/pages/gold-ledger/mobile-gold-loan-form.tsx");
+    expect(loanForm).not.toMatch(/\bcreated_by\b/);
+    expect(loanForm).toMatch(/\buser_id:\s*userId/);
+    for (const rel of [
+      "../src/pages/gold-ledger/index.tsx",
+      "../src/components/gold-ledger/mobile-gold-ledger.tsx",
+    ]) {
+      expect(src(rel)).not.toMatch(/\bcreated_by\b/);
+    }
+
+    // UI pin (390px renders MobileGoldLoanForm): empty submit surfaces
+    // required errors with zero POST traffic (mock route fulfills in-memory
+    // — no real records, no writes).
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (
+        r.url().includes("/rest/v1/gold_loans") &&
+        r.method() === "POST"
+      )
+        posts.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/gold-ledger/new");
+    await expect(
+      page.locator('[data-testid="mobile-gold-loan-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    await page.getByRole("button", { name: /create loan/i }).click();
+    await expect(page.getByText("Borrower name is required")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.waitForTimeout(800);
+    expect(posts).toHaveLength(0);
+  });
+});
