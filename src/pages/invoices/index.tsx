@@ -375,6 +375,7 @@ const InvoiceList: React.FC = () => {
           rowKey="id"
           size="small"
           scroll={{ x: 1400 }}
+          locale={{ emptyText: "No invoices yet" }}
           pagination={{
             ...tableProps.pagination,
             pageSizeOptions: ["10", "20", "50"],

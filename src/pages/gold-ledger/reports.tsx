@@ -269,6 +269,7 @@ export default function GoldLedgerReports() {
                 rowKey="id"
                 size="small"
                 scroll={{ x: 1200 }}
+                locale={{ emptyText: "No loans found" }}
             >
                 <Table.Column<IGoldLoan>
                     title="LOAN DATE"

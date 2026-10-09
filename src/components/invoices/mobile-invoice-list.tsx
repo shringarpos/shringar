@@ -9,7 +9,6 @@ import {
   Skeleton,
   theme,
   Empty,
-  message,
 } from "antd";
 import {
   Search,
@@ -24,6 +23,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import type { ICustomer, IInvoice } from "../../libs/interfaces";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import { DownloadInvoiceButton } from "./download-invoice-button";
+import { notifyMobile } from "../../utils/mobile-notify";
 
 dayjs.extend(relativeTime);
 
@@ -87,7 +87,7 @@ export const MobileInvoiceList: React.FC = () => {
   const handleCopy = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
-    message.success(`Copied #${text}`);
+    notifyMobile.success(`Copied #${text}`);
   };
 
   const handleWhatsApp = (e: React.MouseEvent, inv: IInvoiceRow) => {
@@ -225,9 +225,19 @@ export const MobileInvoiceList: React.FC = () => {
           </div>
         ) : filteredInvoices.length === 0 ? (
           <Empty
-            description="No matching invoices found"
+            description="No invoices found"
             style={{ margin: "32px 0" }}
-          />
+          >
+            <Button
+              data-testid="mobile-empty-new-sale"
+              type="primary"
+              icon={<Plus size={14} />}
+              onClick={() => navigate("/sales/new")}
+              style={{ height: 44, padding: "0 16px", fontSize: 13, display: "inline-flex", alignItems: "center" }}
+            >
+              New sale
+            </Button>
+          </Empty>
         ) : (
           filteredInvoices.map((inv) => {
             const isPaid = inv.payment_status === "PAID";

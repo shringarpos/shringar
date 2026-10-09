@@ -234,8 +234,17 @@ export const MobileOrnamentGrid: React.FC = () => {
         <Empty
           description={
             <div style={{ padding: "20px 0" }}>
-              <Text type="secondary">No ornaments found matching your criteria</Text>
-              <div style={{ marginTop: 12 }}>
+              <Text type="secondary">No ornaments found</Text>
+              <div style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <Button
+                  data-testid="mobile-empty-add-ornament"
+                  type="primary"
+                  icon={<Plus size={14} />}
+                  onClick={handleCreateNew}
+                  style={{ height: 44, padding: "0 16px", fontSize: 13, display: "inline-flex", alignItems: "center" }}
+                >
+                  Add ornament
+                </Button>
                 <Button
                   icon={<RotateCcw size={14} />}
                   onClick={() => {

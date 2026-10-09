@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { Drawer, Form, InputNumber, Button, Typography, theme, message, Space } from "antd";
+import { Drawer, Form, InputNumber, Button, Typography, theme, Space } from "antd";
 import { TrendingUp, Edit3, ArrowRight } from "lucide-react";
 import { useList, useCreate, useUpdate, useGetIdentity } from "@refinedev/core";
 import { useNavigate } from "react-router";
@@ -8,6 +8,7 @@ import { useShopCheck } from "../../hooks/use-shop-check";
 import type { IMetalRate, IMetalType } from "../../libs/interfaces";
 import { formatRateDisplay, displayToPaise, paiseToDisplay, rateUnit } from "./utils";
 import { ColorModeContext } from "../../contexts/color-mode";
+import { notifyMobile } from "../../utils/mobile-notify";
 
 const { Text, Title } = Typography;
 
@@ -67,7 +68,7 @@ export const MobileMetalRatesBar: React.FC = () => {
 
   const handleSaveRates = async () => {
     if (!shopId) {
-      message.error("Shop not found");
+      notifyMobile.error("Shop not found");
       return;
     }
     try {
@@ -122,7 +123,7 @@ export const MobileMetalRatesBar: React.FC = () => {
         }
       }
 
-      message.success("Today's metal rates updated!");
+      notifyMobile.success("Today's metal rates updated!");
       await ratesQuery?.refetch();
       setDrawerOpen(false);
     } catch {

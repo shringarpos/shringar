@@ -10,7 +10,6 @@ import {
   Skeleton,
   theme,
   Empty,
-  message,
   Popconfirm,
 } from "antd";
 import {
@@ -31,6 +30,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import type { IGoldLoan } from "../../libs/interfaces";
 import { LoanDrawer } from "./loan-drawer";
 import { LoanShowDrawer } from "./loan-show-drawer";
+import { notifyMobile } from "../../utils/mobile-notify";
 
 dayjs.extend(relativeTime);
 
@@ -139,7 +139,7 @@ export const MobileGoldLedger: React.FC = () => {
             user_id: userId,
           },
         });
-        message.success(`Loan for ${values.customer_name || ""} updated`);
+        notifyMobile.success(`Loan for ${values.customer_name || ""} updated`);
       } else {
         await createLoan({
           resource: "gold_loans",
@@ -148,14 +148,14 @@ export const MobileGoldLedger: React.FC = () => {
             user_id: userId,
           },
         });
-        message.success(`Gold loan for ${values.customer_name || ""} created`);
+        notifyMobile.success(`Gold loan for ${values.customer_name || ""} created`);
       }
       setEditingLoan(null);
       closeFormDrawer();
       query?.refetch();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save loan";
-      message.error(msg);
+      notifyMobile.error(msg);
     }
   };
 
@@ -171,10 +171,10 @@ export const MobileGoldLedger: React.FC = () => {
           user_id: userId,
         },
       });
-      message.success(`Loan for ${loan.customer_name} settled and closed!`);
+      notifyMobile.success(`Loan for ${loan.customer_name} settled and closed!`);
       query?.refetch();
     } catch {
-      message.error("Failed to settle loan");
+      notifyMobile.error("Failed to settle loan");
     }
   };
 
@@ -346,14 +346,23 @@ export const MobileGoldLedger: React.FC = () => {
           <Empty
             description={
               <div style={{ padding: "16px 0" }}>
-                <Text type="secondary">No loan records match filter</Text>
-                {searchTerm && (
-                  <div style={{ marginTop: 8 }}>
-                    <Button size="small" onClick={() => setSearchTerm("")}>
+                <Text type="secondary">No loans found</Text>
+                <div style={{ marginTop: 8, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                  <Button
+                    data-testid="mobile-empty-new-loan"
+                    type="primary"
+                    size="small"
+                    onClick={handleCreateNew}
+                    style={{ height: 44, padding: "0 14px", fontSize: 12 }}
+                  >
+                    New loan
+                  </Button>
+                  {searchTerm && (
+                    <Button size="small" onClick={() => setSearchTerm("")} style={{ height: 44, padding: "0 14px", fontSize: 12 }}>
                       Clear Search
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             }
           />

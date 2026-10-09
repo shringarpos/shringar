@@ -1045,3 +1045,274 @@ test.describe("Task 3: new-sale empty state + gold/silver-only scope", () => {
     );
   });
 });
+
+test.describe("Task 6: field-specific empty states + mobile toasts", () => {
+  // Every empty state names its field; mobile toasts are small + bottom-docked
+  // above the tab bar with a shorter duration. Harness note (probed 2026-10-08):
+  // antd static message.* toasts never attach to the DOM in this Playwright
+  // setup (no `.ant-message` holder 1.2s after firing), so toast pins assert
+  // the variant config in source/CSS + call-site usage, while the UI half pins
+  // the validation-toast path behaviorally (empty submit blocked, zero POST).
+  // All traffic is mock-auth fulfilled in-memory — no real records anywhere.
+
+  // Registers AFTER setupAuthenticatedContext, so this handler wins for GET
+  // (Playwright matches most-recently-registered first); other methods fall
+  // through to the fixture handlers.
+  async function setupEmptyResource(page: any, pattern: string) {
+    await page.route(pattern, async (route: any) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "content-range": "*/0" },
+        body: "[]",
+      });
+    });
+  }
+
+  test("desktop tables + category lists name their field (source)", async () => {
+    // Generic antd "No Data" fallbacks become field-specific locale text.
+    expect(src("../src/pages/inventory/categories/index.tsx")).toContain(
+      "No categories yet"
+    );
+    expect(src("../src/pages/inventory/ornaments/index.tsx")).toContain(
+      "No ornaments yet"
+    );
+    expect(src("../src/pages/customers/index.tsx")).toContain(
+      "No customers yet"
+    );
+    expect(src("../src/pages/invoices/index.tsx")).toContain("No invoices yet");
+    expect(src("../src/pages/gold-ledger/index.tsx")).toContain("No loans yet");
+    expect(src("../src/pages/gold-ledger/reports.tsx")).toContain(
+      "No loans found"
+    );
+    for (const rel of [
+      "../src/pages/inventory/categories/index.tsx",
+      "../src/pages/inventory/ornaments/index.tsx",
+      "../src/pages/customers/index.tsx",
+      "../src/pages/invoices/index.tsx",
+      "../src/pages/gold-ledger/index.tsx",
+      "../src/pages/gold-ledger/reports.tsx",
+    ]) {
+      expect(src(rel)).toMatch(/emptyText/);
+    }
+  });
+
+  test("mobile empty states name field + CTA to create routes (source)", async () => {
+    // Copy pins.
+    expect(
+      src("../src/components/inventory/mobile-ornament-grid.tsx")
+    ).toContain("No ornaments found");
+    expect(
+      src("../src/components/invoices/mobile-invoice-list.tsx")
+    ).toContain("No invoices found");
+    expect(
+      src("../src/components/customers/mobile-customer-list.tsx")
+    ).toContain("No clients found");
+    expect(src("../src/components/gold-ledger/mobile-gold-ledger.tsx")).toContain(
+      "No loans found"
+    );
+    // CTA pins: each empty state reuses its list's create-route target
+    // (Task 3 /ornaments/new pattern).
+    expect(
+      src("../src/components/inventory/mobile-ornament-grid.tsx")
+    ).toContain('data-testid="mobile-empty-add-ornament"');
+    expect(
+      src("../src/components/invoices/mobile-invoice-list.tsx")
+    ).toContain('data-testid="mobile-empty-new-sale"');
+    expect(
+      src("../src/components/customers/mobile-customer-list.tsx")
+    ).toContain('data-testid="mobile-empty-add-client"');
+    expect(src("../src/components/gold-ledger/mobile-gold-ledger.tsx")).toContain(
+      'data-testid="mobile-empty-new-loan"'
+    );
+  });
+
+  test("notifyMobile variant: small + bottom-docked + short; mobile call sites use it", async () => {
+    // Variant config pins: shorter than antd's default 3s duration, small
+    // copy, bottom-docked above the tab bar.
+    const helper = src("../src/utils/mobile-notify.ts");
+    expect(helper).toContain("notifyMobile");
+    expect(helper).toMatch(/MOBILE_TOAST_DURATION\s*=\s*2/);
+    expect(helper).toContain("mobile-toast");
+    expect(helper).toMatch(/MOBILE_TOAST_BOTTOM_OFFSET\s*=\s*84/);
+    expect(helper).toMatch(/fontSize:\s*12/);
+    const css = src("../src/index.css");
+    expect(css).toContain(".mobile-toast");
+    expect(css).toMatch(/bottom:\s*84px/);
+    // Applied at mobile call sites: all four mobile message.* users go through
+    // the helper; no bare antd message toast calls remain in them.
+    for (const rel of [
+      "../src/pages/pos/mobile-pos.tsx",
+      "../src/components/gold-ledger/mobile-gold-ledger.tsx",
+      "../src/components/invoices/mobile-invoice-list.tsx",
+      "../src/components/metal-rates/mobile-metal-rates-bar.tsx",
+    ]) {
+      const body = src(rel);
+      expect(body).toContain("notifyMobile");
+      expect(body).toMatch(/utils\/mobile-notify/);
+      expect(body).not.toMatch(/message\.(error|success|warning|info)/);
+    }
+    // Desktop behavior unchanged: desktop surfaces never import the helper.
+    for (const rel of [
+      "../src/components/invoices/sale-form.tsx",
+      "../src/components/inventory/ornaments/ornament-drawer.tsx",
+      "../src/pages/gold-ledger/index.tsx",
+    ]) {
+      expect(src(rel)).not.toContain("notifyMobile");
+    }
+  });
+
+  test("390px: empty ornaments grid shows copy + Add-ornament CTA to /ornaments/new", async ({
+    page,
+  }) => {
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (
+        (r.url().includes("/rest/v1/ornaments") ||
+          r.url().includes("/rest/v1/customers")) &&
+        r.method() === "POST"
+      )
+        posts.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await setupEmptyResource(page, "**/rest/v1/ornaments*");
+    await page.goto("/ornaments");
+    await expect(page.locator('[data-testid="mobile-ornaments"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("No ornaments found")).toBeVisible();
+    const cta = page.locator('[data-testid="mobile-empty-add-ornament"]');
+    await expect(cta).toBeVisible();
+    expect((await cta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await cta.click();
+    await expect(page).toHaveURL(/\/ornaments\/new/);
+    await expect(
+      page.locator('[data-testid="mobile-ornament-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    expect(posts).toHaveLength(0);
+  });
+
+  test("390px: empty invoices list shows copy + New-sale CTA to /sales/new", async ({
+    page,
+  }) => {
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (
+        r.url().includes("/rest/v1/invoices") &&
+        r.method() === "POST"
+      )
+        posts.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await setupEmptyResource(page, "**/rest/v1/invoices*");
+    await page.goto("/invoices");
+    await expect(page.locator('[data-testid="mobile-invoices"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("No invoices found")).toBeVisible();
+    const cta = page.locator('[data-testid="mobile-empty-new-sale"]');
+    await expect(cta).toBeVisible();
+    expect((await cta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await cta.click();
+    await expect(page).toHaveURL(/\/sales\/new/);
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    expect(posts).toHaveLength(0);
+  });
+
+  test("390px: empty customers + loans lists show copy + create CTAs", async ({
+    page,
+  }) => {
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (r.method() === "POST") posts.push(r.url());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page, []);
+    await setupEmptyResource(page, "**/rest/v1/customers*");
+    await page.goto("/customers");
+    await expect(page.locator('[data-testid="mobile-customers"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("No clients found")).toBeVisible();
+    const customerCta = page.locator('[data-testid="mobile-empty-add-client"]');
+    await expect(customerCta).toBeVisible();
+    expect((await customerCta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+      44
+    );
+    await customerCta.click();
+    await expect(page).toHaveURL(/\/customers\/new/);
+    await expect(
+      page.locator('[data-testid="mobile-customer-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+
+    await page.goto("/gold-ledger");
+    await expect(
+      page.locator('[data-testid="mobile-gold-ledger"]')
+    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("No loans found")).toBeVisible();
+    const loanCta = page.locator('[data-testid="mobile-empty-new-loan"]');
+    await expect(loanCta).toBeVisible();
+    expect((await loanCta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await loanCta.click();
+    await expect(page).toHaveURL(/\/gold-ledger\/new/);
+    await expect(
+      page.locator('[data-testid="mobile-gold-loan-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    expect(posts).toHaveLength(0);
+  });
+
+  test("390px: empty categories show No categories yet", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await setupEmptyResource(page, "**/rest/v1/ornament_categories*");
+    await page.goto("/categories");
+    await expect(page.getByText("No categories yet")).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("No Data")).toHaveCount(0);
+  });
+
+  test("390px: empty-submit validation toast fires mobile variant, blocks POST", async ({
+    page,
+  }) => {
+    // Config half: the quick-add validation path goes through notifyMobile
+    // (small + bottom-docked + 2s), not bare antd message.
+    const pos = src("../src/pages/pos/mobile-pos.tsx");
+    expect(pos).toContain("notifyMobile");
+    expect(pos).toContain("Please enter client name");
+
+    // Behavioral half (mock-auth, no writes): empty quick-add save is blocked
+    // client-side with zero POST traffic — the same submit that fires the
+    // validation toast.
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (
+        r.url().includes("/rest/v1/customers") &&
+        r.method() === "POST"
+      )
+        posts.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await page.getByText("Select or Add Customer").click();
+    await page.getByRole("button", { name: /quick add/i }).click();
+    await page.getByRole("button", { name: /save & select client/i }).click();
+    await page.waitForTimeout(800);
+    expect(posts).toHaveLength(0);
+    await expect(
+      page.locator('[data-testid="mobile-pos-quickadd-address"]')
+    ).toBeVisible();
+  });
+});

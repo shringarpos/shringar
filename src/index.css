@@ -114,6 +114,25 @@ select:-webkit-autofill:active,
   background-color: #141414 !important;
 }
 
+/* ── Mobile toasts: small + bottom-docked above the tab bar ────────────── */
+/* notifyMobile (src/utils/mobile-notify.ts) tags its notices with
+   .mobile-toast; the class re-docks the notice to the bottom, clear of the
+   fixed bottom tab bar (z-index 999, ~70px tall incl. safe-area). Desktop
+   surfaces use bare antd message and never carry this class, so their
+   top-docked behavior is unchanged. */
+.ant-message .mobile-toast {
+  position: fixed;
+  bottom: 84px;
+  left: 0;
+  right: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  max-width: min(360px, calc(100vw - 32px));
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 12px;
+}
+
 /* ── Recharts Bar Chart Hover Cursor Highlight ────────────────────────── */
 /* Subtle grayish highlight instead of white glare */
 .recharts-tooltip-cursor,

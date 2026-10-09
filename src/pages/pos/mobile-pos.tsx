@@ -11,7 +11,6 @@ import {
   Drawer,
   InputNumber,
   Switch,
-  message,
   theme,
   Spin,
   Empty,
@@ -36,6 +35,7 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { useShopCheck } from "../../hooks/use-shop-check";
+import { notifyMobile } from "../../utils/mobile-notify";
 import type {
   ICustomer,
   IOrnamentWithDetails,
@@ -276,15 +276,15 @@ export const MobilePOS: React.FC<{
   // Handler for Quick Client Creation inside the POS drawer
   const handleCreateQuickClient = async () => {
     if (!quickClientName.trim()) {
-      message.error("Please enter client name");
+      notifyMobile.error("Please enter client name");
       return;
     }
     if (!quickClientAddress.trim()) {
-      message.error("Please enter client address");
+      notifyMobile.error("Please enter client address");
       return;
     }
     if (!quickClientPhone.trim()) {
-      message.error("Please enter client phone number");
+      notifyMobile.error("Please enter client phone number");
       return;
     }
     if (!shopId) return;
@@ -307,7 +307,7 @@ export const MobilePOS: React.FC<{
       const newId = res?.data?.id;
       if (newId) {
         setSelectedCustomerId(newId);
-        message.success(`Client ${quickClientName} added and selected!`);
+        notifyMobile.success(`Client ${quickClientName} added and selected!`);
       }
       setShowQuickAddClient(false);
       setQuickClientName("");
@@ -316,7 +316,7 @@ export const MobilePOS: React.FC<{
       await customersQuery?.refetch();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create client";
-      message.error(msg);
+      notifyMobile.error(msg);
     } finally {
       setCreatingClient(false);
     }
@@ -354,21 +354,21 @@ export const MobilePOS: React.FC<{
       await customersQuery?.refetch();
       setCustomerDrawerOpen(false);
     } catch {
-      message.error("Could not set walk-in customer");
+      notifyMobile.error("Could not set walk-in customer");
     }
   };
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
-      message.error("Cart is empty");
+      notifyMobile.error("Cart is empty");
       return;
     }
     if (!shopId) {
-      message.error("No active shop found");
+      notifyMobile.error("No active shop found");
       return;
     }
     if (!selectedCustomerId) {
-      message.warning("Please select a client for this invoice");
+      notifyMobile.warning("Please select a client for this invoice");
       setCheckoutDrawerOpen(false);
       setCustomerDrawerOpen(true);
       return;
@@ -441,7 +441,7 @@ export const MobilePOS: React.FC<{
         }
       }
 
-      message.success("Invoice created successfully!");
+      notifyMobile.success("Invoice created successfully!");
       setCart([]);
       setSaleNotes("");
       setIncludeMaking(true);
@@ -450,7 +450,7 @@ export const MobilePOS: React.FC<{
       navigate(`/invoices/show/${newInvId}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create invoice";
-      message.error(msg);
+      notifyMobile.error(msg);
     } finally {
       setSubmitting(false);
     }

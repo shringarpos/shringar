@@ -404,6 +404,7 @@ function DesktopGoldLedger() {
                     rowKey="id"
                     size="small"
                     scroll={{ x: 1650 }}
+                    locale={{ emptyText: "No loans yet" }}
                     onChange={(pagination, _columnFilters, sorter, extra) => {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}

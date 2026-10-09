@@ -524,6 +524,7 @@ const OrnamentList: React.FC = () => {
                     rowKey="id"
                     size="small"
                     scroll={{ x: 1600 }}
+                    locale={{ emptyText: "No ornaments yet" }}
                     onChange={(pagination, _columnFilters, sorter, extra) => {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}

@@ -184,9 +184,18 @@ export const MobileCustomerList: React.FC = () => {
           <Empty
             description={
               <div style={{ padding: "16px 0" }}>
-                <Text type="secondary">No clients found matching your query</Text>
-                {searchTerm && (
-                  <div style={{ marginTop: 8 }}>
+                <Text type="secondary">No clients found</Text>
+                <div style={{ marginTop: 8, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                  <Button
+                    data-testid="mobile-empty-add-client"
+                    type="primary"
+                    size="small"
+                    onClick={handleCreateNew}
+                    style={{ height: 44, padding: "0 14px", fontSize: 12 }}
+                  >
+                    Add client
+                  </Button>
+                  {searchTerm && (
                     <Button
                       size="small"
                       onClick={() => setSearchTerm("")}
@@ -194,8 +203,8 @@ export const MobileCustomerList: React.FC = () => {
                     >
                       Clear Search
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             }
           />

@@ -317,7 +317,7 @@ const CustomerList: React.FC = () => {
                 </div>
 
                 {/* Table (inner scroll + titled ellipsis for 1366) */}
-                <Table {...tableProps} rowKey="id" size="middle" scroll={{ x: 1200 }}>
+                <Table {...tableProps} rowKey="id" size="middle" scroll={{ x: 1200 }} locale={{ emptyText: "No customers yet" }}>
                     <Table.Column
                         title="Code"
                         dataIndex="customer_code"

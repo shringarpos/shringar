@@ -292,6 +292,7 @@ const CategoryList: React.FC = () => {
                 ) : (
                 <List
                     {...listProps}
+                    locale={{ emptyText: "No categories yet" }}
                     grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4, xl: 4, xxl: 4 }}
                     renderItem={(item: ICategory) => (
                         <List.Item>
@@ -364,6 +365,7 @@ const MobileCategoryRows: React.FC<{
     return (
         <List
             {...listProps}
+            locale={{ emptyText: "No categories yet" }}
             renderItem={(item: ICategory) => {
                 const count = countByCategory[item.id] ?? 0;
                 return (
