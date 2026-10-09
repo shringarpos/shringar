@@ -42,6 +42,18 @@ const abbrRs = (paise: number): string => {
   return `₹${rs.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 };
 
+function getInvoicePaymentStatus(inv: IInvoiceRow): "PAID" | "PARTIAL" | "UNPAID" {
+  if (inv.payment_status) {
+    const s = inv.payment_status.toUpperCase();
+    if (s === "PAID" || s === "PARTIAL" || s === "UNPAID") return s;
+  }
+  const balance = inv.balance_amount_paise ?? 0;
+  const total = inv.total_amount_paise ?? 0;
+  if (balance <= 0) return "PAID";
+  if (total > 0 && balance < total) return "PARTIAL";
+  return "UNPAID";
+}
+
 export const MobileInvoiceList: React.FC = () => {
   const { token } = theme.useToken();
   const navigate = useNavigate();
@@ -80,7 +92,8 @@ export const MobileInvoiceList: React.FC = () => {
 
       if (statusFilter === "ALL") return true;
       if (statusFilter === "CANCELLED") return !!inv.is_cancelled;
-      return (inv.payment_status || "UNPAID").toUpperCase() === statusFilter && !inv.is_cancelled;
+      const status = getInvoicePaymentStatus(inv);
+      return status === statusFilter && !inv.is_cancelled;
     });
   }, [invoices, searchTerm, statusFilter]);
 
@@ -240,8 +253,9 @@ export const MobileInvoiceList: React.FC = () => {
           </Empty>
         ) : (
           filteredInvoices.map((inv) => {
-            const isPaid = inv.payment_status === "PAID";
-            const isPartial = inv.payment_status === "PARTIAL";
+            const status = getInvoicePaymentStatus(inv);
+            const isPaid = status === "PAID";
+            const isPartial = status === "PARTIAL";
             const isCancelled = !!inv.is_cancelled;
             const custName = inv.customer?.name || "Walk-in Customer";
             const phone = inv.customer?.phone;
@@ -316,7 +330,7 @@ export const MobileInvoiceList: React.FC = () => {
                       border: "none",
                     }}
                   >
-                    {isCancelled ? "CANCELLED" : inv.payment_status || "UNPAID"}
+                    {isCancelled ? "CANCELLED" : status}
                   </Tag>
                 </div>
 
