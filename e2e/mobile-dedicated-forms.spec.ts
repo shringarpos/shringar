@@ -47,10 +47,11 @@ test.describe("Mobile Dedicated Full-Screen Forms Audit", () => {
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
 
-    // Verify sections exist
+    // Verify sections exist (headers renamed by Task 1: GSTIN/PAN removed,
+    // customer form now ships ADDRESS + REFERRAL sections only).
     await expect(page.getByText("PRIMARY CONTACT")).toBeVisible();
-    await expect(page.getByText("ADDRESS & TAX / ID")).toBeVisible();
-    await expect(page.getByText("REFERRAL & NOTES")).toBeVisible();
+    await expect(page.getByText("ADDRESS", { exact: true })).toBeVisible();
+    await expect(page.getByText("REFERRAL", { exact: true })).toBeVisible();
 
     // Capture screenshot for subagent audit
     await page.screenshot({
