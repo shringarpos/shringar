@@ -12,6 +12,8 @@ import {
     Statistic,
     Tag,
     Typography,
+    InputNumber,
+    Modal,
 } from "antd";
 import {
     CalendarOutlined,
@@ -21,6 +23,8 @@ import {
     InboxOutlined,
 } from "@ant-design/icons";
 import type { IOrnamentWithDetails } from "../../../libs/interfaces";
+import { supabaseClient } from "../../../providers/supabase-client";
+import { notifyMobile } from "../../../utils/mobile-notify";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +41,7 @@ interface OrnamentShowDrawerProps {
     open: boolean;
     onClose: () => void;
     onEdit?: () => void;
+    onQuantityUpdated?: (newQty: number) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -46,10 +51,43 @@ export const OrnamentShowDrawer: React.FC<OrnamentShowDrawerProps> = ({
     open,
     onClose,
     onEdit,
+    onQuantityUpdated,
 }) => {
     const go = useGo();
+    const [qtyModalOpen, setQtyModalOpen] = React.useState(false);
+    const [editQty, setEditQty] = React.useState(record?.quantity ?? 1);
+    const [currentQty, setCurrentQty] = React.useState(record?.quantity ?? 1);
+    const [updatingQty, setUpdatingQty] = React.useState(false);
+
+    React.useEffect(() => {
+        if (record) {
+            setCurrentQty(record.quantity ?? 1);
+            setEditQty(record.quantity ?? 1);
+        }
+    }, [record]);
 
     if (!record) return null;
+
+    const handleSaveQty = async () => {
+        if (!record) return;
+        setUpdatingQty(true);
+        try {
+            const { error } = await supabaseClient
+                .from("ornaments")
+                .update({ quantity: editQty })
+                .eq("id", record.id);
+            if (error) throw error;
+            setCurrentQty(editQty);
+            record.quantity = editQty;
+            onQuantityUpdated?.(editQty);
+            notifyMobile.success(`Stock updated to ${editQty} pieces`);
+            setQtyModalOpen(false);
+        } catch (err: any) {
+            notifyMobile.error(err.message || "Failed to update quantity");
+        } finally {
+            setUpdatingQty(false);
+        }
+    };
 
     const handleViewInvoices = () => {
         onClose();
@@ -136,15 +174,35 @@ export const OrnamentShowDrawer: React.FC<OrnamentShowDrawerProps> = ({
                     />
                 </Col>
                 <Col xs={8}>
-                    <Statistic
-                        title="Quantity"
-                        value={record.quantity}
-                        suffix="pcs"
-                        valueStyle={{
-                            fontSize: 18,
-                            color: record.quantity <= 2 ? "#ff4d4f" : undefined,
-                        }}
-                    />
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <Statistic
+                            title="Quantity"
+                            value={currentQty}
+                            suffix="pcs"
+                            valueStyle={{
+                                fontSize: 18,
+                                color: currentQty <= 2 ? "#ff4d4f" : undefined,
+                            }}
+                        />
+                        <Button
+                            type="dashed"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => {
+                                setEditQty(currentQty);
+                                setQtyModalOpen(true);
+                            }}
+                            style={{
+                                marginTop: 4,
+                                height: 26,
+                                fontSize: 11,
+                                borderRadius: 6,
+                                padding: "0 6px",
+                            }}
+                        >
+                            Update Qty
+                        </Button>
+                    </div>
                 </Col>
                 <Col xs={8}>
                     <Statistic
@@ -238,6 +296,42 @@ export const OrnamentShowDrawer: React.FC<OrnamentShowDrawerProps> = ({
                 <span>Created: {new Date(record.created_at).toLocaleString("en-IN")}</span>
                 <span>Updated: {new Date(record.updated_at).toLocaleString("en-IN")}</span>
             </Space>
+            <Modal
+                title="Update Stock Quantity"
+                open={qtyModalOpen}
+                onCancel={() => setQtyModalOpen(false)}
+                onOk={handleSaveQty}
+                confirmLoading={updatingQty}
+                okText="Save Quantity"
+                centered
+                width={340}
+            >
+                <div style={{ padding: "14px 0", textAlign: "center" }}>
+                    <Typography.Text type="secondary" style={{ display: "block", marginBottom: 14 }}>
+                        {record.name}
+                    </Typography.Text>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                        <Button
+                            onClick={() => setEditQty((prev) => Math.max(0, prev - 1))}
+                            style={{ width: 44, height: 44, fontSize: 18, borderRadius: 10 }}
+                        >
+                            -
+                        </Button>
+                        <InputNumber
+                            min={0}
+                            value={editQty}
+                            onChange={(val) => setEditQty(val ?? 0)}
+                            style={{ width: 80, height: 44, fontSize: 18, textAlign: "center", borderRadius: 10 }}
+                        />
+                        <Button
+                            onClick={() => setEditQty((prev) => prev + 1)}
+                            style={{ width: 44, height: 44, fontSize: 18, borderRadius: 10 }}
+                        >
+                            +
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </Drawer>
     );
 };

@@ -6,6 +6,7 @@ import {
   Popover,
   Space,
   Typography,
+  Grid,
   theme,
 } from "antd";
 import dayjs from "dayjs";
@@ -42,6 +43,9 @@ export const HeaderRatesWidget: React.FC = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const isDark = useIsDark();
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.md === false;
+  const { token } = useToken();
   const { shops } = useShopCheck();
   const shopId = shops?.[0]?.id;
   const today = dayjs().format("YYYY-MM-DD");
@@ -142,10 +146,53 @@ export const HeaderRatesWidget: React.FC = () => {
       onOpenChange={setOpen}
       placement="bottomRight"
     >
-      <Button type="text" size="small" style={{ cursor: "pointer" }}>
+      <Button
+        type="text"
+        size="small"
+        style={{
+          cursor: "pointer",
+          padding: isMobile ? "2px 8px" : "4px 8px",
+          height: isMobile ? 32 : "auto",
+          borderRadius: 16,
+          backgroundColor: isMobile ? (isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)") : "transparent",
+          border: isMobile ? `1px solid ${token.colorBorderSecondary}` : "none",
+          display: "inline-flex",
+          alignItems: "center",
+          maxWidth: isMobile ? 190 : "none",
+          overflow: "hidden",
+        }}
+      >
         {metals.map((m: IMetalType, i: number) => {
           const accent = metalAccent(m.name, isDark);
           const r = getLatestRate(rates, m.id);
+          const isGold = m.name.toLowerCase().includes("gold");
+
+          if (isMobile) {
+            let compactVal = "—";
+            if (r) {
+              if (isGold) {
+                const per10gRs = Math.round((r.rate_per_gram_paise * 10) / 100);
+                compactVal = per10gRs >= 1000 ? `${(per10gRs / 1000).toFixed(per10gRs % 1000 === 0 ? 0 : 1)}k` : `${per10gRs}`;
+              } else {
+                const perGRs = Math.round(r.rate_per_gram_paise / 100);
+                compactVal = `${perGRs}`;
+              }
+            }
+
+            return (
+              <React.Fragment key={m.id}>
+                {i > 0 && (
+                  <span style={{ margin: "0 5px", opacity: 0.35, fontSize: 11 }}>•</span>
+                )}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: accent }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: accent }}>{isGold ? "Au" : "Ag"}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: token.colorText }}>₹{compactVal}</span>
+                </span>
+              </React.Fragment>
+            );
+          }
+
           const rateStr = r
             ? formatRateDisplay(r.rate_per_gram_paise, m.name)
             : "—";

@@ -9,6 +9,7 @@ import {
   Popover,
   Space,
   Switch,
+  Grid,
   theme,
   Typography,
 } from "antd";
@@ -40,6 +41,7 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
   sticky = true,
 }) => {
   const { token } = useToken();
+  const screens = Grid.useBreakpoint();
   const { data: user } = useGetIdentity<IUser>();
   const { mode, setMode } = useContext(ColorModeContext);
   const { mutate: logout } = useLogout();
@@ -65,7 +67,7 @@ export const Header: React.FC<RefineThemedLayoutHeaderProps> = ({
     backgroundColor: token.colorBgElevated,
     display: "flex",
     alignItems: "center",
-    padding: "0px 24px",
+    padding: !screens.md ? "0px 12px" : "0px 24px",
     height: "64px",
   };
 

@@ -14,6 +14,7 @@ import {
   Modal,
   notification,
   Spin,
+  Tooltip,
 } from "antd";
 import {
   ArrowLeft,
@@ -30,10 +31,11 @@ import {
   FileText,
   Calendar,
   Layers,
+  Info,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { useShopCheck } from "../../../hooks/use-shop-check";
-import type { IOrnament, ICategory, IMetalType, IPurityLevel } from "../../../libs/interfaces";
+import type { IOrnament, ICategory, IMetalType, IPurityLevel, IMetalRate } from "../../../libs/interfaces";
 import { ColorModeContext } from "../../../contexts/color-mode";
 
 const { Title, Text } = Typography;
@@ -92,6 +94,8 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [debouncedSku, setDebouncedSku] = useState("");
+  const [rateManuallyEdited, setRateManuallyEdited] = useState(action === "edit");
+  const [makingManuallyEdited, setMakingManuallyEdited] = useState(action === "edit");
 
   // Watch form fields for dynamic calculations and conditional styling
   const selectedMetalTypeId = Form.useWatch("metal_type_id", form);
@@ -165,6 +169,31 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
     pagination: { mode: "off" },
   });
 
+  // Load today's metal rates for pre-populating rate
+  const today = dayjs().format("YYYY-MM-DD");
+  const { query: ratesQuery } = useList<IMetalRate>({
+    resource: "ornament_rates",
+    filters: [
+      ...(shopId ? [{ field: "shop_id", operator: "eq" as const, value: shopId }] : []),
+      { field: "rate_date", operator: "eq", value: today },
+    ],
+    pagination: { mode: "off" },
+    queryOptions: { enabled: !!shopId },
+  });
+  const todayRates = (ratesQuery?.data?.data ?? []) as IMetalRate[];
+
+  // Load active making charges
+  const { query: makingChargesQuery } = useList<any>({
+    resource: "making_charges",
+    filters: [
+      ...(shopId ? [{ field: "shop_id", operator: "eq" as const, value: shopId }] : []),
+      { field: "is_active", operator: "eq", value: true },
+    ],
+    pagination: { mode: "off" },
+    queryOptions: { enabled: !!shopId },
+  });
+  const activeMakingCharges = (makingChargesQuery?.data?.data ?? []);
+
   // Default to Gold if creating and not set
   useEffect(() => {
     if (action === "create" && metalTypes.length > 0 && !form.getFieldValue("metal_type_id")) {
@@ -206,6 +235,27 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
       });
     }
   }, [ornament, action, form]);
+
+  // Auto-populate metal rate according to selected metal on create
+  useEffect(() => {
+    if (action !== "create" || rateManuallyEdited || !selectedMetalTypeId) return;
+    const rateItem = todayRates.find((r) => r.metal_type_id === selectedMetalTypeId);
+    if (rateItem && rateItem.rate_per_gram_paise > 0) {
+      form.setFieldValue("purchase_metal_rate_rs", Math.round(rateItem.rate_per_gram_paise / 100));
+    }
+  }, [action, rateManuallyEdited, selectedMetalTypeId, todayRates, form]);
+
+  // Auto-populate making charges if active setting exists
+  useEffect(() => {
+    if (action !== "create" || makingManuallyEdited || !selectedMetalTypeId || !selectedPurityId) return;
+    const mc = activeMakingCharges.find(
+      (m: any) => m.metal_type_id === selectedMetalTypeId && m.purity_level_id === selectedPurityId
+    );
+    if (mc && mc.charge_per_gram_paise > 0 && weightG && weightG > 0) {
+      const computedMcRs = Math.round((weightG * mc.charge_per_gram_paise) / 100);
+      form.setFieldValue("purchase_making_charge_rs", computedMcRs);
+    }
+  }, [action, makingManuallyEdited, selectedMetalTypeId, selectedPurityId, weightG, activeMakingCharges, form]);
 
   // SKU auto-generation from name (desktop parity: stops once manually edited)
   useEffect(() => {
@@ -621,9 +671,16 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             <Form.Item
               name="sku"
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>SKU Code</span>}
+              label={
+                <span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  SKU Code
+                  <Tooltip title="Auto-generated from name. Edit to customise.">
+                    <Info size={13} style={{ color: themeStyles.textSecondary, cursor: "pointer" }} />
+                  </Tooltip>
+                </span>
+              }
               validateStatus={skuTaken ? "error" : ""}
-              help={skuTaken ? "SKU already exists. Choose a different one." : "Auto-generated from name. Edit to customise."}
+              help={skuTaken ? "SKU already exists. Choose a different one." : undefined}
               style={{ marginBottom: 0 }}
             >
               <Input
@@ -728,7 +785,14 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             <Form.Item
               name="purchase_metal_rate_rs"
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Rate / Gram (₹)</span>}
+              label={
+                <span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  Rate / Gram (₹)
+                  <Tooltip title="Auto-filled from today's active rate for this metal. You can edit this anytime.">
+                    <Info size={13} style={{ color: themeStyles.textSecondary, cursor: "pointer" }} />
+                  </Tooltip>
+                </span>
+              }
               style={{ marginBottom: 0 }}
             >
               <InputNumber
@@ -736,12 +800,20 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
                 min={0}
                 style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
                 prefix="₹"
+                onChange={() => setRateManuallyEdited(true)}
               />
             </Form.Item>
 
             <Form.Item
               name="purchase_making_charge_rs"
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Making Charge (₹)</span>}
+              label={
+                <span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  Making Charge (₹)
+                  <Tooltip title="Pre-calculated from active making charges or custom. You can edit this anytime.">
+                    <Info size={13} style={{ color: themeStyles.textSecondary, cursor: "pointer" }} />
+                  </Tooltip>
+                </span>
+              }
               style={{ marginBottom: 0 }}
             >
               <InputNumber
@@ -749,6 +821,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
                 min={0}
                 style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
                 prefix="₹"
+                onChange={() => setMakingManuallyEdited(true)}
               />
             </Form.Item>
           </div>
@@ -844,70 +917,83 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
             />
           </Form.Item>
 
-          <Form.Item name="quantity" label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Stock Quantity</span>} style={{ marginBottom: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button
-                type="button"
-                onClick={() => form.setFieldValue("quantity", Math.max(0, (quantityValue || 1) - 1))}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
-                  border: themeStyles.buttonSecondaryBorder,
-                  backgroundColor: themeStyles.buttonSecondaryBg,
-                  fontSize: 22,
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: themeStyles.textPrimary,
-                }}
-              >
-                -
-              </button>
-
-              <div data-testid="mobile-stock-input" style={{ display: "contents" }}>
-              {/* Scoped fix: center the inner input text with even padding.
-                  A wrapper-level textAlign never reaches
-                  .ant-input-number-input, and this antd InputNumber exposes
-                  no `styles.input` prop — so a scoped rule is required. */}
-              <style>{`.mobile-stock-centered .ant-input-number-input { text-align: center; padding: 0 8px; }`}</style>
-              <InputNumber
-                className="mobile-stock-centered"
-                min={0}
-                value={quantityValue}
-                onChange={(val) => form.setFieldValue("quantity", val ?? 0)}
-                style={{ width: 84, height: 48, borderRadius: 14, fontSize: 17, fontWeight: 700 }}
-              />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => form.setFieldValue("quantity", (quantityValue || 0) + 1)}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
-                  border: themeStyles.buttonSecondaryBorder,
-                  backgroundColor: themeStyles.buttonSecondaryBg,
-                  fontSize: 22,
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  color: themeStyles.textPrimary,
-                }}
-              >
-                +
-              </button>
-
-              <span style={{ fontSize: 13, color: themeStyles.textSecondary, fontWeight: 600 }}>
-                {quantityValue === 1 ? "1 piece" : `${quantityValue} pieces`}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 14px",
+              borderRadius: 14,
+              backgroundColor: themeStyles.subCardBg,
+              border: themeStyles.subCardBorder,
+            }}
+          >
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, display: "block" }}>
+                Stock Quantity
+              </span>
+              <span style={{ fontSize: 12, color: themeStyles.textSecondary, fontWeight: 500 }}>
+                {quantityValue === 1 ? "1 piece in stock" : `${quantityValue || 0} pieces in stock`}
               </span>
             </div>
-          </Form.Item>
+
+            <Form.Item name="quantity" noStyle>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => form.setFieldValue("quantity", Math.max(0, (quantityValue || 1) - 1))}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    border: themeStyles.buttonSecondaryBorder,
+                    backgroundColor: themeStyles.buttonSecondaryBg,
+                    fontSize: 20,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: themeStyles.textPrimary,
+                  }}
+                >
+                  -
+                </button>
+
+                <div data-testid="mobile-stock-input" style={{ display: "contents" }}>
+                  <style>{`.mobile-stock-centered .ant-input-number-input { text-align: center; padding: 0 4px; }`}</style>
+                  <InputNumber
+                    className="mobile-stock-centered"
+                    min={0}
+                    value={quantityValue}
+                    onChange={(val) => form.setFieldValue("quantity", val ?? 0)}
+                    style={{ width: 68, height: 40, borderRadius: 12, fontSize: 16, fontWeight: 700 }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => form.setFieldValue("quantity", (quantityValue || 0) + 1)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    border: themeStyles.buttonSecondaryBorder,
+                    backgroundColor: themeStyles.buttonSecondaryBg,
+                    fontSize: 20,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: themeStyles.textPrimary,
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            </Form.Item>
+          </div>
         </div>
       </Form>
 

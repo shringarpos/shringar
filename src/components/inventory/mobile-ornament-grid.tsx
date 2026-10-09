@@ -390,15 +390,30 @@ export const MobileOrnamentGrid: React.FC = () => {
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{weightG} g</span>
                   </div>
 
-                  {isOutOfStock ? (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: token.colorError }}>
-                      Out of stock
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 11, fontWeight: 500, color: token.colorTextSecondary }}>
-                      Qty: <strong>{orn.quantity}</strong>
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowOrnament(orn);
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "3px 8px",
+                      borderRadius: 8,
+                      border: `1px solid ${isOutOfStock ? token.colorErrorBorder : token.colorBorderSecondary}`,
+                      backgroundColor: token.colorBgLayout,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: isOutOfStock ? token.colorError : token.colorTextSecondary,
+                      cursor: "pointer",
+                    }}
+                    title="Click to view & update stock quantity"
+                  >
+                    <span>Qty: <strong>{orn.quantity ?? 0}</strong></span>
+                    <span style={{ color: token.colorPrimary, marginLeft: 2, fontSize: 12 }}>✎</span>
+                  </button>
                 </div>
               </div>
             );
@@ -411,6 +426,7 @@ export const MobileOrnamentGrid: React.FC = () => {
         open={!!showOrnament}
         record={showOrnament}
         onClose={() => setShowOrnament(null)}
+        onQuantityUpdated={() => query.refetch()}
         onEdit={() => {
           const target = showOrnament;
           setShowOrnament(null);

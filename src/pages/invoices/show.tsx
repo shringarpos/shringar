@@ -69,6 +69,7 @@ export default function InvoiceShow() {
   const navigate = useNavigate();
   const { notification } = App.useApp();
   const screens = useBreakpoint();
+  const isMobile = screens.md === false;
   const { token } = theme.useToken();
 
   const { data: identity } = useGetIdentity<{ id: string }>();
@@ -296,35 +297,83 @@ export default function InvoiceShow() {
           )}
         </Space>
 
-        <Space wrap>
-          {!invoice.is_cancelled && balancePaise > 0 && (
-            <Button
-              type="primary"
-              icon={<DollarOutlined />}
-              onClick={() => setRecordPaymentOpen(true)}
+        {isMobile ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+            {!invoice.is_cancelled && balancePaise > 0 && (
+              <Button
+                type="primary"
+                icon={<DollarOutlined />}
+                block
+                onClick={() => setRecordPaymentOpen(true)}
+              >
+                Record Payment
+              </Button>
+            )}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: invoice.is_cancelled ? "1fr" : "1fr 1fr 1fr",
+                gap: 6,
+                width: "100%",
+              }}
             >
-              Record Payment
-            </Button>
-          )}
-          <DownloadInvoiceButton invoiceId={invoice.id} />
-          {!invoice.is_cancelled && (
-            <>
+              <DownloadInvoiceButton
+                invoiceId={invoice.id}
+                label="PDF"
+                style={{ width: "100%", justifyContent: "center", padding: "4px 6px", fontSize: 13 }}
+              />
+              {!invoice.is_cancelled && (
+                <>
+                  <Button
+                    icon={<CopyOutlined />}
+                    onClick={() => navigate(`/sales/new?clone=${invoice.id}`)}
+                    style={{ width: "100%", justifyContent: "center", padding: "4px 6px", fontSize: 13 }}
+                  >
+                    Clone
+                  </Button>
+                  <Button
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={() => setCancelModalOpen(true)}
+                    style={{ width: "100%", justifyContent: "center", padding: "4px 6px", fontSize: 13 }}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <Space wrap>
+            {!invoice.is_cancelled && balancePaise > 0 && (
               <Button
-                icon={<CopyOutlined />}
-                onClick={() => navigate(`/sales/new?clone=${invoice.id}`)}
+                type="primary"
+                icon={<DollarOutlined />}
+                onClick={() => setRecordPaymentOpen(true)}
               >
-                Clone Sale
+                Record Payment
               </Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => setCancelModalOpen(true)}
-              >
-                Cancel Bill
-              </Button>
-            </>
-          )}
-        </Space>
+            )}
+            <DownloadInvoiceButton invoiceId={invoice.id} />
+            {!invoice.is_cancelled && (
+              <>
+                <Button
+                  icon={<CopyOutlined />}
+                  onClick={() => navigate(`/sales/new?clone=${invoice.id}`)}
+                >
+                  Clone Sale
+                </Button>
+                <Button
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  onClick={() => setCancelModalOpen(true)}
+                >
+                  Cancel Bill
+                </Button>
+              </>
+            )}
+          </Space>
+        )}
       </div>
 
       <Row gutter={[16, 16]}>

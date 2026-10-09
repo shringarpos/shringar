@@ -114,23 +114,31 @@ select:-webkit-autofill:active,
   background-color: #141414 !important;
 }
 
-/* ── Mobile toasts: small + bottom-docked above the tab bar ────────────── */
-/* notifyMobile (src/utils/mobile-notify.ts) tags its notices with
-   .mobile-toast; the class re-docks the notice to the bottom, clear of the
-   fixed bottom tab bar (z-index 999, ~70px tall incl. safe-area). Desktop
-   surfaces use bare antd message and never carry this class, so their
-   top-docked behavior is unchanged. */
-.ant-message .mobile-toast {
-  position: fixed;
-  bottom: 84px;
-  left: 0;
-  right: 0;
-  padding-left: 16px;
-  padding-right: 16px;
-  max-width: min(360px, calc(100vw - 32px));
-  margin-left: auto;
-  margin-right: auto;
-  font-size: 12px;
+/* ── Mobile Island Notifications: sleek top-docked capsule ────────────── */
+/* Sleek floating capsule at top-center, clear of bottom action docks, tab bars, and drawers */
+.ant-message .mobile-capsule-notice .ant-message-notice-content,
+.ant-message .mobile-toast .ant-message-notice-content {
+  border-radius: 9999px !important;
+  padding: 8px 18px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+@media (max-width: 768px) {
+  .ant-message {
+    top: 16px !important;
+    z-index: 99999 !important;
+    pointer-events: none;
+  }
+  .ant-message-notice {
+    pointer-events: auto;
+  }
 }
 
 /* ── Recharts Bar Chart Hover Cursor Highlight ────────────────────────── */

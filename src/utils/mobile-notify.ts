@@ -1,15 +1,11 @@
 import { message } from "antd";
 
-// Mobile toast variant: small + bottom-docked above the tab bar with a shorter
-// duration. Use at mobile call sites only — desktop surfaces keep using antd's
-// `message` directly (unchanged top-docked, default-duration behavior).
+// Mobile notification: sleek top-floating capsule notification (island style)
+// positioned at the top of the mobile viewport, safely away from bottom docks,
+// tab bars, and action drawers.
 
-// Shorter than antd's default 3s duration.
-export const MOBILE_TOAST_DURATION = 2;
-// Applied to the notice; the `.mobile-toast` rule in index.css bottom-docks it.
-export const MOBILE_TOAST_CLASS = "mobile-toast";
-// Clears the bottom tab bar (~70px incl. safe-area padding).
-export const MOBILE_TOAST_BOTTOM_OFFSET = 84;
+export const MOBILE_TOAST_DURATION = 2.2;
+export const MOBILE_TOAST_CLASS = "mobile-capsule-notice";
 
 type ToastContent = string;
 
@@ -22,11 +18,6 @@ function open(
     content,
     duration: MOBILE_TOAST_DURATION,
     className: MOBILE_TOAST_CLASS,
-    style: {
-      fontSize: 12,
-      maxWidth: 320,
-      marginBottom: MOBILE_TOAST_BOTTOM_OFFSET,
-    },
   });
 }
 

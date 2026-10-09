@@ -345,58 +345,96 @@ export const MobileGoldLoanForm: React.FC = () => {
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
-            <Form.Item
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Loan Principal (₹)</span>}
-              name="loan_amount"
-              rules={[{ required: true, message: "Enter principal amount" }]}
-              style={{ marginBottom: 14 }}
-            >
-              <InputNumber
-                min={0}
-                placeholder="₹ Principal"
-                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
-              />
-            </Form.Item>
+          <style>{`
+            .loan-fields-centered .ant-form-item-label { text-align: center; }
+            .loan-fields-centered .ant-form-item-label > label { display: inline-flex; justify-content: center; width: 100%; text-align: center; }
+            .loan-fields-centered .ant-input-number-input {
+              text-align: center !important;
+              height: 48px !important;
+              line-height: 48px !important;
+              font-size: 16px !important;
+              font-weight: 600 !important;
+            }
+            .loan-fields-centered .ant-input-number-group-addon {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 0 10px;
+              font-weight: 600;
+              font-size: 13px;
+            }
+            .loan-fields-centered .ant-picker {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .loan-fields-centered .ant-picker-input {
+              height: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .loan-fields-centered .ant-picker-input input {
+              text-align: center !important;
+              height: 48px !important;
+              font-size: 15px !important;
+              font-weight: 600 !important;
+            }
+          `}</style>
+          <div className="loan-fields-centered">
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+              <Form.Item
+                label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Loan Principal (₹)</span>}
+                name="loan_amount"
+                rules={[{ required: true, message: "Enter principal amount" }]}
+                style={{ marginBottom: 14 }}
+              >
+                <InputNumber
+                  min={0}
+                  placeholder="₹ Principal"
+                  style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
+                />
+              </Form.Item>
 
-            <Form.Item
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Interest (% p.a.)</span>}
-              name="interest_rate"
-              rules={[
-                { required: true, message: "Interest rate is required" },
-                { type: "number", min: 0.1, max: 100, message: "Rate must be between 0.1% and 100%" },
-              ]}
-              style={{ marginBottom: 14 }}
-            >
-              <InputNumber
-                min={0.1}
-                max={100}
-                step={0.5}
-                precision={2}
-                placeholder="18"
-                addonAfter="% p.a."
-                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
-              />
-            </Form.Item>
-          </div>
+              <Form.Item
+                label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Interest (% p.a.)</span>}
+                name="interest_rate"
+                rules={[
+                  { required: true, message: "Interest rate is required" },
+                  { type: "number", min: 0.1, max: 100, message: "Rate must be between 0.1% and 100%" },
+                ]}
+                style={{ marginBottom: 14 }}
+              >
+                <InputNumber
+                  min={0.1}
+                  max={100}
+                  step={0.5}
+                  precision={2}
+                  placeholder="18"
+                  addonAfter="% p.a."
+                  style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
+                />
+              </Form.Item>
+            </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-            <Form.Item
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Tenure (Months)</span>}
-              name="duration_months"
-              rules={[{ required: true, message: "Duration" }]}
-              style={{ marginBottom: 0 }}
-            >
-              <InputNumber
-                min={1}
-                max={60}
-                style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
-              />
-            </Form.Item>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+              <Form.Item
+                label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Tenure (Months)</span>}
+                name="duration_months"
+                rules={[{ required: true, message: "Duration" }]}
+                style={{ marginBottom: 0 }}
+              >
+                <InputNumber
+                  min={1}
+                  max={60}
+                  style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
+                />
+              </Form.Item>
 
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Issue Date</span>} name="loan_date" style={{ marginBottom: 0 }}>
-              <DatePicker format="YYYY-MM-DD" style={{ width: "100%", height: 48, borderRadius: 14 }} />
-            </Form.Item>
+              <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Issue Date</span>} name="loan_date" style={{ marginBottom: 0 }}>
+                <DatePicker format="YYYY-MM-DD" style={{ width: "100%", height: 48, borderRadius: 14 }} />
+              </Form.Item>
+            </div>
           </div>
 
           {/* High-Contrast Dynamic Monthly Interest Badge */}

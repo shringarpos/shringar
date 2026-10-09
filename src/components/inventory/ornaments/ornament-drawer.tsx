@@ -17,8 +17,9 @@ import {
     Space,
     Statistic,
     Typography,
+    Tooltip,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { DrawerProps, FormProps } from "antd";
 import dayjs from "dayjs";
 import type { ICategory, IMetalType, IOrnament, IPurityLevel } from "../../../libs/interfaces";
@@ -329,14 +330,17 @@ export const OrnamentDrawer: React.FC<OrnamentDrawerProps> = ({
                     </Col>
                     <Col xs={24} sm={8}>
                         <Form.Item
-                            label="SKU"
+                            label={
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                    SKU
+                                    <Tooltip title="Auto-generated from name. Edit to customise.">
+                                        <InfoCircleOutlined style={{ fontSize: 13, color: "#8c8c8c", cursor: "pointer" }} />
+                                    </Tooltip>
+                                </span>
+                            }
                             name="sku"
                             validateStatus={skuTaken ? "error" : ""}
-                            help={
-                                skuTaken
-                                    ? "SKU already exists. Choose a different one."
-                                    : "Auto-generated from name. Edit to customise."
-                            }
+                            help={skuTaken ? "SKU already exists. Choose a different one." : undefined}
                         >
                             <Input
                                 placeholder="e.g. GLD-001"

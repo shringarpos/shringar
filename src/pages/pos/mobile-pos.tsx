@@ -206,7 +206,7 @@ export const MobilePOS: React.FC<{
     (orn: IOrnamentWithDetails, qty: number) => {
       const weightGrams = ((orn.weight_mg ? orn.weight_mg / 1000 : 1) || 1) * qty;
       const rateItem = rates.find((r) => r.metal_type_id === orn.metal_type_id);
-      const ratePerGram = rateItem?.rate_per_gram_paise || 700000;
+      const ratePerGram = rateItem?.rate_per_gram_paise || orn.purchase_metal_rate_paise || 700000;
       const metalVal = weightGrams * ratePerGram;
 
       const mc = orn.metal_type_id && orn.purity_level_id ? getActiveMC(orn.metal_type_id, orn.purity_level_id) : undefined;
@@ -232,9 +232,19 @@ export const MobilePOS: React.FC<{
 
 
   const handleAddToCart = (orn: IOrnamentWithDetails) => {
+    const maxStock = typeof orn.quantity === "number" ? Math.max(0, orn.quantity) : 99;
+    if (maxStock <= 0) {
+      notifyMobile.warning(`${orn.name} is currently out of stock`);
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((item) => item.ornament.id === orn.id);
       if (existing) {
+        if (existing.quantity >= maxStock) {
+          notifyMobile.warning(`Cannot add more: Only ${maxStock} in stock for ${orn.name}`);
+          return prev;
+        }
         const newQty = existing.quantity + 1;
         const calc = calculateItemTotal(orn, newQty);
         return prev.map((item) =>
@@ -264,6 +274,11 @@ export const MobilePOS: React.FC<{
       return prev
         .map((item) => {
           if (item.ornament.id === ornId) {
+            const maxStock = typeof item.ornament.quantity === "number" ? Math.max(0, item.ornament.quantity) : 99;
+            if (delta > 0 && item.quantity >= maxStock) {
+              notifyMobile.warning(`Cannot add more: Only ${maxStock} in stock for ${item.ornament.name}`);
+              return item;
+            }
             const newQty = item.quantity + delta;
             if (newQty <= 0) return null;
             const calc = calculateItemTotal(item.ornament, newQty);
@@ -781,23 +796,31 @@ export const MobilePOS: React.FC<{
                     <span style={{ width: 24, textAlign: "center", fontSize: 12, fontWeight: 700 }}>
                       {item.quantity}
                     </span>
-                    <button
-                      type="button"
-                      data-testid="mobile-pos-qty-inc"
-                      onClick={() => handleUpdateQty(item.ornament.id, 1)}
-                      style={{
-                        width: 44,
-                        height: 44,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        border: "none",
-                        backgroundColor: "transparent",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Plus size={13} />
-                    </button>
+                    {(() => {
+                      const maxStock = typeof item.ornament.quantity === "number" ? item.ornament.quantity : 99;
+                      const isMaxReached = item.quantity >= maxStock;
+                      return (
+                        <button
+                          type="button"
+                          data-testid="mobile-pos-qty-inc"
+                          disabled={isMaxReached}
+                          onClick={() => handleUpdateQty(item.ornament.id, 1)}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "none",
+                            backgroundColor: "transparent",
+                            cursor: isMaxReached ? "not-allowed" : "pointer",
+                            opacity: isMaxReached ? 0.35 : 1,
+                          }}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   <button
@@ -922,24 +945,34 @@ export const MobilePOS: React.FC<{
                       ₹{Math.round(calc.totalPaise / 100).toLocaleString("en-IN")}
                     </span>
 
-                    <Button
-                      data-testid="mobile-pos-add-item"
-                      type={inCartItem ? "primary" : "default"}
-                      size="small"
-                      icon={inCartItem ? <CheckCircle size={12} /> : <Plus size={12} />}
-                      onClick={() => handleAddToCart(orn)}
-                      style={{
-                        width: "100%",
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        fontSize: 11,
-                        height: 44,
-                        minHeight: 44,
-                        padding: "0 10px",
-                      }}
-                    >
-                      {inCartItem ? inCartItem.quantity : "Add"}
-                    </Button>
+                    {(() => {
+                      const maxStock = typeof orn.quantity === "number" ? Math.max(0, orn.quantity) : 99;
+                      const isOutOfStock = maxStock <= 0;
+                      const isMaxReached = inCartItem ? inCartItem.quantity >= maxStock : false;
+
+                      return (
+                        <Button
+                          data-testid="mobile-pos-add-item"
+                          type={inCartItem ? "primary" : "default"}
+                          size="small"
+                          disabled={isOutOfStock || isMaxReached}
+                          icon={inCartItem ? <CheckCircle size={12} /> : <Plus size={12} />}
+                          onClick={() => handleAddToCart(orn)}
+                          style={{
+                            width: "100%",
+                            borderRadius: 8,
+                            fontWeight: 600,
+                            fontSize: 11,
+                            height: 44,
+                            minHeight: 44,
+                            padding: "0 10px",
+                            opacity: isMaxReached ? 0.7 : 1,
+                          }}
+                        >
+                          {isOutOfStock ? "Out" : inCartItem ? (isMaxReached ? `${inCartItem.quantity} (Max)` : inCartItem.quantity) : "Add"}
+                        </Button>
+                      );
+                    })()}
                   </div>
                 </div>
               );
