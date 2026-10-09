@@ -420,16 +420,28 @@ const MobileCategoryRows: React.FC<{
                                 </Typography.Text>
                             </div>
                             <div
-                                onClick={(e) => e.stopPropagation()}
-                                style={{ display: "flex", alignItems: "center", minHeight: 44 }}
+                                data-testid="mobile-category-toggle"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isUpdating) onToggle(item, !item.is_active);
+                                }}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    minHeight: 44,
+                                    minWidth: 44,
+                                    cursor: "pointer",
+                                }}
                             >
-                                <Switch
-                                    size="small"
-                                    checked={item.is_active}
-                                    loading={isUpdating}
-                                    onChange={(checked) => onToggle(item, checked)}
-                                    aria-label={`${item.name} active`}
-                                />
+                                <span onClick={(e) => e.stopPropagation()}>
+                                    <Switch
+                                        checked={item.is_active}
+                                        loading={isUpdating}
+                                        onChange={(checked) => onToggle(item, checked)}
+                                        aria-label={`${item.name} active`}
+                                    />
+                                </span>
                             </div>
                             <RightOutlined
                                 data-testid="mobile-category-chevron"

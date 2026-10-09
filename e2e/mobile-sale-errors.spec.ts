@@ -496,6 +496,7 @@ test.describe("Task 5: mobile native polish + parity", () => {
     const cats = src("../src/pages/inventory/categories/index.tsx");
     expect(cats).toContain("mobile-category-row");
     expect(cats).toContain("mobile-category-thumb");
+    expect(cats).toContain("mobile-category-toggle");
     expect(cats).toMatch(/ChevronRight|RightOutlined/);
     // 60px thumbnail sits inside the 56-64px native spec (UI asserts the box).
     expect(cats).toContain("width: 60");
@@ -518,6 +519,12 @@ test.describe("Task 5: mobile native polish + parity", () => {
     await expect(
       row.locator('[data-testid="mobile-category-chevron"]')
     ).toBeVisible();
+    // Strict 44px gate: default-size Switch lives in a 44x44 tappable well.
+    const toggleWell = row.locator('[data-testid="mobile-category-toggle"]');
+    await expect(toggleWell).toBeVisible();
+    const toggleBox = await toggleWell.boundingBox();
+    expect(toggleBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(toggleBox?.height ?? 0).toBeGreaterThanOrEqual(44);
     // cat-1 carries exactly the orn-1 mock piece.
     await expect(
       page.locator('[data-testid="mobile-category-row"]').filter({ hasText: "Necklaces" })
@@ -575,6 +582,8 @@ test.describe("Task 5: mobile native polish + parity", () => {
     expect(mc).toContain("mobile-making-inc");
     expect(mc).toContain("mobile-making-dec");
     expect(mc).toMatch(/44/);
+    expect(mc).toContain("mobile-making-uniform-row");
+    expect(mc).toContain("Uniform rate applies to all purities");
 
     // UI pin (390px /settings making tab): rows visible, steppers >= 44px,
     // and + steps the displayed charge by Rs 10.
@@ -596,6 +605,23 @@ test.describe("Task 5: mobile native polish + parity", () => {
     await expect
       .poll(() => value.innerText(), { timeout: 5000 })
       .not.toBe(before);
+
+    // Uniform mode (SILVER card): exactly ONE stepper row owning the shared
+    // value + explainer, no N mirroring rows.
+    await expect(
+      page.locator('[data-testid="mobile-making-uniform-row"]')
+    ).toHaveCount(1);
+    const uniform = page.locator('[data-testid="mobile-making-uniform-row"]');
+    await expect(uniform).toBeVisible();
+    await expect(
+      page.locator('[data-testid="mobile-making-uniform-note"]')
+    ).toContainText("Uniform rate applies to all purities");
+    const uval = uniform.locator('[data-testid="mobile-making-value"]');
+    const ubefore = await uval.innerText();
+    await uniform.locator('[data-testid="mobile-making-inc"]').click();
+    await expect
+      .poll(() => uval.innerText(), { timeout: 5000 })
+      .not.toBe(ubefore);
   });
 
   test("(e) parity source pins: sale/ornament/loan mobile forms carry every desktop field", async () => {

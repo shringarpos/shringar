@@ -1,5 +1,5 @@
  import { useCreate, useGetIdentity, useList, useUpdate } from "@refinedev/core";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { IMakingCharge, IMetalType, IPurityLevel } from "../../libs/interfaces";
 import {
   Button,
@@ -21,6 +21,8 @@ import {
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useShopCheck } from "../../hooks/use-shop-check";
 
+import type { GlobalToken } from "antd";
+
 function buildLatestPerPurity(charges: IMakingCharge[]): Record<string, IMakingCharge> {
   const map: Record<string, IMakingCharge> = {};
   for (const c of charges) {
@@ -37,6 +39,138 @@ interface MetalCardProps {
   purities: IPurityLevel[];
   existingCharges: IMakingCharge[];
   shopId: string;
+}
+
+// ─── Mobile shared bits: 44px stepper + 44px enable well ─────────────────────
+
+function MobileStepper({
+  testId,
+  label,
+  token,
+  disabled,
+  onStep,
+  children,
+}: {
+  testId: string;
+  label: string;
+  token: GlobalToken;
+  disabled: boolean;
+  onStep: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onStep}
+      style={{
+        width: 44,
+        height: 44,
+        minWidth: 44,
+        minHeight: 44,
+        borderRadius: 12,
+        border: `1px solid ${token.colorBorder}`,
+        backgroundColor: token.colorFillAlter,
+        color: token.colorText,
+        fontSize: 20,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MobileEnableWell({
+  label,
+  tooltip,
+  enabled,
+  loading,
+  onToggle,
+}: {
+  label: string;
+  tooltip: string;
+  enabled: boolean;
+  loading: boolean;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 44,
+        minWidth: 44,
+      }}
+    >
+      <Tooltip title={tooltip}>
+        <Switch
+          size="small"
+          checked={enabled}
+          loading={loading}
+          onChange={onToggle}
+          aria-label={label}
+        />
+      </Tooltip>
+    </div>
+  );
+}
+
+// Toggle-only purity row for mobile uniform mode (the single uniform stepper
+// row above owns the value; these rows only enable/disable purities).
+function MobilePurityToggle({
+  purity,
+  enabled,
+  loading,
+  showDivider,
+  token,
+  onToggle,
+}: {
+  purity: IPurityLevel;
+  enabled: boolean;
+  loading: boolean;
+  showDivider: boolean;
+  token: GlobalToken;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <div
+      data-testid="mobile-making-row"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        minHeight: 56,
+        padding: "6px 0",
+        borderBottom: showDivider ? `1px solid ${token.colorBorderSecondary}` : "none",
+        opacity: enabled ? 1 : 0.55,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Typography.Text strong style={{ fontSize: 14, display: "block" }}>
+          {purity.display_name}
+        </Typography.Text>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          Follows uniform rate
+        </Typography.Text>
+      </div>
+      <MobileEnableWell
+        label={`${purity.display_name} active`}
+        tooltip={enabled ? "Disable this purity" : "Enable this purity"}
+        enabled={enabled}
+        loading={loading}
+        onToggle={onToggle}
+      />
+    </div>
+  );
 }
 
 export default function MakingChargesSettings() {
@@ -369,51 +503,73 @@ function MetalCard({ metal, purities, existingCharges, shopId }: MetalCardProps)
           <div style={{ display: "flex", flexDirection: "column" }}>
             {purities.length === 0 ? (
               <Typography.Text type="secondary">No purity levels configured for this metal.</Typography.Text>
+            ) : !purityWise ? (
+              <>
+                <div
+                  data-testid="mobile-making-uniform-row"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    minHeight: 64,
+                    padding: "8px 0",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Typography.Text strong style={{ fontSize: 14, display: "block" }}>
+                      Uniform rate
+                    </Typography.Text>
+                    <Typography.Text
+                      data-testid="mobile-making-value"
+                      type="secondary"
+                      style={{ fontSize: 13 }}
+                    >
+                      ₹{uniformValue}/g
+                    </Typography.Text>
+                  </div>
+                  <MobileStepper
+                    testId="mobile-making-dec"
+                    label="Decrease uniform making charge"
+                    token={token}
+                    disabled={enabledPurities.length === 0}
+                    onStep={() => setUniformValue((prev) => Math.max(0, prev - 10))}
+                  >
+                    −
+                  </MobileStepper>
+                  <MobileStepper
+                    testId="mobile-making-inc"
+                    label="Increase uniform making charge"
+                    token={token}
+                    disabled={enabledPurities.length === 0}
+                    onStep={() => setUniformValue((prev) => Math.max(0, prev + 10))}
+                  >
+                    +
+                  </MobileStepper>
+                </div>
+                <Typography.Text
+                  data-testid="mobile-making-uniform-note"
+                  type="secondary"
+                  style={{ fontSize: 12, marginBottom: 4 }}
+                >
+                  Uniform rate applies to all purities
+                </Typography.Text>
+                {purities.map((purity, idx) => (
+                  <MobilePurityToggle
+                    key={purity.id}
+                    purity={purity}
+                    enabled={purityEnabled[purity.id] !== false}
+                    loading={purityToggleLoading[purity.id] ?? false}
+                    showDivider={idx < purities.length - 1}
+                    token={token}
+                    onToggle={(v) => handlePurityEnable(purity.id, v)}
+                  />
+                ))}
+              </>
             ) : (
               purities.map((purity, idx) => {
                 const enabled       = purityEnabled[purity.id] !== false;
                 const toggleLoading = purityToggleLoading[purity.id] ?? false;
-                const val = purityWise ? (perPurityValues[purity.id] ?? 0) : uniformValue;
-                const step = (delta: number) => {
-                  if (!enabled) return;
-                  if (purityWise) {
-                    setPerPurityValues((prev) => ({
-                      ...prev,
-                      [purity.id]: Math.max(0, (prev[purity.id] ?? 0) + delta),
-                    }));
-                  } else {
-                    setUniformValue((prev) => Math.max(0, prev + delta));
-                  }
-                };
-                const stepper = (kind: "dec" | "inc") => (
-                  <button
-                    key={kind}
-                    type="button"
-                    data-testid={kind === "dec" ? "mobile-making-dec" : "mobile-making-inc"}
-                    aria-label={`${kind === "dec" ? "Decrease" : "Increase"} ${purity.display_name} making charge`}
-                    disabled={!enabled}
-                    onClick={() => step(kind === "dec" ? -10 : 10)}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      minWidth: 44,
-                      minHeight: 44,
-                      borderRadius: 12,
-                      border: `1px solid ${token.colorBorder}`,
-                      backgroundColor: token.colorFillAlter,
-                      color: token.colorText,
-                      fontSize: 20,
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: enabled ? "pointer" : "not-allowed",
-                      opacity: enabled ? 1 : 0.45,
-                    }}
-                  >
-                    {kind === "dec" ? "−" : "+"}
-                  </button>
-                );
+                const val = perPurityValues[purity.id] ?? 0;
                 return (
                   <div
                     key={purity.id}
@@ -443,27 +599,41 @@ function MetalCard({ metal, purities, existingCharges, shopId }: MetalCardProps)
                         ₹{val}/g
                       </Typography.Text>
                     </div>
-                    {stepper("dec")}
-                    {stepper("inc")}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minHeight: 44,
-                        minWidth: 44,
-                      }}
+                    <MobileStepper
+                      testId="mobile-making-dec"
+                      label={`Decrease ${purity.display_name} making charge`}
+                      token={token}
+                      disabled={!enabled}
+                      onStep={() =>
+                        setPerPurityValues((prev) => ({
+                          ...prev,
+                          [purity.id]: Math.max(0, (prev[purity.id] ?? 0) - 10),
+                        }))
+                      }
                     >
-                      <Tooltip title={enabled ? "Disable this purity" : "Enable this purity"}>
-                        <Switch
-                          size="small"
-                          checked={enabled}
-                          loading={toggleLoading}
-                          onChange={(v) => handlePurityEnable(purity.id, v)}
-                          aria-label={`${purity.display_name} active`}
-                        />
-                      </Tooltip>
-                    </div>
+                      −
+                    </MobileStepper>
+                    <MobileStepper
+                      testId="mobile-making-inc"
+                      label={`Increase ${purity.display_name} making charge`}
+                      token={token}
+                      disabled={!enabled}
+                      onStep={() =>
+                        setPerPurityValues((prev) => ({
+                          ...prev,
+                          [purity.id]: Math.max(0, (prev[purity.id] ?? 0) + 10),
+                        }))
+                      }
+                    >
+                      +
+                    </MobileStepper>
+                    <MobileEnableWell
+                      label={`${purity.display_name} active`}
+                      tooltip={enabled ? "Disable this purity" : "Enable this purity"}
+                      enabled={enabled}
+                      loading={toggleLoading}
+                      onToggle={(v) => handlePurityEnable(purity.id, v)}
+                    />
                   </div>
                 );
               })
