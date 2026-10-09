@@ -184,7 +184,10 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                             <Form.Item
                                 label="Phone"
                                 name="phone"
-                                rules={[{ required: true, message: "Phone number is required" }]}
+                                rules={[
+                                    { required: true, whitespace: true, message: "Phone number is required" },
+                                    { pattern: /^[0-9+\s-]{8,15}$/, message: "Please enter a valid phone number" },
+                                ]}
                             >
                                 <Input placeholder="+91 98765 43210" />
                             </Form.Item>
@@ -275,7 +278,10 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                     <Form.Item
                         label="Phone"
                         name="phone"
-                        rules={[{ required: true, message: "Phone is required" }]}
+                        rules={[
+                            { required: true, whitespace: true, message: "Phone is required" },
+                            { pattern: /^[0-9+\s-]{8,15}$/, message: "Please enter a valid phone number" },
+                        ]}
                     >
                         <Input placeholder="+91 98765 43210" />
                     </Form.Item>
