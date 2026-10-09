@@ -145,31 +145,41 @@ export const MobileMetalRatesBar: React.FC = () => {
         data-testid="mobile-metal-rates-bar"
         onClick={handleOpenDrawer}
         style={{
+          position: "relative",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 16px 10px 16px",
+          height: 38,
+          padding: "0 12px",
           borderBottom: isDark ? "1px solid #1e293b" : "1px solid rgba(15, 23, 42, 0.08)",
           cursor: "pointer",
           userSelect: "none",
           WebkitTapHighlightColor: "transparent",
           whiteSpace: "nowrap",
+          boxSizing: "border-box",
         }}
       >
+        {/* Left Side: Gold Rate (Right-aligned to Center Divider) */}
         <div
           style={{
+            flex: 1,
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            justifyContent: "flex-end",
+            paddingRight: 10,
             minWidth: 0,
-            flex: 1,
             whiteSpace: "nowrap",
-            overflowX: "auto",
-            scrollbarWidth: "none",
           }}
         >
-          {/* Gold Rate */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
             <span
               style={{
                 width: 7,
@@ -181,33 +191,73 @@ export const MobileMetalRatesBar: React.FC = () => {
                 flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#fbbf24" : "#b45309", letterSpacing: "0.03em" }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: isDark ? "#fbbf24" : "#b45309",
+                letterSpacing: "0.03em",
+                lineHeight: 1,
+              }}
+            >
               GOLD
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a", whiteSpace: "nowrap" }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: isDark ? "#f8fafc" : "#0f172a",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                lineHeight: 1,
+              }}
+            >
               {goldRate && goldMetal ? (
                 <>
-                  ₹{paiseToDisplay(goldRate.rate_per_gram_paise, goldMetal.name).toLocaleString("en-IN")}
-                  <span style={{ fontSize: 10, fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b", marginLeft: 2 }}>/10g</span>
+                  <span>₹{paiseToDisplay(goldRate.rate_per_gram_paise, goldMetal.name).toLocaleString("en-IN")}</span>
+                  <span style={{ fontSize: 10, fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b", marginLeft: 2, lineHeight: 1 }}>/10g</span>
                 </>
               ) : (
                 <span style={{ color: "#f59e0b", fontSize: 11, fontWeight: 600 }}>Set Rate</span>
               )}
             </span>
           </div>
+        </div>
 
-          {/* Subtle Divider */}
-          <span
+        {/* Exact Center Divider */}
+        <span
+          style={{
+            width: 1,
+            height: 14,
+            backgroundColor: isDark ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.15)",
+            flexShrink: 0,
+            alignSelf: "center",
+          }}
+        />
+
+        {/* Right Side: Silver Rate (Left-aligned from Center Divider) */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            paddingLeft: 10,
+            minWidth: 0,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <div
             style={{
-              width: 1,
-              height: 13,
-              backgroundColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              whiteSpace: "nowrap",
               flexShrink: 0,
+              lineHeight: 1,
             }}
-          />
-
-          {/* Silver Rate */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
+          >
             <span
               style={{
                 width: 7,
@@ -219,14 +269,32 @@ export const MobileMetalRatesBar: React.FC = () => {
                 flexShrink: 0,
               }}
             />
-            <span style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569", letterSpacing: "0.03em" }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: isDark ? "#cbd5e1" : "#475569",
+                letterSpacing: "0.03em",
+                lineHeight: 1,
+              }}
+            >
               SILVER
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a", whiteSpace: "nowrap" }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: isDark ? "#f8fafc" : "#0f172a",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                lineHeight: 1,
+              }}
+            >
               {silverRate && silverMetal ? (
                 <>
-                  ₹{paiseToDisplay(silverRate.rate_per_gram_paise, silverMetal.name).toLocaleString("en-IN")}
-                  <span style={{ fontSize: 10, fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b", marginLeft: 2 }}>/g</span>
+                  <span>₹{paiseToDisplay(silverRate.rate_per_gram_paise, silverMetal.name).toLocaleString("en-IN")}</span>
+                  <span style={{ fontSize: 10, fontWeight: 500, color: isDark ? "#94a3b8" : "#64748b", marginLeft: 2, lineHeight: 1 }}>/g</span>
                 </>
               ) : (
                 <span style={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: 11, fontWeight: 600 }}>Set Rate</span>
@@ -235,11 +303,13 @@ export const MobileMetalRatesBar: React.FC = () => {
           </div>
         </div>
 
-        {/* Edit / Update Action */}
+        {/* Edit / Update Action (Absolute pinned to right) */}
         <div
           data-testid="mobile-rate-edit-btn"
           aria-label="Update Rates"
           style={{
+            position: "absolute",
+            right: 12,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -253,7 +323,6 @@ export const MobileMetalRatesBar: React.FC = () => {
             fontWeight: 700,
             fontSize: 11,
             flexShrink: 0,
-            marginLeft: 8,
             boxSizing: "border-box",
           }}
         >
