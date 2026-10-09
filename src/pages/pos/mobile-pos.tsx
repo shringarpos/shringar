@@ -170,17 +170,35 @@ export const MobilePOS: React.FC<{
 
 
 
+  const isWalkInCustomer = (c?: Partial<ICustomer> | null): boolean => {
+    if (!c) return false;
+    const name = (c.name || "").toLowerCase().trim();
+    const phone = (c.phone || "").trim();
+    return (
+      name.includes("walk-in") ||
+      name.includes("walk in") ||
+      name.includes("walkin") ||
+      phone === "9999999999"
+    );
+  };
+
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === selectedCustomerId) || null,
     [customers, selectedCustomerId]
   );
 
+  const isWalkInSelected = useMemo(() => {
+    if (!selectedCustomerId || !selectedCustomer) return false;
+    return isWalkInCustomer(selectedCustomer);
+  }, [selectedCustomerId, selectedCustomer]);
+
   const filteredCustomers = useMemo(() => {
-    if (!customerSearchTerm.trim()) return customers;
+    const nonWalkIn = customers.filter((c) => !isWalkInCustomer(c));
+    if (!customerSearchTerm.trim()) return nonWalkIn;
     const q = customerSearchTerm.toLowerCase();
-    return customers.filter(
+    return nonWalkIn.filter(
       (c) =>
-        c.name.toLowerCase().includes(q) ||
+        (c.name || "").toLowerCase().includes(q) ||
         c.phone?.includes(q) ||
         c.customer_code?.toLowerCase().includes(q)
     );
@@ -484,9 +502,7 @@ export const MobilePOS: React.FC<{
 
   // Handler to select or create a Walk-in Customer
   const handleSelectWalkIn = async () => {
-    const walkIn = customers.find((c) =>
-      c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
-    );
+    const walkIn = customers.find((c) => isWalkInCustomer(c));
     let targetId = walkIn?.id;
 
     if (!targetId && shopId) {
@@ -1132,15 +1148,23 @@ export const MobilePOS: React.FC<{
                 style={{
                   padding: "12px 14px",
                   borderRadius: 12,
-                  backgroundColor: !selectedCustomerId ? token.colorPrimaryBg : token.colorFillAlter,
-                  border: `1px solid ${!selectedCustomerId ? token.colorPrimary : token.colorBorderSecondary}`,
+                  backgroundColor: isWalkInSelected ? token.colorPrimaryBg : token.colorFillAlter,
+                  border: `1px solid ${isWalkInSelected ? token.colorPrimary : token.colorBorderSecondary}`,
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
-                <Text strong style={{ fontSize: 13 }}>Walk-in Customer</Text>
-                <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-                  Standard counter sale without client profile
-                </Text>
+                <div>
+                  <Text strong style={{ fontSize: 13, display: "block" }}>Walk-in Customer</Text>
+                  <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    Standard counter sale without client profile
+                  </Text>
+                </div>
+                {isWalkInSelected && (
+                  <CheckCircle size={16} color={token.colorPrimary} />
+                )}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
