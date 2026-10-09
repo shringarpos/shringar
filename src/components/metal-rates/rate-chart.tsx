@@ -1,4 +1,4 @@
-import { Card, Radio, Typography } from "antd";
+import { Card, Grid, Radio, Typography, theme } from "antd";
 import dayjs from "dayjs";
 import React, { useMemo, useState } from "react";
 import {
@@ -38,6 +38,20 @@ export const RateChart: React.FC<RateChartProps> = ({
 }) => {
   const [range, setRange] = useState<Range>("30d");
   const [activeMetal, setActiveMetal] = useState<string | null>(null);
+  const { token } = theme.useToken();
+  const screens = Grid.useBreakpoint();
+  // Single compact scroll row below md; desktop keeps the stacked rows untouched.
+  const isMobile = !screens.md;
+
+  const rangeOptions = [
+    { label: "Today", value: "today" },
+    { label: "7D", value: "7d" },
+    { label: "30D", value: "30d" },
+  ];
+  const metalOptions = [
+    { label: "All", value: "all" },
+    ...metals.map((m) => ({ label: m.name, value: m.id })),
+  ];
 
   const cutoff = useMemo(() => {
     if (range === "today") return today;
@@ -78,6 +92,45 @@ export const RateChart: React.FC<RateChartProps> = ({
     <Card title="Rate Trend" bordered={false}>
       {/* Filter rows live in the card body (not `extra`) so they scroll
           horizontally on narrow screens instead of truncating. */}
+      {isMobile ? (
+        <div
+          data-testid="rate-trend-filters"
+          style={{
+            display: "flex",
+            flexWrap: "nowrap",
+            alignItems: "center",
+            overflowX: "auto",
+            gap: 8,
+            marginBottom: 12,
+            paddingBottom: 4,
+            scrollbarWidth: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <Radio.Group
+            value={range}
+            onChange={(e) => setRange(e.target.value as Range)}
+            size="small"
+            optionType="button"
+            options={rangeOptions}
+            style={{ display: "flex", flexWrap: "nowrap", flexShrink: 0 }}
+          />
+          <div
+            aria-hidden
+            style={{ width: 1, alignSelf: "stretch", background: token.colorBorderSecondary, flexShrink: 0 }}
+          />
+          <Radio.Group
+            value={activeMetal ?? "all"}
+            onChange={(e) =>
+              setActiveMetal(e.target.value === "all" ? null : e.target.value)
+            }
+            size="small"
+            optionType="button"
+            options={metalOptions}
+            style={{ display: "flex", flexWrap: "nowrap", flexShrink: 0 }}
+          />
+        </div>
+      ) : (
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
         <div
           style={{
@@ -95,11 +148,7 @@ export const RateChart: React.FC<RateChartProps> = ({
             onChange={(e) => setRange(e.target.value as Range)}
             size="small"
             optionType="button"
-            options={[
-              { label: "Today", value: "today" },
-              { label: "7D", value: "7d" },
-              { label: "30D", value: "30d" },
-            ]}
+            options={rangeOptions}
           />
         </div>
         <div
@@ -120,13 +169,11 @@ export const RateChart: React.FC<RateChartProps> = ({
             }
             size="small"
             optionType="button"
-            options={[
-              { label: "All", value: "all" },
-              ...metals.map((m) => ({ label: m.name, value: m.id })),
-            ]}
+            options={metalOptions}
           />
         </div>
       </div>
+      )}
       {chartData.length === 0 ? (
         <Text type="secondary">No rate data available for this range.</Text>
       ) : (

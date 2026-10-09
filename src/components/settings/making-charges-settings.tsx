@@ -6,6 +6,7 @@ import {
   Card,
   Col,
   Divider,
+  Grid,
   InputNumber,
   message,
   notification,
@@ -15,6 +16,7 @@ import {
   Tag,
   Tooltip,
   Typography,
+  theme,
 } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { useShopCheck } from "../../hooks/use-shop-check";
@@ -111,6 +113,10 @@ export default function MakingChargesSettings() {
 function MetalCard({ metal, purities, existingCharges, shopId }: MetalCardProps) {
   const { data: identity } = useGetIdentity<{ id: string }>();
   const userId = (identity as any)?.id as string | undefined;
+  const { token } = theme.useToken();
+  const screens = Grid.useBreakpoint();
+  // Native list/stepper rows below md; desktop card layout untouched.
+  const isMobile = !screens.md;
 
   const { mutateAsync: createCharge } = useCreate<IMakingCharge>();
   const { mutateAsync: updateCharge } = useUpdate<IMakingCharge>();
@@ -334,8 +340,8 @@ function MetalCard({ metal, purities, existingCharges, shopId }: MetalCardProps)
 
       <Divider style={{ margin: "0 0 10px" }} />
 
-      {/* Column labels — only shown in purity-wise mode */}
-      {purityWise && (
+      {/* Column labels — desktop purity-wise mode only */}
+      {!isMobile && purityWise && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px 6px" }}>
           <Typography.Text type="secondary" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>
             Purity
@@ -358,7 +364,112 @@ function MetalCard({ metal, purities, existingCharges, shopId }: MetalCardProps)
 
       {/* Body */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {purityWise ? (
+        {isMobile ? (
+          /* ── Mobile: native list/stepper rows, 44px targets ── */
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {purities.length === 0 ? (
+              <Typography.Text type="secondary">No purity levels configured for this metal.</Typography.Text>
+            ) : (
+              purities.map((purity, idx) => {
+                const enabled       = purityEnabled[purity.id] !== false;
+                const toggleLoading = purityToggleLoading[purity.id] ?? false;
+                const val = purityWise ? (perPurityValues[purity.id] ?? 0) : uniformValue;
+                const step = (delta: number) => {
+                  if (!enabled) return;
+                  if (purityWise) {
+                    setPerPurityValues((prev) => ({
+                      ...prev,
+                      [purity.id]: Math.max(0, (prev[purity.id] ?? 0) + delta),
+                    }));
+                  } else {
+                    setUniformValue((prev) => Math.max(0, prev + delta));
+                  }
+                };
+                const stepper = (kind: "dec" | "inc") => (
+                  <button
+                    key={kind}
+                    type="button"
+                    data-testid={kind === "dec" ? "mobile-making-dec" : "mobile-making-inc"}
+                    aria-label={`${kind === "dec" ? "Decrease" : "Increase"} ${purity.display_name} making charge`}
+                    disabled={!enabled}
+                    onClick={() => step(kind === "dec" ? -10 : 10)}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      minWidth: 44,
+                      minHeight: 44,
+                      borderRadius: 12,
+                      border: `1px solid ${token.colorBorder}`,
+                      backgroundColor: token.colorFillAlter,
+                      color: token.colorText,
+                      fontSize: 20,
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: enabled ? "pointer" : "not-allowed",
+                      opacity: enabled ? 1 : 0.45,
+                    }}
+                  >
+                    {kind === "dec" ? "−" : "+"}
+                  </button>
+                );
+                return (
+                  <div
+                    key={purity.id}
+                    data-testid="mobile-making-row"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minHeight: 64,
+                      padding: "8px 0",
+                      borderBottom:
+                        idx < purities.length - 1
+                          ? `1px solid ${token.colorBorderSecondary}`
+                          : "none",
+                      opacity: enabled ? 1 : 0.55,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Typography.Text strong style={{ fontSize: 14, display: "block" }}>
+                        {purity.display_name}
+                      </Typography.Text>
+                      <Typography.Text
+                        data-testid="mobile-making-value"
+                        type="secondary"
+                        style={{ fontSize: 13 }}
+                      >
+                        ₹{val}/g
+                      </Typography.Text>
+                    </div>
+                    {stepper("dec")}
+                    {stepper("inc")}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minHeight: 44,
+                        minWidth: 44,
+                      }}
+                    >
+                      <Tooltip title={enabled ? "Disable this purity" : "Enable this purity"}>
+                        <Switch
+                          size="small"
+                          checked={enabled}
+                          loading={toggleLoading}
+                          onChange={(v) => handlePurityEnable(purity.id, v)}
+                          aria-label={`${purity.display_name} active`}
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : purityWise ? (
           /* ── Purity-wise mode: full row per purity with rate input + toggle ── */
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {purities.length === 0 ? (

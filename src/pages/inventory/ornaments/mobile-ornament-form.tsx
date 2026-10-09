@@ -242,6 +242,11 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
     return Math.round(metalCostRs + (makingChargeRs ?? 0));
   }, [metalCostRs, makingChargeRs]);
 
+  // Keep the read-only desktop-parity total field in sync with live calc.
+  useEffect(() => {
+    form.setFieldValue("purchase_total_cost_rs", totalCostRs);
+  }, [totalCostRs, form]);
+
   // Mutations
   const { mutateAsync: createOrnament } = useCreate();
   const { mutateAsync: updateOrnament } = useUpdate();
@@ -747,6 +752,22 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
               />
             </Form.Item>
           </div>
+
+          {/* Desktop parity: read-only auto total (weight × rate) + making */}
+          <Form.Item
+            name="purchase_total_cost_rs"
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Total Purchase Cost (₹)</span>}
+            extra="Auto-calculated: (weight × rate) + making"
+            style={{ marginBottom: 14, marginTop: 10 }}
+          >
+            <InputNumber
+              data-testid="mobile-total-cost-input"
+              readOnly
+              min={0}
+              style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
+              prefix="₹"
+            />
+          </Form.Item>
 
           {/* Dynamic Total Cost Banner */}
           <div

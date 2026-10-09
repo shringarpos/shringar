@@ -7,8 +7,10 @@ import {
   Button,
   Tag,
   Avatar,
+  DatePicker,
   Drawer,
   InputNumber,
+  Switch,
   message,
   theme,
   Spin,
@@ -83,6 +85,11 @@ export const MobilePOS: React.FC<{
   const [paymentMode, setPaymentMode] = useState<string>("CASH");
   const [cashTendered, setCashTendered] = useState<number | null>(null);
   const [discountPaise, setDiscountPaise] = useState<number>(0);
+  // Desktop sale-form parity fields: making-charge inclusion (same
+  // metal + making - discount semantics), free-text notes, invoice date.
+  const [includeMaking, setIncludeMaking] = useState<boolean>(true);
+  const [saleNotes, setSaleNotes] = useState<string>("");
+  const [invoiceDate, setInvoiceDate] = useState(() => dayjs());
   const [paidPaise, setPaidPaise] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -246,7 +253,16 @@ export const MobilePOS: React.FC<{
   };
 
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotalPaise = cart.reduce((sum, item) => sum + item.totalPaise, 0);
+  const metalOnlyPaise = cart.reduce(
+    (sum, item) => sum + (item.totalPaise - item.makingChargePaise),
+    0
+  );
+  const makingTotalPaise = cart.reduce((sum, item) => sum + item.makingChargePaise, 0);
+  // Desktop sale-form parity: line total = metal + making. Excluding making
+  // drops exactly the making share — identical to zeroing making on desktop.
+  const subtotalPaise = includeMaking
+    ? metalOnlyPaise + makingTotalPaise
+    : metalOnlyPaise;
   const gstPaise = Math.round(subtotalPaise * 0.03); // 3% GST
   const grandTotalPaise = Math.max(0, subtotalPaise + gstPaise - discountPaise);
   const grandTotalRs = Math.round(grandTotalPaise / 100);
@@ -366,12 +382,18 @@ export const MobilePOS: React.FC<{
         values: {
           shop_id: shopId,
           customer_id: selectedCustomerId,
-          invoice_date: dayjs().format("YYYY-MM-DD"),
+          invoice_date: invoiceDate.format("YYYY-MM-DD"),
           subtotal_amount_paise: subtotalPaise,
-          total_making_charges_paise: cart.reduce((sum, i) => sum + i.makingChargePaise, 0),
+          total_making_charges_paise: includeMaking
+            ? cart.reduce((sum, i) => sum + i.makingChargePaise, 0)
+            : 0,
           discount_amount_paise: discountPaise,
           total_amount_paise: grandTotalPaise,
-          notes: paymentMode ? `Paid via ${paymentMode}` : null,
+          notes: saleNotes.trim()
+            ? saleNotes.trim()
+            : paymentMode
+              ? `Paid via ${paymentMode}`
+              : null,
           created_by: userId,
           updated_by: userId,
         },
@@ -381,6 +403,10 @@ export const MobilePOS: React.FC<{
 
       // 2. Create Items & decrement stock
       for (const item of cart) {
+        const itemMaking = includeMaking ? item.makingChargePaise : 0;
+        const lineTotal = includeMaking
+          ? item.totalPaise
+          : item.totalPaise - item.makingChargePaise;
         await createInvoiceItem({
           resource: "invoice_items",
           values: {
@@ -393,10 +419,11 @@ export const MobilePOS: React.FC<{
             purity_value: item.ornament.purity_level?.purity_value || 916,
             purity_display_name: item.ornament.purity_level?.display_name || "22K",
             rate_per_gram_paise: item.ratePerGram,
-            making_charge_per_gram_paise: Math.round(item.makingChargePaise / item.weightGrams),
-            metal_amount_paise: item.totalPaise - item.makingChargePaise,
-            making_charge_amount_paise: item.makingChargePaise,
-            line_total_paise: item.totalPaise,
+            making_charge_per_gram_paise:
+              item.weightGrams > 0 ? Math.round(itemMaking / item.weightGrams) : 0,
+            metal_amount_paise: lineTotal - itemMaking,
+            making_charge_amount_paise: itemMaking,
+            line_total_paise: lineTotal,
           },
         });
 
@@ -416,6 +443,9 @@ export const MobilePOS: React.FC<{
 
       message.success("Invoice created successfully!");
       setCart([]);
+      setSaleNotes("");
+      setIncludeMaking(true);
+      setInvoiceDate(dayjs());
       setCheckoutDrawerOpen(false);
       navigate(`/invoices/show/${newInvId}`);
     } catch (err: unknown) {
@@ -1074,7 +1104,25 @@ export const MobilePOS: React.FC<{
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <Text type="secondary">Subtotal ({totalItemsCount} items)</Text>
-              <Text>₹{(subtotalPaise / 100).toLocaleString("en-IN")}</Text>
+              <Text data-testid="mobile-pos-subtotal" data-value={subtotalPaise}>
+                ₹{(subtotalPaise / 100).toLocaleString("en-IN")}
+              </Text>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Text type="secondary">Making charges</Text>
+              <Text data-testid="mobile-pos-making-total" data-value={makingTotalPaise}>
+                ₹{(makingTotalPaise / 100).toLocaleString("en-IN")}
+              </Text>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Text type="secondary">Include making charges</Text>
+              <Switch
+                data-testid="mobile-pos-include-making"
+                checked={includeMaking}
+                onChange={setIncludeMaking}
+                size="small"
+                aria-label="Include making charges"
+              />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <Text type="secondary">GST (3%)</Text>
@@ -1099,9 +1147,56 @@ export const MobilePOS: React.FC<{
               }}
             >
               <Text strong style={{ fontSize: 15 }}>Grand Total</Text>
-              <Text strong style={{ fontSize: 16, color: token.colorPrimary }}>
+              <Text
+                strong
+                style={{ fontSize: 16, color: token.colorPrimary }}
+                data-testid="mobile-pos-grand-total"
+                data-value={grandTotalPaise}
+              >
                 ₹{(grandTotalPaise / 100).toLocaleString("en-IN")}
               </Text>
+            </div>
+          </div>
+
+          {/* Sale details parity: invoice date + free-text notes (desktop fields) */}
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 12,
+              backgroundColor: token.colorBgContainer,
+              border: `1px solid ${token.colorBorderSecondary}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div>
+              <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+                Invoice Date
+              </Text>
+              <DatePicker
+                data-testid="mobile-pos-invoice-date"
+                value={invoiceDate}
+                onChange={(d) => {
+                  if (d) setInvoiceDate(d);
+                }}
+                format="DD MMM YYYY"
+                style={{ width: "100%" }}
+                allowClear={false}
+              />
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+                Notes (optional)
+              </Text>
+              <Input.TextArea
+                data-testid="mobile-pos-notes"
+                value={saleNotes}
+                onChange={(e) => setSaleNotes(e.target.value)}
+                placeholder="Any notes for this invoice..."
+                rows={2}
+                maxLength={500}
+              />
             </div>
           </div>
 

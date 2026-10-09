@@ -456,6 +456,345 @@ test.describe("Task 4: inventory form centered stock + desktop SKU parity", () =
   });
 });
 
+test.describe("Task 5: mobile native polish + parity", () => {
+  test("(a) rate drawer inputs sit directly on card bg, token borders only", async ({
+    page,
+  }) => {
+    // Source pin: no third-color faded input bg; drawer + inputs share the
+    // card token with token-only borders.
+    const bar = src("../src/components/metal-rates/mobile-metal-rates-bar.tsx");
+    expect(bar).not.toMatch(/#1a1a1e/);
+    expect(bar).toContain("colorBgContainer");
+    expect(bar).toMatch(/border:\s*`?1px solid \$\{token\.colorBorder\}/);
+
+    // UI pin (390px): drawer input computed bg == drawer card bg.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await page.locator('[data-testid="mobile-metal-rates-bar"]').click();
+    const drawer = page.locator(".ant-drawer-open");
+    await expect(drawer).toBeVisible({ timeout: 10000 });
+    const bgs = await drawer.evaluate((root) => {
+      const body = root.querySelector(".ant-drawer-body") as HTMLElement;
+      const input = root.querySelector(".ant-input-number") as HTMLElement;
+      const cs = (el: HTMLElement | null) =>
+        el ? getComputedStyle(el).backgroundColor : null;
+      return { body: cs(body), input: cs(input) };
+    });
+    expect(bgs.input).not.toBeNull();
+    expect(bgs.input).toBe(bgs.body);
+  });
+
+  test("(b) categories render compact native rows on mobile, grid untouched on desktop", async ({
+    page,
+  }) => {
+    // Source pins: mobile rows carry thumbnail (56-64px), name+count and a
+    // chevron; desktop grid branch stays intact behind the breakpoint.
+    const cats = src("../src/pages/inventory/categories/index.tsx");
+    expect(cats).toContain("mobile-category-row");
+    expect(cats).toContain("mobile-category-thumb");
+    expect(cats).toMatch(/ChevronRight|RightOutlined/);
+    // 60px thumbnail sits inside the 56-64px native spec (UI asserts the box).
+    expect(cats).toContain("width: 60");
+    expect(cats).toMatch(/piece/);
+    expect(cats).toContain("grid={{");
+
+    // UI pin (390px): compact rows with 56-64px thumbs, name+count, chevron.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/categories");
+    const row = page.locator('[data-testid="mobile-category-row"]').first();
+    await expect(row).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.locator('[data-testid="mobile-category-row"]')
+    ).toHaveCount(4);
+    const thumb = row.locator('[data-testid="mobile-category-thumb"]');
+    const box = await thumb.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(56);
+    expect(box?.height ?? 0).toBeLessThanOrEqual(64);
+    await expect(
+      row.locator('[data-testid="mobile-category-chevron"]')
+    ).toBeVisible();
+    // cat-1 carries exactly the orn-1 mock piece.
+    await expect(
+      page.locator('[data-testid="mobile-category-row"]').filter({ hasText: "Necklaces" })
+    ).toContainText("1 piece");
+
+    // UI pin (desktop): big-box grid stays, compact rows absent.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/categories");
+    await expect(page.getByText("Necklaces").first()).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      page.locator('[data-testid="mobile-category-row"]')
+    ).toHaveCount(0);
+  });
+
+  test("(c) rate-trend filters collapse to a single compact scroll row on mobile", async ({
+    page,
+  }) => {
+    // Source pin: one scrollable filter row on mobile (range + metal together).
+    const chart = src("../src/components/metal-rates/rate-chart.tsx");
+    expect(chart).toContain("rate-trend-filters");
+    expect(chart).toMatch(/overflowX:\s*"auto"/);
+
+    // UI pin (390px): range + metal options share one row in a scroller.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/metal-rates");
+    const filters = page.locator('[data-testid="rate-trend-filters"]');
+    await expect(filters).toBeVisible({ timeout: 15000 });
+    const overflowX = await filters.evaluate(
+      (el) => getComputedStyle(el).overflowX
+    );
+    expect(["auto", "scroll"]).toContain(overflowX);
+    const ys = await filters.evaluate((root) => {
+      const btns = Array.from(
+        root.querySelectorAll(".ant-radio-button-wrapper")
+      ) as HTMLElement[];
+      return btns.slice(0, 6).map((b) => b.getBoundingClientRect().top);
+    });
+    expect(ys.length).toBeGreaterThan(3);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThanOrEqual(10);
+
+    // UI pin (desktop): stacked rows stay, single-row container absent.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await expect(filters).toHaveCount(0);
+  });
+
+  test("(d) making charges use native list/stepper rows with 44px targets on mobile", async ({
+    page,
+  }) => {
+    // Source pins: native rows + stepper testids with 44px targets.
+    const mc = src("../src/components/settings/making-charges-settings.tsx");
+    expect(mc).toContain("mobile-making-row");
+    expect(mc).toContain("mobile-making-inc");
+    expect(mc).toContain("mobile-making-dec");
+    expect(mc).toMatch(/44/);
+
+    // UI pin (390px /settings making tab): rows visible, steppers >= 44px,
+    // and + steps the displayed charge by Rs 10.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/settings");
+    const row = page.locator('[data-testid="mobile-making-row"]').first();
+    await expect(row).toBeVisible({ timeout: 15000 });
+    const inc = row.locator('[data-testid="mobile-making-inc"]');
+    const dec = row.locator('[data-testid="mobile-making-dec"]');
+    for (const btn of [inc, dec]) {
+      const box = await btn.boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    const value = row.locator('[data-testid="mobile-making-value"]');
+    const before = await value.innerText();
+    await inc.click();
+    await expect
+      .poll(() => value.innerText(), { timeout: 5000 })
+      .not.toBe(before);
+  });
+
+  test("(e) parity source pins: sale/ornament/loan mobile forms carry every desktop field", async () => {
+    // Mobile sale: invoice date + notes + making-charge inclusion.
+    const pos = src("../src/pages/pos/mobile-pos.tsx");
+    expect(pos).toContain("mobile-pos-include-making");
+    expect(pos).toContain("mobile-pos-notes");
+    expect(pos).toContain("mobile-pos-invoice-date");
+    expect(pos).toContain("includeMaking");
+    // Mobile ornament: read-only auto total-cost field like the desktop drawer.
+    const form = src(
+      "../src/pages/inventory/ornaments/mobile-ornament-form.tsx"
+    );
+    expect(form).toContain('name="purchase_total_cost_rs"');
+    expect(form).toMatch(/readOnly/);
+    expect(src("../src/components/inventory/ornaments/ornament-drawer.tsx")).toContain(
+      'name="purchase_total_cost_rs"'
+    );
+    // Loan: desktop create renders the shared mobile form (parity by construction).
+    expect(src("../src/pages/gold-ledger/create.tsx")).toContain(
+      "MobileGoldLoanForm"
+    );
+  });
+
+  test("(e) making-charge toggle changes mobile totals per the desktop formula", async ({
+    page,
+  }) => {
+    // Desktop formula: line = metal + making; grand = metal + making - discount
+    // (mobile additionally carries its pre-existing 3% GST row — asserted here
+    // so the toggle delta stays exact under it).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("Royal Kundan Choker")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.locator('[data-testid="mobile-pos-add-item"]').first().click();
+    await page.getByRole("button", { name: /review & pay/i }).click();
+    const drawer = page.locator(".ant-drawer-open");
+    await expect(drawer).toBeVisible({ timeout: 10000 });
+    const num = (testId: string) =>
+      drawer.locator(`[data-testid="${testId}"]`).getAttribute("data-value");
+    const subOn = Number(await num("mobile-pos-subtotal"));
+    const making = Number(await num("mobile-pos-making-total"));
+    const grandOn = Number(await num("mobile-pos-grand-total"));
+    // orn-1 x1: making = its purchase_making_charge_paise (Rs 450); metal is
+    // whatever weight x live rate yields — the pin asserts formula structure.
+    expect(making).toBe(45000);
+    const metal = subOn - making;
+    expect(metal).toBeGreaterThan(0);
+    expect(grandOn).toBe(subOn + Math.round(subOn * 0.03));
+    // Toggle making off: totals drop by exactly making + its GST share.
+    await drawer.locator('[data-testid="mobile-pos-include-making"]').click();
+    const subOff = Number(await num("mobile-pos-subtotal"));
+    const grandOff = Number(await num("mobile-pos-grand-total"));
+    expect(subOff).toBe(subOn - making);
+    expect(grandOff).toBe(subOff + Math.round(subOff * 0.03));
+    expect(grandOn - grandOff).toBe(
+      making + Math.round(subOn * 0.03) - Math.round(subOff * 0.03)
+    );
+  });
+
+  test("(e) mobile sale posts desktop-identical payload incl. notes/date/making", async ({
+    page,
+  }) => {
+    // Full parity payload: notes + invoice_date + desktop column set with
+    // making included (mock fulfills in-memory — no real records).
+    const invoices: any[] = [];
+    const items: any[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/rest/v1/invoices") && r.method() === "POST")
+        invoices.push(r.postDataJSON());
+      if (r.url().includes("/rest/v1/invoice_items") && r.method() === "POST")
+        items.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("Royal Kundan Choker")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.locator('[data-testid="mobile-pos-add-item"]').first().click();
+    await page.getByRole("button", { name: /review & pay/i }).click();
+    const drawer = page.locator(".ant-drawer-open");
+    await expect(drawer).toBeVisible({ timeout: 10000 });
+    await expect(
+      drawer.locator('[data-testid="mobile-pos-invoice-date"]')
+    ).toBeVisible();
+    await drawer.locator('[data-testid="mobile-pos-notes"]').fill("Resize note");
+    await drawer
+      .getByRole("button", { name: /confirm & generate bill/i })
+      .click();
+    await expect.poll(() => invoices.length, { timeout: 15000 }).toBeGreaterThan(0);
+    const inv = invoices[invoices.length - 1];
+    const today = new Date().toISOString().slice(0, 10);
+    expect(inv.invoice_date).toBe(today);
+    expect(inv.notes).toBe("Resize note");
+    expect(inv.total_making_charges_paise).toBe(45000);
+    expect(inv.discount_amount_paise).toBe(0);
+    expect(inv.total_amount_paise).toBe(
+      inv.subtotal_amount_paise +
+        Math.round(inv.subtotal_amount_paise * 0.03) -
+        inv.discount_amount_paise
+    );
+    await expect.poll(() => items.length, { timeout: 15000 }).toBeGreaterThan(0);
+    const li = items[items.length - 1];
+    expect(li.making_charge_amount_paise).toBe(45000);
+    expect(li.line_total_paise).toBe(
+      li.metal_amount_paise + li.making_charge_amount_paise
+    );
+  });
+
+  test("(e) making toggle off posts zero making with Paid-via fallback notes", async ({
+    page,
+  }) => {
+    // Excluded making posts zeros (desktop formula with making = 0) while the
+    // untouched-notes fallback keeps the pre-existing Paid-via behavior.
+    const invoices: any[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/rest/v1/invoices") && r.method() === "POST")
+        invoices.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/sales/new");
+    await expect(page.locator('[data-testid="mobile-pos"]')).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.getByText("Royal Kundan Choker")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.locator('[data-testid="mobile-pos-add-item"]').first().click();
+    await page.getByRole("button", { name: /review & pay/i }).click();
+    const drawer = page.locator(".ant-drawer-open");
+    await expect(drawer).toBeVisible({ timeout: 10000 });
+    await drawer.locator('[data-testid="mobile-pos-include-making"]').click();
+    await drawer
+      .getByRole("button", { name: /confirm & generate bill/i })
+      .click();
+    await expect.poll(() => invoices.length, { timeout: 15000 }).toBeGreaterThan(0);
+    const inv = invoices[invoices.length - 1];
+    expect(inv.total_making_charges_paise).toBe(0);
+    expect(inv.notes).toBe("Paid via CASH");
+    expect(inv.total_amount_paise).toBe(
+      inv.subtotal_amount_paise +
+        Math.round(inv.subtotal_amount_paise * 0.03) -
+        inv.discount_amount_paise
+    );
+  });
+
+  test("(e) mobile ornament total-cost field auto-matches desktop formula", async ({
+    page,
+  }) => {
+    // Desktop drawer: Total Purchase Cost (Rs, readOnly) = (weight x rate) + making.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/ornaments/new");
+    await expect(
+      page.locator('[data-testid="mobile-ornament-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    await page
+      .locator('input[placeholder="e.g. 14.850"]')
+      .fill("10");
+    await page.locator('input[placeholder="e.g. 7200"]').fill("7000");
+    await page.locator('input[placeholder="e.g. 3500"]').fill("500");
+    // data-testid lands on the inner input itself; value auto-syncs.
+    const total = page.locator('[data-testid="mobile-total-cost-input"]');
+    await expect(total).toBeVisible();
+    await expect
+      .poll(() => total.inputValue(), { timeout: 10000 })
+      .toBe("70500");
+  });
+
+  test("(e) loan form is shared: identical fields on mobile + desktop widths", async ({
+    page,
+  }) => {
+    // Desktop create.tsx renders MobileGoldLoanForm — parity by construction.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/gold-ledger/new");
+    await expect(
+      page.locator('[data-testid="mobile-gold-loan-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('input[placeholder="₹ Principal"]')).toBeVisible();
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/gold-ledger/new");
+    await expect(
+      page.locator('[data-testid="mobile-gold-loan-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('input[placeholder="₹ Principal"]')).toBeVisible();
+  });
+});
+
 test.describe("Task 3: new-sale empty state + gold/silver-only scope", () => {
   // A legacy DIAMOND metal row injected on top of the shared mock (which is
   // gold/silver-only). Ruling R3 (binding): diamond UI *options* go away, but

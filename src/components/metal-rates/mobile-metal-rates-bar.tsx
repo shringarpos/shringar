@@ -227,19 +227,19 @@ export const MobileMetalRatesBar: React.FC = () => {
         styles={{
           body: {
             padding: "16px 20px 28px",
-            backgroundColor: isDark ? "#121214" : "#ffffff",
-            color: isDark ? "#f8fafc" : "#0f172a",
+            backgroundColor: token.colorBgContainer,
+            color: token.colorText,
           },
           header: {
-            borderBottom: isDark ? "1px solid #27272a" : "1px solid rgba(15, 23, 42, 0.08)",
-            backgroundColor: isDark ? "#18181b" : "#ffffff",
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            backgroundColor: token.colorBgContainer,
             padding: "14px 20px",
           },
         }}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <TrendingUp size={18} color="#2563eb" />
-            <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>
+            <TrendingUp size={18} color={token.colorPrimary} />
+            <span style={{ fontSize: 16, fontWeight: 700, color: token.colorText }}>
               Today's Metal Rates
             </span>
           </div>
@@ -250,13 +250,15 @@ export const MobileMetalRatesBar: React.FC = () => {
             <Form.Item
               name="gold_rate"
               label={
-                <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? "#f1f5f9" : "#1e293b" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: token.colorText }}>
                   Gold Rate ({rateUnit(goldMetal.name)})
                 </span>
               }
               rules={[{ required: true, message: "Enter gold rate" }]}
               style={{ marginBottom: 16 }}
             >
+              {/* Native polish: inputs sit directly on the card background —
+                  no third-color faded wrapper, token border only. */}
               <InputNumber
                 placeholder="e.g. 7200"
                 min={0}
@@ -266,9 +268,9 @@ export const MobileMetalRatesBar: React.FC = () => {
                   borderRadius: 14,
                   fontSize: 16,
                   fontWeight: 600,
-                  backgroundColor: isDark ? "#1a1a1e" : "#ffffff",
-                  color: isDark ? "#ffffff" : "#0f172a",
-                  border: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+                  backgroundColor: token.colorBgContainer,
+                  color: token.colorText,
+                  border: `1px solid ${token.colorBorder}`,
                 }}
                 prefix="₹"
               />
@@ -279,7 +281,7 @@ export const MobileMetalRatesBar: React.FC = () => {
             <Form.Item
               name="silver_rate"
               label={
-                <span style={{ fontSize: 13, fontWeight: 600, color: isDark ? "#f1f5f9" : "#1e293b" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: token.colorText }}>
                   Silver Rate ({rateUnit(silverMetal.name)})
                 </span>
               }
@@ -295,9 +297,9 @@ export const MobileMetalRatesBar: React.FC = () => {
                   borderRadius: 14,
                   fontSize: 16,
                   fontWeight: 600,
-                  backgroundColor: isDark ? "#1a1a1e" : "#ffffff",
-                  color: isDark ? "#ffffff" : "#0f172a",
-                  border: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+                  backgroundColor: token.colorBgContainer,
+                  color: token.colorText,
+                  border: `1px solid ${token.colorBorder}`,
                 }}
                 prefix="₹"
               />
@@ -313,9 +315,9 @@ export const MobileMetalRatesBar: React.FC = () => {
                 borderRadius: 14,
                 fontWeight: 700,
                 fontSize: 14,
-                backgroundColor: isDark ? "#27272a" : "#f1f5f9",
-                color: isDark ? "#f8fafc" : "#334155",
-                border: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
+                backgroundColor: token.colorFillAlter,
+                color: token.colorText,
+                border: `1px solid ${token.colorBorder}`,
               }}
             >
               Cancel
@@ -324,7 +326,7 @@ export const MobileMetalRatesBar: React.FC = () => {
               type="primary"
               htmlType="submit"
               loading={saving}
-              style={{ flex: 2, height: 48, borderRadius: 14, fontWeight: 700, fontSize: 14, backgroundColor: "#2563eb" }}
+              style={{ flex: 2, height: 48, borderRadius: 14, fontWeight: 700, fontSize: 14, backgroundColor: token.colorPrimary }}
             >
               Save Today's Rates
             </Button>

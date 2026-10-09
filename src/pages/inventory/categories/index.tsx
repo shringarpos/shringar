@@ -1,11 +1,13 @@
 import { List as RefineList, useModalForm, useSimpleList } from "@refinedev/antd";
-import { useDelete, useGetIdentity, useGo, useUpdate } from "@refinedev/core";
+import { useDelete, useGetIdentity, useGo, useList, useUpdate } from "@refinedev/core";
 import type { CrudFilter, HttpError } from "@refinedev/core";
+import type { ListProps } from "antd";
 import {
     AppstoreOutlined,
     CopyOutlined,
     DeleteOutlined,
     EditOutlined,
+    RightOutlined,
 } from "@ant-design/icons";
 import {
     App,
@@ -279,6 +281,15 @@ const CategoryList: React.FC = () => {
                 )}
 
                 {/* Card grid */}
+                {isMobile ? (
+                    <MobileCategoryRows
+                        listProps={listProps}
+                        shopId={shopId}
+                        isUpdating={isUpdating}
+                        onToggle={handleToggle}
+                        onRowClick={handleViewOrnaments}
+                    />
+                ) : (
                 <List
                     {...listProps}
                     grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4, xl: 4, xxl: 4 }}
@@ -296,6 +307,7 @@ const CategoryList: React.FC = () => {
                         </List.Item>
                     )}
                 />
+                )}
             </RefineList>
 
             {/* Modals */}
@@ -321,6 +333,113 @@ const CategoryList: React.FC = () => {
                 close={closeClone}
             />
         </>
+    );
+};
+
+// ─── Mobile compact rows ─────────────────────────────────────────────────────
+// Native rows below md (60px thumbnail, name + ornament count, chevron); the
+// desktop big-box grid above is untouched.
+const MobileCategoryRows: React.FC<{
+    listProps: ListProps<ICategory>;
+    shopId?: string;
+    isUpdating: boolean;
+    onToggle: (record: ICategory, checked: boolean) => void;
+    onRowClick: (record: ICategory) => void;
+}> = ({ listProps, shopId, isUpdating, onToggle, onRowClick }) => {
+    const { token } = theme.useToken();
+    const { query: ornamentsQuery } = useList<{ id: string; category_id: string }>({
+        resource: "ornaments",
+        filters: shopId ? [{ field: "shop_id", operator: "eq", value: shopId }] : [],
+        pagination: { mode: "off" },
+        queryOptions: { enabled: !!shopId },
+    });
+    const ornamentRows = (ornamentsQuery?.data?.data ?? []) as {
+        id: string;
+        category_id: string;
+    }[];
+    const countByCategory: Record<string, number> = {};
+    for (const o of ornamentRows)
+        countByCategory[o.category_id] = (countByCategory[o.category_id] ?? 0) + 1;
+
+    return (
+        <List
+            {...listProps}
+            renderItem={(item: ICategory) => {
+                const count = countByCategory[item.id] ?? 0;
+                return (
+                    <List.Item style={{ padding: 0, marginBottom: 8, borderBottom: "none" }}>
+                        <div
+                            data-testid="mobile-category-row"
+                            onClick={() => onRowClick(item)}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 12,
+                                width: "100%",
+                                minHeight: 76,
+                                padding: "8px 12px 8px 8px",
+                                background: token.colorBgContainer,
+                                border: `1px solid ${token.colorBorderSecondary}`,
+                                borderRadius: 14,
+                                cursor: "pointer",
+                            }}
+                        >
+                            <div
+                                data-testid="mobile-category-thumb"
+                                style={{
+                                    width: 60,
+                                    height: 60,
+                                    borderRadius: 10,
+                                    overflow: "hidden",
+                                    flexShrink: 0,
+                                    background: token.colorFillAlter,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                {item.image_url ? (
+                                    <img
+                                        alt={item.name}
+                                        src={item.image_url}
+                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                    />
+                                ) : (
+                                    <AppstoreOutlined
+                                        style={{ fontSize: 24, color: token.colorTextQuaternary }}
+                                    />
+                                )}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <Typography.Text strong ellipsis style={{ display: "block", fontSize: 14 }}>
+                                    {item.name}
+                                </Typography.Text>
+                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                    {count} {count === 1 ? "piece" : "pieces"}
+                                    {!item.is_active ? " • Inactive" : ""}
+                                </Typography.Text>
+                            </div>
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ display: "flex", alignItems: "center", minHeight: 44 }}
+                            >
+                                <Switch
+                                    size="small"
+                                    checked={item.is_active}
+                                    loading={isUpdating}
+                                    onChange={(checked) => onToggle(item, checked)}
+                                    aria-label={`${item.name} active`}
+                                />
+                            </div>
+                            <RightOutlined
+                                data-testid="mobile-category-chevron"
+                                style={{ color: token.colorTextQuaternary, fontSize: 14 }}
+                            />
+                        </div>
+                    </List.Item>
+                );
+            }}
+        />
     );
 };
 
