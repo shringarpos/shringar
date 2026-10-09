@@ -4,7 +4,6 @@ import { useCreate, useGetIdentity } from "@refinedev/core";
 import { Form, Input, InputNumber, Button, DatePicker, Typography, notification, theme } from "antd";
 import { ArrowLeft, User, Coins, Percent, Save, Phone } from "lucide-react";
 import dayjs from "dayjs";
-import { useShopCheck } from "../../hooks/use-shop-check";
 import type { IGoldLoan } from "../../libs/interfaces";
 import { ColorModeContext } from "../../contexts/color-mode";
 
@@ -33,8 +32,6 @@ export const MobileGoldLoanForm: React.FC = () => {
     buttonSecondaryBorder: isDark ? "1px solid #3f3f46" : "1px solid #cbd5e1",
   };
 
-  const { shops } = useShopCheck();
-  const shopId = shops?.[0]?.id;
   const { data: identity } = useGetIdentity<{ id: string }>();
   const userId = identity?.id;
 
@@ -42,17 +39,18 @@ export const MobileGoldLoanForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loanAmount = Form.useWatch("loan_amount", form) || 0;
-  const interestRatePct = Form.useWatch("interest_rate_pct", form) || 0;
-  const monthlyInterestRs = Math.round((loanAmount * interestRatePct) / 100);
+  const interestRate = Form.useWatch("interest_rate", form) || 0;
+  const durationMonths = Form.useWatch("duration_months", form) || 0;
+  // Same simple-interest derivation the badge below displays: the rate is a
+  // MONTHLY % (girvi convention), so monthly interest = round(P * r / 100),
+  // tenure interest = monthly x months, total = principal + tenure interest.
+  const monthlyInterestRs = Math.round((Number(loanAmount) * Number(interestRate)) / 100);
+  const tenureInterestRs = monthlyInterestRs * Number(durationMonths || 0);
+  const totalPayableRs = Number(loanAmount || 0) + tenureInterestRs;
 
   const { mutateAsync: createLoan } = useCreate<IGoldLoan>();
 
   const handleSubmit = async (values: any) => {
-    if (!shopId) {
-      notification.error({ message: "Shop information not available" });
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       const loanDateStr = values.loan_date
@@ -61,20 +59,34 @@ export const MobileGoldLoanForm: React.FC = () => {
           : values.loan_date
         : dayjs().format("YYYY-MM-DD");
 
+      const principal = Number(values.loan_amount);
+      const rate = Number(values.interest_rate);
+      const months = Number(values.duration_months);
+      const monthly = Math.round((principal * rate) / 100);
+      const interestAmount = monthly * months;
+      const totalAmount = principal + interestAmount;
+
+      // EXACT gold_loans columns only (migration 20261005154854): user_id
+      // satisfies RLS user_id = auth.uid(); non-schema keys and UI-aliased
+      // field names are mapped or dropped — never sent.
       await createLoan({
         resource: "gold_loans",
         values: {
-          customer_name: values.customer_name.trim(),
-          customer_phone: values.customer_phone?.trim() || null,
-          item_description: values.item_description.trim(),
-          loan_amount: Number(values.loan_amount),
-          interest_rate_pct: Number(values.interest_rate_pct),
-          duration_months: Number(values.duration_months),
-          loan_date: loanDateStr,
-          status: "active",
-          shop_id: shopId,
           user_id: userId,
-          updated_by: userId,
+          customer_name: values.customer_name.trim(),
+          contact_no: values.contact_no.trim(),
+          address: values.address.trim(),
+          nominee: values.nominee.trim(),
+          metal_type: values.metal_type,
+          purity: values.purity,
+          ornament_details: values.ornament_details.trim(),
+          loan_date: loanDateStr,
+          loan_amount: principal,
+          duration_months: months,
+          interest_rate: rate,
+          interest_amount: interestAmount,
+          total_amount: totalAmount,
+          status: "running",
         },
       });
 
@@ -175,7 +187,7 @@ export const MobileGoldLoanForm: React.FC = () => {
         initialValues={{
           metal_type: "Gold",
           purity: "22K",
-          interest_rate_pct: 2,
+          interest_rate: 2,
           duration_months: 6,
           loan_date: dayjs(),
         }}
@@ -214,7 +226,7 @@ export const MobileGoldLoanForm: React.FC = () => {
           <Form.Item
             label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Borrower Name</span>}
             name="customer_name"
-            rules={[{ required: true, message: "Borrower name is required" }]}
+            rules={[{ required: true, whitespace: true, message: "Borrower name is required" }]}
             style={{ marginBottom: 14 }}
           >
             <Input placeholder="Full name of borrower" style={{ height: 48, borderRadius: 14, fontSize: 15 }} />
@@ -222,8 +234,11 @@ export const MobileGoldLoanForm: React.FC = () => {
 
           <Form.Item
             label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Phone Number</span>}
-            name="customer_phone"
-            rules={[{ pattern: /^[0-9+\s-]{8,15}$/, message: "Valid phone required" }]}
+            name="contact_no"
+            rules={[
+              { required: true, whitespace: true, message: "Contact number is required" },
+              { pattern: /^[0-9+\s-]{8,15}$/, message: "Valid phone required" },
+            ]}
             style={{ marginBottom: 14 }}
           >
             <Input
@@ -234,7 +249,16 @@ export const MobileGoldLoanForm: React.FC = () => {
             />
           </Form.Item>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Address</span>} name="address" style={{ marginBottom: 0 }}>
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Nominee</span>}
+            name="nominee"
+            rules={[{ required: true, whitespace: true, message: "Nominee name is required" }]}
+            style={{ marginBottom: 14 }}
+          >
+            <Input placeholder="Nominee full name" style={{ height: 48, borderRadius: 14, fontSize: 15 }} />
+          </Form.Item>
+
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Address</span>} name="address" rules={[{ required: true, whitespace: true, message: "Residential address is required" }]} style={{ marginBottom: 0 }}>
             <Input placeholder="Resident village / town" style={{ height: 48, borderRadius: 14, fontSize: 14 }} />
           </Form.Item>
         </div>
@@ -270,19 +294,19 @@ export const MobileGoldLoanForm: React.FC = () => {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Metal Type</span>} name="metal_type" style={{ marginBottom: 14 }}>
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Metal Type</span>} name="metal_type" rules={[{ required: true, message: "Select metal type" }]} style={{ marginBottom: 14 }}>
               <Input style={{ height: 48, borderRadius: 14, fontSize: 14 }} />
             </Form.Item>
 
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Purity</span>} name="purity" style={{ marginBottom: 14 }}>
+            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Purity</span>} name="purity" rules={[{ required: true, message: "Select purity" }]} style={{ marginBottom: 14 }}>
               <Input placeholder="e.g. 22K" style={{ height: 48, borderRadius: 14, fontSize: 14 }} />
             </Form.Item>
           </div>
 
           <Form.Item
             label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Item Description & Weight</span>}
-            name="item_description"
-            rules={[{ required: true, message: "Describe the ornaments" }]}
+            name="ornament_details"
+            rules={[{ required: true, whitespace: true, message: "Describe the ornaments" }]}
             style={{ marginBottom: 0 }}
           >
             <Input
@@ -339,7 +363,7 @@ export const MobileGoldLoanForm: React.FC = () => {
 
             <Form.Item
               label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Interest (%/mo)</span>}
-              name="interest_rate_pct"
+              name="interest_rate"
               rules={[{ required: true, message: "Rate" }]}
               style={{ marginBottom: 14 }}
             >
@@ -392,7 +416,7 @@ export const MobileGoldLoanForm: React.FC = () => {
                 ESTIMATED MONTHLY INTEREST
               </span>
               <span style={{ fontSize: 12, color: "#cbd5e1", fontWeight: 500 }}>
-                {interestRatePct}% on ₹{loanAmount.toLocaleString("en-IN")}
+                {interestRate}%/mo on ₹{Number(loanAmount || 0).toLocaleString("en-IN")} • Total ₹{totalPayableRs.toLocaleString("en-IN")} over {Number(durationMonths || 0)}mo
               </span>
             </div>
             <div style={{ textAlign: "right" }}>
