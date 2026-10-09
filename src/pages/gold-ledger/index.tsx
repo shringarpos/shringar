@@ -46,6 +46,12 @@ import { LoanShowDrawer } from "../../components/gold-ledger/loan-show-drawer";
 import { LoanStatsCards } from "../../components/gold-ledger/loan-stats-cards";
 import type { IGoldLoan } from "../../libs/interfaces";
 
+const formatINR = (val: number | string | null | undefined): string =>
+    Number(val || 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
 export default function GoldLedger() {
     const screens = Grid.useBreakpoint();
     if (!screens.md) {
@@ -513,7 +519,7 @@ function DesktopGoldLedger() {
                         sorter
                         render={(val: number) => (
                             <Typography.Text strong style={{ color: token.colorText }}>
-                                ₹{Number(val).toLocaleString("en-IN")}
+                                ₹{formatINR(val)}
                             </Typography.Text>
                         )}
                     />
@@ -545,7 +551,7 @@ function DesktopGoldLedger() {
                                     {record.interest_rate}%
                                 </Typography.Text>
                                 <Typography.Text style={{ color: token.colorWarning, fontWeight: 600 }}>
-                                    ₹{Number(record.interest_amount).toLocaleString("en-IN")}
+                                    ₹{formatINR(record.interest_amount)}
                                 </Typography.Text>
                             </div>
                         )}
@@ -560,7 +566,7 @@ function DesktopGoldLedger() {
                         sorter
                         render={(val: number) => (
                             <Typography.Text strong style={{ color: token.colorSuccess }}>
-                                ₹{Number(val).toLocaleString("en-IN")}
+                                ₹{formatINR(val)}
                             </Typography.Text>
                         )}
                     />
