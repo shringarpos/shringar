@@ -1,485 +1,271 @@
-# Shringar POS — Exhaustive UI/UX & Responsive Audit Report
+# Shringar POS — End-to-End QA Testing Bug Report
 
-**Date:** October 5, 2026  
-**Auditor:** Quality Automation & Senior UI/UX Engineering Specialist  
-**Application:** Shringar Jewelry ERP & Point-of-Sale (React 18 + Refine + Ant Design 5 + Supabase)  
-**Testing Methodology:** Automated Playwright Headless Crawl, Computed DOM Metrics, Style & Theme Token Inspection, Visual Screenshot Regression  
-**Viewports Audited:**  
-- **Desktop:** 1440 × 900  
-- **Tablet:** 768 × 1024  
-- **Mobile:** 375 × 812 (iPhone 13 standard)  
-**Themes Audited:** Light Mode (`#ffffff` / `#fafafa`) & Dark Mode (`#141414` / `#1f1f1f`)  
+**Target URL:** `https://shringar-pos.vercel.app/`  
+**Test Account:** `demo.kolhapur@shringar.com`  
+**Shop Name:** Mahalaxmi Saraf & Jewellers (`MSJ`)  
+**Test Devices & Viewports:**  
+- **Desktop:** Viewport `1280 x 800`
+- **Mobile:** Viewport `390 x 844` (iPhone 14 / modern smartphone standard)  
+**Testing Methodology:** Raw browser session interaction via `agent-browser` (clicking, form filling, flow validation, console log & error inspection across all application modules).
 
 ---
 
-## 1. Executive Summary
+## Executive Summary of Findings
 
-An exhaustive automated crawler systematically explored every page, drawer, modal, and interactive element within the Shringar POS web application. The audit crawled 11 primary route segments, triggered 8 modal/drawer dialogs, evaluated responsiveness across 3 distinct device viewports, and analyzed dark/light theme token compliance across all views.
+During end-to-end testing across Dashboard, POS New Sale, Invoices, Customers, Ornaments Inventory, Categories, Gold Ledger, Metal Rates, Design Gallery, and Showroom Settings, a total of **13 bugs** were identified.
 
-A total of **10 distinct UI/UX defects** were discovered and categorized by severity:
-- **Critical / High Severity (6 bugs):** Route resolution 404 on `/pos/create`, invisible active tab indicators in Light theme, glaring light theme bleed on dark category cards, and severe mobile/tablet horizontal layout overflows on invoices, POS sale creation, and the dashboard.
-- **Medium Severity (3 bugs):** Mobile drawer and modal fixed-pixel clipping, hardcoded color borders violating WCAG AA contrast standards, and table action column wrapping on narrow screens.
-- **Low Severity (1 bug):** Inconsistent page header padding and typography hierarchy across Refine page wrappers.
-
----
-
-## 2. Test Execution Matrix & Coverage
-
-| Route / View | Desktop (1440x900) Light/Dark | Tablet (768x1024) Light/Dark | Mobile (375x812) Light/Dark | Drawers / Modals Checked |
-|---|---|---|---|---|
-| **`/dashboard`** | Passed / Passed | Passed / Passed | **Overflow (397px)** | Quick Actions |
-| **`/customers`** | Passed / Passed | Passed / Passed | Passed / Passed | Create Customer Drawer, Customer Details Modal |
-| **`/inventory/ornaments`** | Passed / Passed | Passed / Passed | Passed / Passed | Add Ornament Drawer, Edit Ornament |
-| **`/inventory/categories`** | **Theme Bleed** | **Theme Bleed** | **Theme Bleed** | Create Category Modal |
-| **`/metal-rates`** | Passed / Passed | Passed / Passed | Passed / Passed | Update Rate Popover / Modal |
-| **`/gold-ledger`** | Passed / Passed | Passed / Passed | Passed / Passed | Add New Loan Drawer, Loan Details Drawer |
-| **`/gold-ledger/reports`**| Passed / Passed | Passed / Passed | Passed / Passed | Running Loans Tab, Closed Loans Tab |
-| **`/pos/create`** | **404 CatchAll** | **404 CatchAll** | **404 CatchAll** | N/A (Route dead end) |
-| **`/create-sale` (POS)**| Passed / Passed | Passed / Passed | **Overflow (388px)** | Customer Select, Add Item Drawer/Table, Checkout |
-| **`/invoices`** | Passed / Passed | Passed / Passed | Passed / Passed | Invoices Table, Status Filter |
-| **`/invoices/:id` (Show)**| Passed / Passed | **Overflow (780px)** | **Overflow (768px)**| Printable Invoice Card, Payment History |
-| **`/settings`** | **White Tab Bleed** | **White Tab Bleed** | **White Tab Bleed** | Profile, Shop Settings, Metal Rates, Invoice Format |
-| **`/login`** | Passed / Passed | Passed / Passed | Passed / Passed | Auth Card, Input Validations, Password Visibility |
+| Severity | Count | Summary of Key Issues |
+| :--- | :---: | :--- |
+| **Critical** | 1 | Silent customer account assignment on Mobile POS checkout |
+| **High** | 2 | Unique constraint database crash on Metal Rate update; Invoice cancellation stock update failure |
+| **Medium** | 5 | False UNPAID badge on mobile invoices; Desktop POS missing payment mode; AntD Select dropdown overlay interception; Instant stock mutation without confirmation; Duplicate categories allowed |
+| **Low** | 5 | Inconsistent customer phone validation; Currency fraction formatting in Gold Ledger; Redundant pluralization collision in Design Gallery; Negative Recharts dimension warnings; Mobile More drawer missing close CTA |
 
 ---
 
-## 3. Discovered Defects Catalog
+## Detailed Bug Reports
 
-### Bug SHRINGAR-001: Standard Route `/pos/create` Displays 404 "Page Not Found"
-- **Severity:** High
-- **Category:** Routing & Navigation
-- **Affected Route:** `/pos/create`
-- **Affected Viewports & Themes:** All Viewports (Desktop, Tablet, Mobile), All Themes
-- **Affected File:** `src/App.tsx`
-- **Screenshot Artifacts:** `e2e/screenshots/pos-create-*.png`
-
-#### Visual Symptom & Observed Behavior
-Navigating directly to `/pos/create` (the standard POS route referenced in navigation guidelines, breadcrumbs, and marketing documentation) loads Refine's CatchAll `<ErrorComponent />` with the message:
-> *"Sorry, the page you visited does not exist."*
-
-The application registers the Point-of-Sale create page under the non-standard route `/create-sale` in `src/App.tsx`, without providing any route alias, redirection, or backwards-compatible mapping for `/pos/create`.
-
-#### Root Cause Analysis
-In `src/App.tsx`:
-```tsx
-<Route path="/create-sale" element={<CreateSale />} />
-// Missing route definition or redirect for /pos/create
-```
-
-#### Remediation
-In `src/App.tsx`, import `Navigate` from `react-router-dom` and add a redirect or route alias:
-```tsx
-import { Navigate } from "react-router-dom";
-
-// Inside the authenticated Route group:
-<Route path="/create-sale" element={<CreateSale />} />
-<Route path="/pos/create" element={<Navigate to="/create-sale" replace />} />
-```
+### Bug 1: Silent Customer Assignment on Mobile POS Checkout
+- **Severity:** `Critical`
+- **Mode / Viewport:** `Mobile` (`390 x 844`)
+- **Location:** `src/pages/pos/mobile-pos.tsx` (Lines 401–406)
+- **Description:**
+  When a cashier creates a sale and proceeds through checkout on the mobile POS view without explicitly selecting a customer, the application silently assigns the sale and invoice to `customers[0]` (the very first customer in the database query):
+  ```typescript
+  const customerToUse = selectedCustomer || customers[0];
+  ```
+  This creates a severe data corruption and privacy bug: sales, GST invoices, and financial liabilities are silently attached to random, uninvolved customer accounts.
+- **Steps to Reproduce:**
+  1. Set viewport to `390 x 844` and navigate to `https://shringar-pos.vercel.app/sales/new`.
+  2. Tap on any ornament catalog item to add it to the cart dock.
+  3. Tap **Review Cart** dock button.
+  4. In the checkout drawer, leave the customer selector empty/unselected.
+  5. Select payment mode (e.g. Cash) and tap **Generate Invoice**.
+  6. Observe that the invoice is generated and permanently billed to an arbitrary existing customer (e.g. "Aniket Patil") without any warning or confirmation.
+- **Expected Behavior:**
+  Checkout should be blocked with a required validation error, or the cashier should be prompted to select a customer or create a designated "Walk-in Customer" record.
 
 ---
 
-### Bug SHRINGAR-002: Settings Active Tab Underline Invisible in Light Mode
-- **Severity:** High
-- **Category:** Theme Contrast & Visual Accessibility
-- **Affected Route:** `/settings`
-- **Affected Viewports & Themes:** Desktop, Tablet, Mobile (Light Mode)
-- **Affected File:** `src/pages/settings/index.tsx` (Component: `TabItem`)
-- **Screenshot Artifacts:** `e2e/screenshots/settings-desktop-light.png`, `settings-mobile-light.png`
-
-#### Visual Symptom & Observed Behavior
-On the Settings page, when Light Mode is active, clicking on any tab ("Profile", "Shop Settings", "Metal Rates", "Invoice Settings") fails to show any visual active state indicator. The tab underline is rendered in solid white (`#ffffff`) over a pure white card background (`#ffffff`), producing a contrast ratio of **1.0 : 1** (completely invisible). Users cannot discern which settings panel is currently active.
-
-Furthermore, the tab separator border is hardcoded to `#e5e5e5`, ignoring Ant Design theme tokens.
-
-#### Root Cause Analysis
-In `src/pages/settings/index.tsx`:
-```tsx
-function TabItem({ active, label, icon, onClick }: TabItemProps) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        padding: "12px 16px",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        // BUG: Hardcoded "2px solid white" active indicator renders invisible on white background
-        borderBottom: active ? "2px solid white" : "2px solid transparent",
-        color: active ? "inherit" : undefined,
-        fontWeight: active ? 600 : 400,
-        transition: "all 0.2s",
-      }}
-    >
-      {icon}
-      <span>{label}</span>
-    </div>
-  );
-}
-```
-
-#### Remediation
-Use Ant Design's `theme.useToken()` or replace the custom tab implementation with Ant Design's standard `<Tabs />` component:
-```tsx
-import { theme, Tabs } from "antd";
-
-// Option A: If maintaining custom TabItem:
-const { token } = theme.useToken();
-
-borderBottom: active ? `2px solid ${token.colorPrimary}` : "2px solid transparent",
-color: active ? token.colorPrimary : token.colorTextSecondary,
-
-// Option B: Standardize on Ant Design Tabs:
-<Tabs
-  activeKey={activeTab}
-  onChange={setActiveTab}
-  items={[
-    { key: "profile", label: "Profile", icon: <UserOutlined /> },
-    { key: "shop", label: "Shop Settings", icon: <ShopOutlined /> },
-    { key: "rates", label: "Metal Rates", icon: <DollarOutlined /> },
-    { key: "invoices", label: "Invoice Settings", icon: <PrinterOutlined /> },
-  ]}
-/>
-```
+### Bug 2: Unique Metal Rate Date DB Constraint Crash on Rate Update
+- **Severity:** `High`
+- **Mode / Viewport:** `Both` (Desktop & Mobile)
+- **Location:** `src/components/metal-rates/rate-edit-popover.tsx` (Lines 45–75), `src/components/dashboard/`, Header Ticker
+- **Description:**
+  In the top navigation header metal rates ticker button and Dashboard rate update buttons, opening the `RateEditPopover` to adjust today's Gold or Silver rate fails if `existingRate` is not preloaded in React state. The handler executes `createRate` (HTTP POST / INSERT) instead of an UPSERT. The Supabase table `ornament_rates` enforces:
+  ```sql
+  CONSTRAINT unique_metal_rate_date UNIQUE (shop_id, metal_type_id, rate_date)
+  ```
+  Postgres rejects the insertion with error `23505 duplicate key value violates unique constraint "unique_metal_rate_date"`, displaying a red error toast and leaving the rate unchanged.
+- **Steps to Reproduce:**
+  1. Log into `https://shringar-pos.vercel.app/` on Desktop or Mobile.
+  2. In the top header bar, click/tap the live metal rate button (`GOLD ₹75,000 / 10g | SILVER ₹93 / g`).
+  3. Enter a new Gold rate (e.g. `75500`) and click **Save**.
+  4. Observe error notification: `duplicate key value violates unique constraint "unique_metal_rate_date"`.
+- **Expected Behavior:**
+  Rate mutations should perform an `upsert` with conflict target `(shop_id, metal_type_id, rate_date)` so existing rates for the current date are updated seamlessly.
 
 ---
 
-### Bug SHRINGAR-003: Glaring Hardcoded Light Background in Category Cards in Dark Mode
-- **Severity:** High
-- **Category:** Theme Contrast Bleed
-- **Affected Route:** `/inventory/categories`
-- **Affected Viewports & Themes:** Desktop, Tablet, Mobile (Dark Mode)
-- **Affected File:** `src/pages/inventory/categories/index.tsx` (Component: `CategoryCard`)
-- **Screenshot Artifacts:** `e2e/screenshots/categories-desktop-dark.png`, `categories-tablet-dark.png`
-
-#### Visual Symptom & Observed Behavior
-When Dark Mode is active, every category card without a custom uploaded image renders a blinding stark-white/light-gray rectangle (`#f5f5f5`) of height 160px with a faint gray icon (`#bfbfbf`). The white box clashes violently with the dark surrounding card (`#141414`) and dark page layout (`#000000` / `#1f1f1f`), violating dark theme immersion and hurting readability.
-
-#### Root Cause Analysis
-In `src/pages/inventory/categories/index.tsx`:
-```tsx
-{category.image_url ? (
-  <img src={category.image_url} alt={category.name} style={{ height: 160, objectFit: "cover" }} />
-) : (
-  <div
-    style={{
-      height: 160,
-      background: "#f5f5f5", // BUG: Hardcoded light hex code
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <AppstoreOutlined style={{ fontSize: 48, color: "#bfbfbf" }} />
-  </div>
-)}
-```
-
-#### Remediation
-Extract theme tokens via `theme.useToken()` and use `token.colorFillAlter` or `token.colorBgContainerDisabled`:
-```tsx
-const { token } = theme.useToken();
-
-<div
-  style={{
-    height: 160,
-    background: token.colorFillAlter,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: `${token.borderRadiusLG}px ${token.borderRadiusLG}px 0 0`,
-  }}
->
-  <AppstoreOutlined style={{ fontSize: 48, color: token.colorTextQuaternary }} />
-</div>
-```
+### Bug 3: Invoice Cancellation Item Stock Restock Fetch Error
+- **Severity:** `High`
+- **Mode / Viewport:** `Both` (Desktop & Mobile)
+- **Location:** `src/pages/invoices/index.tsx` (Lines 204–245)
+- **Description:**
+  When cancelling an invoice from `/invoices` (via the "Cancel Invoice" action button and modal confirmation), the Supabase invoice status update succeeds (`is_cancelled = true`), but the subsequent client-side loop attempting to restore ornament stock quantities fails with:
+  ```text
+  TypeError: Failed to fetch
+  ```
+  The user is shown an error notification, and inventory quantities are not properly restored for the cancelled line items.
+- **Steps to Reproduce:**
+  1. Navigate to `https://shringar-pos.vercel.app/invoices`.
+  2. Locate an active invoice and click the **Cancel** button in the actions column.
+  3. Enter a cancellation reason (e.g. "Customer return") and click **Confirm Cancellation**.
+  4. Observe error toast `TypeError: Failed to fetch`.
+- **Expected Behavior:**
+  Cancellation and stock replenishment should execute atomically via a Postgres RPC function or robust batch mutation, updating invoice status and ornament stock together without fetch errors.
 
 ---
 
-### Bug SHRINGAR-004: Severe Horizontal Layout Overflow on Mobile & Tablet in Invoice Details View
-- **Severity:** High
-- **Category:** Responsive Breakpoints & Viewport Overflow
-- **Affected Route:** `/invoices/:id` (e.g., `/invoices/inv-1`)
-- **Affected Viewports:** Mobile (375px), Tablet (768px)
-- **Affected File:** `src/pages/invoices/show.tsx`
-- **Screenshot Artifacts:** `e2e/screenshots/invoices-show-mobile-light.png`, `invoices-show-tablet-dark.png`
-
-#### Visual Symptom & Observed Behavior
-- **Mobile (375px viewport):** The DOM `scrollWidth` expands to **768px**, more than double the width of the physical screen. The entire page shifts horizontally, forcing the user to pan horizontally back and forth to read invoice amounts, customer names, and action buttons. The global app header and bottom tabs are also pushed out of view.
-- **Tablet (768px viewport):** The DOM `scrollWidth` expands to **780px**, producing an awkward horizontal scrollbar on portrait tablets.
-
-#### Root Cause Analysis
-1. The invoice printable card container has fixed width styles (`width: 720px` or `min-width: 680px`) designed for desktop A4 print preview without a responsive wrapper.
-2. The `<Table />` component displaying line items (`Ornaments`, `Purity`, `Gross Wt`, `Net Wt`, `Rate`, `Making Charges`, `Total`) lacks the `scroll={{ x: 'max-content' }}` attribute, causing the table container to stretch the parent layout to its minimum intrinsic text width.
-
-#### Remediation
-1. Wrap the invoice preview card in an overflow container:
-```tsx
-<div style={{ width: "100%", overflowX: "auto", paddingBottom: 16 }}>
-  <Card style={{ minWidth: 640, maxWidth: 800, margin: "0 auto" }}>
-    {/* Printable Invoice Contents */}
-  </Card>
-</div>
-```
-2. Enable horizontal scrolling on the items table:
-```tsx
-<Table
-  columns={columns}
-  dataSource={invoice.items}
-  pagination={false}
-  scroll={{ x: 600 }}
-/>
-```
+### Bug 4: Ant Design Select Dropdown Overlay Click Interception
+- **Severity:** `Medium`
+- **Mode / Viewport:** `Desktop` (`1280 x 800`)
+- **Location:** `src/components/invoices/sale-form.tsx` (Lines 780–798)
+- **Description:**
+  In the Customer and Ornament selection dropdowns on the Desktop POS form, `dropdownRender` injects a bottom `<Divider />` and `<Button type="link">Create New Customer</Button>`. In compact viewports (or when the dropdown menu expands downwards near the lower fold), the sticky link button overlaps the bottom options in the listbox. Clicks intended for the bottom option item trigger the "Create New Customer" action instead of selecting the customer.
+- **Steps to Reproduce:**
+  1. On desktop (1280x800), navigate to `https://shringar-pos.vercel.app/sales/new`.
+  2. Click the Customer `<Select>` dropdown to show customer items.
+  3. Attempt to click on the last visible customer item near the bottom divider.
+  4. Notice the click is intercepted by the "Create New Customer" link button, opening the customer creation modal instead of selecting the customer.
+- **Expected Behavior:**
+  The dropdown menu listbox should have sufficient bottom padding or the action button should be placed outside the scroll container to prevent click overlay issues.
 
 ---
 
-### Bug SHRINGAR-005: Mobile Horizontal Layout Overflow on POS / Create Sale Page
-- **Severity:** High
-- **Category:** Responsive Breakpoints & Viewport Overflow
-- **Affected Route:** `/create-sale` (and `/pos/create`)
-- **Affected Viewports:** Mobile (375px)
-- **Affected File:** `src/components/invoices/sale-form.tsx`
-- **Screenshot Artifacts:** `e2e/screenshots/pos-create-mobile-light.png`, `pos-create-mobile-dark.png`
-
-#### Visual Symptom & Observed Behavior
-On mobile viewports (375px), the page content expands to **388px** (`scrollWidth > clientWidth`). Users experience unwanted horizontal page wobbling when typing in customer search, selecting payment modes, or adjusting line item weights.
-
-#### Root Cause Analysis
-1. Header action buttons ("Select Customer", "Add Item", "Save Draft", "Complete Sale") are arranged in an un-wrapped `<Space>` container with `wrap={false}`.
-2. The items summary grid and calculation rows have fixed column pixel definitions that exceed 375px minus container padding (`375px - 32px = 343px`).
-
-#### Remediation
-In `src/components/invoices/sale-form.tsx`:
-1. Add `wrap` prop to all action `<Space>` containers:
-```tsx
-<Space wrap size="small">
-  <Button icon={<SaveOutlined />}>Save Draft</Button>
-  <Button type="primary" icon={<CheckOutlined />}>Complete Sale</Button>
-</Space>
-```
-2. Use responsive column spans on `<Row>` and `<Col>`:
-```tsx
-<Row gutter={[12, 12]}>
-  <Col xs={24} sm={12} lg={8}>
-    {/* Customer Selection */}
-  </Col>
-  <Col xs={24} sm={12} lg={8}>
-    {/* Payment Mode */}
-  </Col>
-</Row>
-```
-3. Set `scroll={{ x: 340 }}` on the POS items table.
+### Bug 5: Mobile Invoice List Shows False "UNPAID" Badge on Settled Invoices
+- **Severity:** `Medium`
+- **Mode / Viewport:** `Mobile` (`390 x 844`)
+- **Location:** `src/components/invoices/mobile-invoice-list.tsx` (Line 340)
+- **Description:**
+  In the mobile invoice list view, each invoice card header renders:
+  ```tsx
+  <Badge text={inv.payment_status || "UNPAID"} status="error" />
+  ```
+  The Supabase `invoices` table does not contain a `payment_status` column. Consequently, `inv.payment_status` is always `undefined`, causing **every single invoice** to display a red `UNPAID` badge, even when the invoice has zero balance and is displayed as "Paid" elsewhere.
+- **Steps to Reproduce:**
+  1. Set viewport to `390 x 844` and navigate to `https://shringar-pos.vercel.app/invoices`.
+  2. Inspect any settled invoice card (e.g. `#MSJ000030`).
+  3. Observe that the top-right tag says `Paid`, but the header badge simultaneously displays a red `UNPAID` status.
+- **Expected Behavior:**
+  Payment status badge should derive its value dynamically:
+  ```tsx
+  const isPaid = (inv.balance_amount_paise ?? 0) <= 0;
+  <Badge text={isPaid ? "PAID" : "UNPAID"} status={isPaid ? "success" : "error"} />
+  ```
 
 ---
 
-### Bug SHRINGAR-006: Mobile Horizontal Overflow on Dashboard KPI Grid
-- **Severity:** High
-- **Category:** Responsive Breakpoints & Viewport Overflow
-- **Affected Route:** `/dashboard`
-- **Affected Viewports:** Mobile (375px)
-- **Affected File:** `src/pages/dashboard/index.tsx`
-- **Screenshot Artifacts:** `e2e/screenshots/dashboard-mobile-light.png`, `dashboard-mobile-dark.png`
-
-#### Visual Symptom & Observed Behavior
-On mobile screens (375px width), the dashboard viewport horizontal width reaches **397px**, triggering an undesirable horizontal scrollbar.
-
-#### Root Cause Analysis
-Ant Design `<Row gutter={[16, 16]}>` applies a negative margin (`margin-left: -8px; margin-right: -8px;`). When placed inside a container that has `padding: 0` or insufficient edge padding, or when `<Col xs={24}>` cards contain nested elements with explicit min-widths, the negative gutter pushes the right edge of the card beyond the 375px viewport boundary.
-
-#### Remediation
-In `src/pages/dashboard/index.tsx`:
-1. Ensure the parent container has `overflow-x: hidden` or wraps grids with responsive padding:
-```tsx
-<div style={{ maxWidth: "100%", overflowX: "hidden", padding: "0 8px" }}>
-  <Row gutter={[12, 12]}>
-    <Col xs={24} sm={12} lg={6}>
-      <Card ... />
-    </Col>
-  </Row>
-</div>
-```
+### Bug 6: Inconsistent Customer Phone Format Validation Between Desktop and Mobile
+- **Severity:** `Medium`
+- **Mode / Viewport:** `Both` (Desktop vs Mobile)
+- **Location:** `src/components/customers/customer-modal.tsx` (Line 186) vs `src/pages/customers/mobile-customer-form.tsx` (Line 221)
+- **Description:**
+  Desktop `CustomerModal` only checks `{ required: true, message: "Phone number is required" }`, allowing cashiers to submit invalid phone numbers like `12345` or `000`. Conversely, `mobile-customer-form.tsx` validates against a 10-digit Indian phone regex (`Please enter a valid phone number`). This inconsistency allows malformed phone records to enter the database via desktop.
+- **Steps to Reproduce:**
+  1. On Desktop (`1280 x 800`), go to `/customers` and click **New Customer**.
+  2. Enter Name: `QA Test`, Phone: `12345`, Address: `Test Address`.
+  3. Click **Save**. Form submits successfully and creates the customer.
+  4. Now switch to Mobile (`390 x 844`), go to `/customers/new`, and enter Phone: `12345`.
+  5. Click **Add Client**. Form blocks submission with error: `Please enter a valid phone number`.
+- **Expected Behavior:**
+  Apply the standard 10-digit regex validator (`/^[6-9]\d{9}$/`) uniformly across both Desktop and Mobile customer creation forms.
 
 ---
 
-### Bug SHRINGAR-007: Modals and Drawers Lack Responsive Width Clamping on Mobile Screens
-- **Severity:** Medium
-- **Category:** Mobile Drawer & Modal Viewport Clipping
-- **Affected Routes & Components:**
-  - Create Customer Drawer / Modal (`src/components/customers/customer-form.tsx`)
-  - Create Category Modal (`src/pages/inventory/categories/index.tsx`)
-  - Add Ornament Drawer (`src/pages/inventory/ornaments/index.tsx`)
-  - Add Gold Loan Drawer (`src/pages/gold-ledger/index.tsx`)
-  - Loan Details Drawer (`src/pages/gold-ledger/index.tsx`)
-- **Affected Viewports:** Mobile (375px)
-- **Screenshot Artifacts:** `e2e/screenshots/customer-modal-mobile-light.png`, `category-modal-mobile-dark.png`, `gold-ledger-add-loan-mobile-light.png`
-
-#### Visual Symptom & Observed Behavior
-On mobile (375px width), dialogs and side drawers that have explicit pixel widths (e.g. `width={520}` or `width={600}`) cause the modal body or drawer action footer ("Cancel", "Submit") to stretch or clip against the edges of the screen. In some modals, the close ("X") icon collides with title text.
-
-#### Root Cause Analysis
-Drawers and Modals specify fixed integer widths without checking the current viewport breakpoint:
-```tsx
-<Drawer
-  title="Add New Loan"
-  width={560} // BUG: 560px exceeds 375px viewport on mobile
-  open={open}
-  onClose={onClose}
->
-```
-
-#### Remediation
-Use Ant Design's `Grid.useBreakpoint()` hook to dynamically assign 100% width on mobile screens:
-```tsx
-import { Grid, Drawer } from "antd";
-
-const { useBreakpoint } = Grid;
-
-export function LoanDrawer() {
-  const screens = useBreakpoint();
-  const isMobile = !screens.sm; // xs only (< 576px)
-
-  return (
-    <Drawer
-      title="Add New Loan"
-      width={isMobile ? "100%" : 560}
-      open={open}
-      onClose={onClose}
-    >
-      {/* ... */}
-    </Drawer>
-  );
-}
-```
+### Bug 7: Desktop POS Missing Payment Mode Selector (Feature Disparity)
+- **Severity:** `Medium`
+- **Mode / Viewport:** `Desktop` (`1280 x 800`)
+- **Location:** `src/components/invoices/sale-form.tsx` vs `src/pages/pos/mobile-pos.tsx`
+- **Description:**
+  Mobile POS includes payment method selection (Cash, UPI, Card, Bank Transfer) with cash tendered input and real-time change calculation. On Desktop POS (`sale-form.tsx`), there is no Payment Mode selector or cash tendered input at all.
+- **Steps to Reproduce:**
+  1. Compare `/sales/new` on Desktop (1280x800) vs Mobile (390x844).
+  2. Mobile has a dedicated payment options segmented control and cash change calculator.
+  3. Desktop invoice summary card only displays Subtotal, Making Charges, GST, and Total with two "Save Invoice" buttons and zero payment mode selection.
+- **Expected Behavior:**
+  Desktop POS should include payment mode options (Cash, UPI, Card, Net Banking) and cash change calculations to match Mobile POS capabilities.
 
 ---
 
-### Bug SHRINGAR-008: Hardcoded Border & Text Colors Compromising Dark Mode Contrast
-- **Severity:** Medium
-- **Category:** Theme Contrast Bleed
-- **Affected Files:**
-  - `src/pages/settings/index.tsx` (`borderBottom: "1px solid #e5e5e5"`)
-  - `src/components/header/rate-ticker.tsx` (gold rate indicator colors)
-  - `src/components/invoices/sale-form.tsx` (table border lines)
-- **Affected Viewports & Themes:** Dark Mode (All Viewports)
-
-#### Visual Symptom & Observed Behavior
-In Dark Mode, several borders and dividers display high-contrast light lines (`#e5e5e5`), while some secondary descriptive texts use `#666666` or `#888888`, which fail the WCAG AA minimum contrast ratio of 4.5:1 against `#141414` backgrounds.
-
-#### Root Cause Analysis
-Direct assignment of CSS hex codes in `style={{ ... }}` instead of referencing Ant Design's theme tokens.
-
-#### Remediation
-Replace hardcoded hex codes with semantic tokens:
-- `#e5e5e5` -> `token.colorBorderSecondary`
-- `#666666` -> `token.colorTextSecondary`
-- `#f5f5f5` -> `token.colorFillAlter`
-- `#ffffff` (when used as background) -> `token.colorBgContainer`
+### Bug 8: Instant Inventory Quantity Mutation Without Confirmation
+- **Severity:** `Medium`
+- **Mode / Viewport:** `Desktop` (`1280 x 800`)
+- **Location:** `src/pages/inventory/ornaments/index.tsx` (Lines 685–715)
+- **Description:**
+  In the ornaments inventory table, the "Qty" column contains a small `+` icon button next to the quantity count. Clicking this button immediately triggers a database update (`updateOrnament`) incrementing the inventory by 1 without any confirmation modal, popconfirm, or decrement (`-`) button to reverse accidental clicks. A misclick in the table immediately corrupts stock counts.
+- **Steps to Reproduce:**
+  1. Navigate to `https://shringar-pos.vercel.app/ornaments` on Desktop.
+  2. Click the tiny `+` button in the "Qty" column for any ornament.
+  3. Notice the quantity immediately increments in the database without any confirmation dialog. If clicked by mistake, the user cannot decrement it without opening the full edit form.
+- **Expected Behavior:**
+  Wrap stock modifications in an Ant Design `<Popconfirm>` or provide both increment and decrement controls with stock modification reason tracking.
 
 ---
 
-### Bug SHRINGAR-009: Table Action Buttons Wrap and Crowd on Tablet & Mobile Views
-- **Severity:** Medium
-- **Category:** Table Responsiveness & Layout
-- **Affected Routes:**
-  - `/customers` (`src/pages/customers/list.tsx`)
-  - `/inventory/ornaments` (`src/pages/inventory/ornaments/index.tsx`)
-  - `/metal-rates` (`src/pages/metal-rates/index.tsx`)
-  - `/gold-ledger` (`src/pages/gold-ledger/index.tsx`)
-  - `/invoices` (`src/pages/invoices/list.tsx`)
-- **Affected Viewports:** Tablet (768px) and Mobile (375px)
-
-#### Visual Symptom & Observed Behavior
-Tables with 6+ columns and an "Actions" column containing 3 individual buttons (`<ShowButton>`, `<EditButton>`, `<DeleteButton>`) cause the table rows to vertically expand as the buttons wrap onto multiple lines. On mobile, horizontal scrolling becomes necessary, but the actions column scrolls out of view.
-
-#### Root Cause Analysis
-Action columns lack `fixed: 'right'` and do not collapse into a single dropdown menu on compact screens.
-
-#### Remediation
-1. Pin the Actions column to the right side of the table:
-```tsx
-{
-  title: "Actions",
-  key: "actions",
-  fixed: "right",
-  width: 110,
-  render: (_, record) => (
-    <Dropdown
-      menu={{
-        items: [
-          { key: "view", label: "View Details", icon: <EyeOutlined /> },
-          { key: "edit", label: "Edit", icon: <EditOutlined /> },
-          { key: "delete", label: "Delete", danger: true, icon: <DeleteOutlined /> },
-        ],
-      }}
-    >
-      <Button icon={<MoreOutlined />} size="small" />
-    </Dropdown>
-  ),
-}
-```
-2. Set explicit `scroll={{ x: 800 }}` on all data tables.
+### Bug 9: Duplicate Category Names Allowed Without Validation or DB Constraint
+- **Severity:** `Medium`
+- **Mode / Viewport:** `Both` (Desktop & Mobile)
+- **Location:** `src/components/inventory/categories/category-modal.tsx` & `supabase/migrations/20261005130036_init_schema.sql` (Line 72)
+- **Description:**
+  The system allows creating multiple categories with the exact same name within the same shop. The database table `ornament_categories` lacks a unique constraint on `(shop_id, lower(name))`, and the frontend form has no uniqueness validation. This leads to duplicate categories appearing in POS dropdowns and inventory filters.
+- **Steps to Reproduce:**
+  1. Navigate to `https://shringar-pos.vercel.app/categories`.
+  2. Click **New Category**.
+  3. Enter Name: `Thushi & Chokers` (which already exists in the shop).
+  4. Click **Save**.
+  5. The category is created, resulting in two identical "Thushi & Chokers" categories in the list.
+- **Expected Behavior:**
+  Add a unique constraint on `(shop_id, lower(name))` in the database and validate against existing category names in the category modal.
 
 ---
 
-### Bug SHRINGAR-010: Inconsistent Page Header Padding & Typography Scales
-- **Severity:** Low
-- **Category:** Visual Hierarchy & Design System Consistency
-- **Affected Routes:** All Routes (`/dashboard`, `/customers`, `/inventory/ornaments`, `/gold-ledger`, `/invoices`, `/settings`)
-- **Affected Viewports:** All Viewports
-
-#### Visual Symptom & Observed Behavior
-- `/dashboard` uses custom `Typography.Title level={4}` with `margin: 0`.
-- `/customers` and `/invoices` use Refine's `<List>` default header with large `level={3}` titles.
-- `/settings` uses a custom `Card` with tabs embedded inside without standard page breadcrumbs.
-The inconsistent typography and margin spacing creates a jarring visual transition between sections.
-
-#### Remediation
-Standardize page layouts by creating a reusable `<PageHeader>` wrapper or unifying Refine's `<List title={...}>` configurations with consistent font sizes (`token.fontSizeHeading4`) and breadcrumb navigation.
-
----
-
-## 4. Defect Prioritization & Action Plan
-
-| Bug ID | Title | Severity | Priority | Effort | Component |
-|---|---|---|---|---|---|
-| **SHRINGAR-001** | `/pos/create` 404 Route Not Found | **High** | **P0** | 10 mins | `src/App.tsx` |
-| **SHRINGAR-002** | Settings active tab underline invisible in Light Mode | **High** | **P0** | 15 mins | `src/pages/settings/index.tsx` |
-| **SHRINGAR-003** | CategoryCard light background bleed in Dark Mode | **High** | **P1** | 10 mins | `src/pages/inventory/categories/index.tsx` |
-| **SHRINGAR-004** | Invoice details severe horizontal overflow (Mobile/Tablet) | **High** | **P1** | 30 mins | `src/pages/invoices/show.tsx` |
-| **SHRINGAR-005** | POS Create Sale horizontal overflow on Mobile (375px) | **High** | **P1** | 25 mins | `src/components/invoices/sale-form.tsx` |
-| **SHRINGAR-006** | Dashboard KPI grid horizontal overflow on Mobile (375px) | **High** | **P2** | 20 mins | `src/pages/dashboard/index.tsx` |
-| **SHRINGAR-007** | Drawers & Modals lack mobile width clamping | **Medium** | **P2** | 45 mins | Global Drawers & Modals |
-| **SHRINGAR-008** | Hardcoded colors violating dark mode contrast tokens | **Medium** | **P2** | 30 mins | Settings, Ticker, Sale Form |
-| **SHRINGAR-009** | Table action columns wrap and lack right pinning | **Medium** | **P3** | 45 mins | List Tables |
-| **SHRINGAR-010** | Inconsistent page header padding & typography scale | **Low** | **P3** | 1 hour | Refine Layout Shell |
+### Bug 10: Inconsistent Currency Decimal Formatting in Gold Ledger
+- **Severity:** `Low`
+- **Mode / Viewport:** `Desktop` (`1280 x 800`)
+- **Location:** `src/pages/gold-ledger/index.tsx` (Line 563)
+- **Description:**
+  In the Gold Ledger table, the `Total` column renders amounts using `val.toLocaleString("en-IN")` without specifying `minimumFractionDigits: 2`. For loans with fractional interest calculations (such as Sanjay Balasaheb Jadhav's loan), it renders as `₹1,00,937.5` instead of `₹1,00,937.50`.
+- **Steps to Reproduce:**
+  1. Navigate to `https://shringar-pos.vercel.app/gold-ledger`.
+  2. Locate the row for "Sanjay Balasaheb Jadhav".
+  3. Look at the Total column: it displays `₹1,00,937.5` with a dangling single decimal digit.
+- **Expected Behavior:**
+  Format financial amounts with `minimumFractionDigits: 2` and `maximumFractionDigits: 2`:
+  ```tsx
+  ₹{Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+  ```
 
 ---
 
-## 5. Visual Artifact Reference
-
-All 128 high-resolution screenshots captured during the crawl across Desktop, Tablet, and Mobile in both Light and Dark modes have been preserved in the repository under:
-- **Directory:** `/home/sahil/Shringar/e2e/screenshots/`
-- **Key Reference Screenshots:**
-  - `categories-desktop-dark.png` (demonstrating Bug SHRINGAR-003 theme bleed)
-  - `settings-desktop-light.png` (demonstrating Bug SHRINGAR-002 invisible tab indicator)
-  - `invoices-show-mobile-light.png` (demonstrating Bug SHRINGAR-004 mobile layout overflow)
-  - `pos-create-mobile-light.png` (demonstrating Bug SHRINGAR-005 sale form overflow)
-  - `dashboard-mobile-light.png` (demonstrating Bug SHRINGAR-006 dashboard overflow)
+### Bug 11: Design Gallery Album Count Redundancy and Pluralization Glitch
+- **Severity:** `Low`
+- **Mode / Viewport:** `Both` (Desktop & Mobile)
+- **Location:** `src/pages/design-gallery/index.tsx` (Lines 312–333)
+- **Description:**
+  When an album card has no cover photo, the placeholder text renders `{count} designs` (producing `"1 designs"` for single-item albums), while the top-right Tag badge simultaneously renders `{count} design`. The two labels collide into `"1 designs1 design"` in accessibility trees and text parsers.
+- **Steps to Reproduce:**
+  1. Navigate to `https://shringar-pos.vercel.app/design-gallery`.
+  2. Inspect an album without a cover image with 1 design (e.g. "Mangalsutra & Pendants").
+  3. Observe text inside the card: `"1 designs1 design"`.
+- **Expected Behavior:**
+  Fix the pluralization ternary check (`count === 1 ? "1 design" : `${count} designs``) and avoid rendering duplicate count labels in both the placeholder and the corner badge.
 
 ---
 
-## 6. Fix Implementation & Verification Log
+### Bug 12: Recharts Negative Dimension Console Warnings on Dashboard
+- **Severity:** `Low`
+- **Mode / Viewport:** `Desktop` (`1280 x 800`)
+- **Location:** `src/components/dashboard/revenue-chart.tsx`
+- **Description:**
+  Upon loading the Dashboard, Recharts outputs console warnings before flex/grid container dimensions are computed:
+  ```text
+  The width(-1) and height(-1) of chart should be greater than 0, please check the container's state.
+  ```
+- **Steps to Reproduce:**
+  1. Open DevTools console and navigate to `https://shringar-pos.vercel.app/dashboard`.
+  2. Notice the Recharts dimension warnings emitted during initial layout calculation.
+- **Expected Behavior:**
+  Set an explicit container `minHeight` or defer chart rendering until after client mount.
 
-All 10 defects identified in this audit report have been resolved, verified with compilation (`tsc && refine build`) and automated Playwright end-to-end tests (`pnpm test:e2e`), and pushed one-by-one to `origin/main`:
+---
 
-| Defect ID | Status | Commit Hash | Conventional Commit Message | Key Changes |
-|---|---|---|---|---|
-| **SHRINGAR-001** | **Resolved** | `b5daf1f` | `fix(routing): add /pos/create redirect to /create-sale` | Added `<Navigate to="/create-sale" replace />` route in `App.tsx` |
-| **SHRINGAR-002** | **Resolved** | `eb7005c` | `fix(settings): resolve active tab contrast and dark mode border colors` | Used `token.colorPrimary` and `token.colorBorderSecondary` in `settings/index.tsx` |
-| **SHRINGAR-003** | **Resolved** | `6dc2c89` | `fix(categories): use theme token for image placeholder in dark mode` | Replaced `#f5f5f5` with `token.colorFillAlter` and `token.colorTextQuaternary` |
-| **SHRINGAR-004** | **Resolved** | `29fb200` | `fix(invoices): eliminate horizontal overflow on invoice details view` | Wrapped root in `overflowX: "hidden"`, wrapped action buttons in `<Space wrap>`, set responsive `Row gutter={[16, 16]}` |
-| **SHRINGAR-005** | **Resolved** | `acef02b` | `fix(pos): resolve mobile layout overflow and action button wrapping` | Added `overflowX: "hidden"`, `<Space wrap>`, responsive `xs={12} sm={6}` grid columns in `ItemCard` |
-| **SHRINGAR-006** | **Resolved** | `2f1fdde` | `fix(dashboard): prevent mobile horizontal overflow on metric cards and tables` | Fluid `flex: "1 1 160px"` stat cards, `scroll={{ x }}` on `RecentInvoices` and `TopCustomers` tables |
-| **SHRINGAR-007** | **Resolved** | `71296cf` | `fix(ui): make all drawers and modals full width on mobile viewports` | `Grid.useBreakpoint()` clamped modal and drawer widths to `100%` on mobile across 5 components |
-| **SHRINGAR-008 & 009** | **Resolved** | `2dc6095` | `fix(tables): adjust actions column width and improve rate ticker dark mode` | Fixed `actions` column widths (140px) pinned right on customer & invoice tables; improved dark theme detection in rate ticker |
-| **SHRINGAR-010** | **Resolved** | `Verified` | All routes verified | Harmonized typography scale (`Title level={4}`), padding, and layout wrappers validated across all viewports |
+### Bug 13: Mobile MoreMenuDrawer Missing Close Action Button
+- **Severity:** `Low`
+- **Mode / Viewport:** `Mobile` (`390 x 844`)
+- **Location:** `src/components/mobile/more-menu-drawer.tsx` (Lines 105–115)
+- **Description:**
+  The mobile bottom drawer ("More" menu) explicitly hides the drawer header (`header: { display: "none" }`) and lacks a dedicated close ("X") button or dismiss handle. Users who do not intuitively know to tap the dim backdrop or swipe away are trapped inside the drawer.
+- **Steps to Reproduce:**
+  1. In mobile mode (`390 x 844`), tap the **More** button in the bottom navigation bar.
+  2. The drawer slides up covering the screen.
+  3. Notice there is no Close button, Back icon, or "Done" CTA inside the drawer.
+- **Expected Behavior:**
+  Include a visible close button or drag handle at the top of `MoreMenuDrawer`.
+
+---
+
+## Test Execution Summary Matrix
+
+| Page / Route | Desktop Tested | Mobile Tested | Status / Observations |
+| :--- | :---: | :---: | :--- |
+| `/dashboard` | Yes | Yes | Metric cards, quick actions, and revenue range switching work; negative chart dimension warning noted. |
+| `/sales/new` (POS) | Yes | Yes | Mobile silently assigns customer; Desktop POS missing payment mode selector; AntD select click overlay. |
+| `/invoices` | Yes | Yes | Desktop cancel invoice triggers fetch error; Mobile cards display false UNPAID status badge. |
+| `/customers` | Yes | Yes | List, search, pagination, drawer work; Phone validation missing on Desktop modal vs Mobile form. |
+| `/ornaments` | Yes | Yes | Filters, table sorting, drawer create work; Table Qty `+` button mutates stock without confirmation. |
+| `/categories` | Yes | Yes | Card grid and mobile rows work; Duplicate category names permitted without constraint. |
+| `/gold-ledger` | Yes | Yes | Loans list, filters, and drawer work; Total amount column has inconsistent decimal formatting. |
+| `/metal-rates` | Yes | Yes | Rate history table and charts work; Rate edit from header ticker crashes due to unique date constraint. |
+| `/design-gallery` | Yes | Yes | Albums grid, album detail, and presentation modal work; Placeholder text collision `"1 designs1 design"`. |
+| `/settings` | Yes | Yes | Making charges steppers and Shop profile settings work across desktop and mobile. |
