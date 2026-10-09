@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
-import type { ICustomer, IInvoice, IInvoiceItem, IShop } from "../../libs/interfaces";
+import type { ICustomer, IInvoice, IInvoiceItem, IInvoicePayment, IShop } from "../../libs/interfaces";
+import { parseNotesPaymentLedger, calculatePaymentStatus } from "../../services/payment-ledger";
 import dayjs from "dayjs";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -237,6 +238,9 @@ export interface InvoicePdfProps {
   invoice: IInvoice & {
     customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone" | "address" | "email"> | null;
     invoice_items?: IInvoiceItem[];
+    payments?: IInvoicePayment[];
+    paid_amount_paise?: number;
+    balance_amount_paise?: number;
   };
   shop?: IShop | null;
 }
@@ -245,6 +249,15 @@ export interface InvoicePdfProps {
 
 export const InvoicePdfDocument: React.FC<InvoicePdfProps> = ({ invoice, shop }) => {
   const items = invoice.invoice_items ?? [];
+  const { cleanNotes, payments: parsedPayments } = parseNotesPaymentLedger(invoice.notes);
+  const paymentsList = invoice.payments && invoice.payments.length > 0 ? invoice.payments : parsedPayments;
+  const paymentMeta = paymentsList.length > 0
+    ? calculatePaymentStatus(invoice.total_amount_paise || 0, paymentsList)
+    : {
+        paidPaise: invoice.paid_amount_paise ?? invoice.total_amount_paise ?? 0,
+        balancePaise: invoice.balance_amount_paise ?? 0,
+        status: "PAID",
+      };
 
   return (
     <Document
@@ -414,14 +427,58 @@ export const InvoicePdfDocument: React.FC<InvoicePdfProps> = ({ invoice, shop })
               <Text style={s.summaryTotalLabel}>Grand Total</Text>
               <Text style={s.summaryTotalValue}>{p2Rs(invoice.total_amount_paise)}</Text>
             </View>
+            <View style={s.summaryRow}>
+              <Text style={s.summaryLabel}>Amount Paid</Text>
+              <Text style={[s.summaryValue, { color: "#2e7d32", fontFamily: "Helvetica-Bold" }]}>
+                {p2Rs(paymentMeta.paidPaise)}
+              </Text>
+            </View>
+            {paymentMeta.balancePaise > 0 ? (
+              <View style={s.summaryRow}>
+                <Text style={s.summaryLabel}>Balance Due</Text>
+                <Text style={[s.summaryValue, { color: redCancel, fontFamily: "Helvetica-Bold" }]}>
+                  {p2Rs(paymentMeta.balancePaise)}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
+        {/* ── Payment Receipts Ledger (if installments recorded) ── */}
+        {paymentsList.length > 0 ? (
+          <View style={s.tableSection}>
+            <Text style={s.tableTitle}>Payment Receipts & Ledger</Text>
+            <View style={s.tableHeader}>
+              <Text style={[s.thText, { width: "25%" }]}>Date</Text>
+              <Text style={[s.thText, { width: "25%" }]}>Mode</Text>
+              <Text style={[s.thText, { width: "25%", textAlign: "right" }]}>Amount Paid</Text>
+              <Text style={[s.thText, { width: "25%", textAlign: "right" }]}>Balance Snapshot</Text>
+            </View>
+            {paymentsList.map((p, pIdx) => {
+              const pRowStyle = pIdx % 2 === 0 ? s.tableRow : s.tableRowAlt;
+              return (
+                <View key={p.id || pIdx} style={pRowStyle}>
+                  <Text style={[s.tdText, { width: "25%" }]}>
+                    {dayjs(p.payment_date).format("D MMM YYYY")}
+                  </Text>
+                  <Text style={[s.tdText, { width: "25%" }]}>{p.payment_mode}</Text>
+                  <Text style={[s.tdTextRight, { width: "25%", color: "#2e7d32", fontFamily: "Helvetica-Bold" }]}>
+                    {p2Rs(p.amount_paise)}
+                  </Text>
+                  <Text style={[s.tdTextRight, { width: "25%" }]}>
+                    {p2Rs(p.balance_snapshot_paise)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
+
         {/* ── Notes ── */}
-        {invoice.notes ? (
+        {cleanNotes ? (
           <View style={s.noteSection}>
             <Text style={s.noteLabel}>Notes</Text>
-            <Text style={s.noteText}>{invoice.notes}</Text>
+            <Text style={s.noteText}>{cleanNotes}</Text>
           </View>
         ) : null}
 

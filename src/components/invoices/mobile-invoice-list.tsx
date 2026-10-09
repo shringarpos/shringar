@@ -127,9 +127,9 @@ export const MobileInvoiceList: React.FC = () => {
     e.stopPropagation();
     const custName = inv.customer?.name || "Valued Customer";
     const total = abbrRs(inv.total_amount_paise || 0);
-    const balance = inv.balance_amount_paise ? abbrRs(inv.balance_amount_paise) : null;
-    const msg = balance
-      ? `Hello ${custName}, thank you for shopping with Shringar Jewellers! Your invoice #${inv.invoice_number} is for ${total}. Outstanding balance due: ${balance}.`
+    const balancePaise = getInvoiceBalance(inv);
+    const msg = balancePaise > 0
+      ? `Hello ${custName}, thank you for shopping with Shringar Jewellers! Your invoice #${inv.invoice_number} is for ${total}. Outstanding balance due: ${abbrRs(balancePaise)}.`
       : `Hello ${custName}, thank you for your payment at Shringar Jewellers! Your invoice #${inv.invoice_number} for ${total} is fully settled.`;
 
     const digits = inv.customer?.phone ? inv.customer.phone.replace(/\D/g, "") : "";
