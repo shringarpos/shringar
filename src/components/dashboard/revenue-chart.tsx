@@ -158,7 +158,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : (
-        <ResponsiveContainer width="100%" height={280}>
+        <div style={{ width: "100%", height: 280, minHeight: 280 }}>
+          <ResponsiveContainer width="100%" height={280} minWidth={0} minHeight={280}>
           {chartType === "bar" ? (
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={token.colorBorderSecondary} />
@@ -259,6 +260,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ shopId }) => {
             </LineChart>
           )}
         </ResponsiveContainer>
+        </div>
       )}
     </Card>
   );

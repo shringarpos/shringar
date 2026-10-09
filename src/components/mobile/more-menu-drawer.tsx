@@ -11,6 +11,7 @@ import {
   Moon,
   Sun,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { useGetIdentity, useLogout, useList } from "@refinedev/core";
 import { useNavigate, useLocation } from "react-router";
@@ -134,8 +135,16 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
       }}
       rootStyle={{ zIndex: 1050 }}
     >
-      {/* Top Grab Bar Handle */}
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+      {/* Top Header with Grab Bar and Close Button */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ width: 28 }} />
         <div
           style={{
             width: 36,
@@ -144,6 +153,24 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
             backgroundColor: isDark ? "#3f3f46" : "#cbd5e1",
           }}
         />
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 4,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: isDark ? "#94a3b8" : "#64748b",
+            borderRadius: "50%",
+          }}
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Showroom & Profile Card */}
