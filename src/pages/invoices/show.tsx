@@ -4,6 +4,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   CopyOutlined,
+  DollarOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { DownloadInvoiceButton } from "../../components/invoices/download-invoice-button";
 import {
@@ -27,10 +29,14 @@ import {
   theme,
 } from "antd";
 import dayjs from "dayjs";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import type { ColumnsType } from "antd/es/table";
 import { useNavigate, useParams } from "react-router";
 import { CancelInvoiceModal } from "../../components/invoices/cancel-invoice-modal";
+import { RecordPaymentModal } from "../../components/invoices/record-payment-modal";
+import { PaymentLedgerTimeline } from "../../components/invoices/payment-ledger-timeline";
+import { getInvoiceLedger, calculatePaymentStatus } from "../../services/payment-ledger";
+import type { IInvoicePayment } from "../../libs/interfaces";
 import type { ICustomer, IInvoice, IInvoiceItem } from "../../libs/interfaces";
 import { supabaseClient } from "../../providers/supabase-client";
 import { formatRateDisplay } from "../../components/metal-rates/utils";
@@ -71,6 +77,8 @@ export default function InvoiceShow() {
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [payments, setPayments] = useState<IInvoicePayment[]>([]);
+  const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
 
   const { query } = useShow<InvoiceDetail>({
     resource: "invoices",
@@ -82,6 +90,36 @@ export default function InvoiceShow() {
 
   const { data, isLoading: loading } = query;
   const invoice = data?.data ?? null;
+
+  const fetchLedger = useCallback(async () => {
+    if (!invoice?.id || !invoice?.shop_id) return;
+    try {
+      const records = await getInvoiceLedger(invoice.id, invoice.shop_id, invoice.notes);
+      setPayments(records);
+    } catch (err) {
+      console.error("Failed to load invoice ledger", err);
+    }
+  }, [invoice?.id, invoice?.shop_id, invoice?.notes]);
+
+  useEffect(() => {
+    fetchLedger();
+  }, [fetchLedger]);
+
+  const { paidPaise, balancePaise, status: paymentStatus } = useMemo(() => {
+    const totalPaise = invoice?.total_amount_paise || 0;
+    if (payments.length > 0) {
+      return calculatePaymentStatus(totalPaise, payments);
+    }
+    if (invoice?.paid_amount_paise !== undefined) {
+      const paid = invoice.paid_amount_paise || 0;
+      const bal = invoice.balance_amount_paise ?? Math.max(0, totalPaise - paid);
+      let st: "PAID" | "PARTIAL" | "UNPAID" = "UNPAID";
+      if (paid >= totalPaise && totalPaise > 0) st = "PAID";
+      else if (paid > 0) st = "PARTIAL";
+      return { paidPaise: paid, balancePaise: bal, status: st };
+    }
+    return { paidPaise: totalPaise, balancePaise: 0, status: "PAID" as const };
+  }, [invoice, payments]);
 
   const { mutateAsync: updateInvoice } = useUpdate<IInvoice>();
 
@@ -243,13 +281,31 @@ export default function InvoiceShow() {
               CANCELLED
             </Tag>
           ) : (
-            <Tag icon={<CheckCircleOutlined />} color="success">
-              ACTIVE
-            </Tag>
+            <>
+              <Tag icon={<CheckCircleOutlined />} color="success">
+                ACTIVE
+              </Tag>
+              {paymentStatus === "PAID" ? (
+                <Tag color="success">PAID</Tag>
+              ) : paymentStatus === "PARTIAL" ? (
+                <Tag color="warning">PARTIAL (Due: ₹{p2Rs(balancePaise)})</Tag>
+              ) : (
+                <Tag color="error">UNPAID (Due: ₹{p2Rs(balancePaise)})</Tag>
+              )}
+            </>
           )}
         </Space>
 
         <Space wrap>
+          {!invoice.is_cancelled && balancePaise > 0 && (
+            <Button
+              type="primary"
+              icon={<DollarOutlined />}
+              onClick={() => setRecordPaymentOpen(true)}
+            >
+              Record Payment
+            </Button>
+          )}
           <DownloadInvoiceButton invoiceId={invoice.id} />
           {!invoice.is_cancelled && (
             <>
@@ -439,17 +495,28 @@ export default function InvoiceShow() {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <Text type="secondary">Paid Amount</Text>
               <Text strong style={{ color: token.colorSuccess }}>
-                ₹{p2Rs(invoice.paid_amount_paise || 0)}
+                ₹{p2Rs(paidPaise)}
               </Text>
             </div>
 
-            {(invoice.balance_amount_paise ?? 0) > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            {balancePaise > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <Text type="secondary">Balance Due</Text>
                 <Text strong style={{ color: token.colorError }}>
-                  ₹{p2Rs(invoice.balance_amount_paise || 0)}
+                  ₹{p2Rs(balancePaise)}
                 </Text>
               </div>
+            )}
+
+            {!invoice.is_cancelled && balancePaise > 0 && (
+              <Button
+                type="primary"
+                block
+                style={{ marginTop: 8, marginBottom: 12 }}
+                onClick={() => setRecordPaymentOpen(true)}
+              >
+                Record Payment
+              </Button>
             )}
 
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
@@ -467,6 +534,25 @@ export default function InvoiceShow() {
         onConfirm={handleCancelConfirm}
         onCancel={() => setCancelModalOpen(false)}
         loading={cancelling}
+      />
+
+      {/* Record Payment Modal */}
+      <RecordPaymentModal
+        open={recordPaymentOpen}
+        onClose={() => setRecordPaymentOpen(false)}
+        onSuccess={() => {
+          fetchLedger();
+          query.refetch();
+        }}
+        invoice={{
+          id: invoice.id,
+          shop_id: invoice.shop_id,
+          invoice_number: invoice.invoice_number,
+          total_amount_paise: invoice.total_amount_paise,
+          notes: invoice.notes,
+        }}
+        balancePaise={balancePaise}
+        userId={userId}
       />
     </div>
   );
