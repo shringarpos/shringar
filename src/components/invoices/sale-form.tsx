@@ -26,6 +26,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Radio,
   Row,
   Select,
   Space,
@@ -213,6 +214,8 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
   const [items, setItems] = useState<SaleItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [selectedOrnamentId, setSelectedOrnamentId] = useState<string | undefined>();
+  const [paymentMode, setPaymentMode] = useState<string>("CASH");
+  const [cashTendered, setCashTendered] = useState<number | null>(null);
   const watchedValues = Form.useWatch([], form) as Record<string, unknown> | undefined;
 
   const draftResolvedRef = useRef(false);
@@ -604,7 +607,9 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
           total_making_charges_paise: makingTotalPaise,
           discount_amount_paise: discPaise,
           total_amount_paise: totalPaise,
-          notes: fv.notes ?? null,
+          notes: fv.notes?.trim()
+            ? `${fv.notes.trim()} | Paid via ${paymentMode}`
+            : `Paid via ${paymentMode}`,
           created_by: userId,
           updated_by: userId,
         },
@@ -971,6 +976,65 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                   disabled={isEdit}
                 />
               </Form.Item>
+
+              <div style={{ marginBottom: 12 }}>
+                <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>
+                  Payment Mode
+                </Text>
+                <Radio.Group
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value)}
+                  buttonStyle="solid"
+                  size="small"
+                  style={{ width: "100%", display: "flex" }}
+                >
+                  <Radio.Button value="CASH" style={{ flex: 1, textAlign: "center" }}>
+                    Cash
+                  </Radio.Button>
+                  <Radio.Button value="UPI" style={{ flex: 1, textAlign: "center" }}>
+                    UPI
+                  </Radio.Button>
+                  <Radio.Button value="CARD" style={{ flex: 1, textAlign: "center" }}>
+                    Card
+                  </Radio.Button>
+                  <Radio.Button value="NET_BANKING" style={{ flex: 1, textAlign: "center" }}>
+                    Bank
+                  </Radio.Button>
+                </Radio.Group>
+              </div>
+
+              {paymentMode === "CASH" && (
+                <div
+                  style={{
+                    backgroundColor: "var(--ant-color-fill-alter, #f5f5f5)",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <Text style={{ fontSize: 12 }}>Cash Tendered</Text>
+                    <InputNumber
+                      min={0}
+                      precision={0}
+                      prefix="₹"
+                      size="small"
+                      placeholder="0"
+                      value={cashTendered ?? undefined}
+                      onChange={(val) => setCashTendered(val)}
+                      style={{ width: 120 }}
+                    />
+                  </div>
+                  {cashTendered !== null && cashTendered > p2Rs(grandTotalPaise) && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>Change Due</Text>
+                      <Text strong style={{ color: "#389e0d", fontSize: 13 }}>
+                        ₹{(cashTendered - p2Rs(grandTotalPaise)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Divider style={{ margin: "8px 0" }} />
 
