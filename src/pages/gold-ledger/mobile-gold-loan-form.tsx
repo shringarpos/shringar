@@ -1,7 +1,8 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router";
 import { useCreate, useGetIdentity } from "@refinedev/core";
-import { Form, Input, InputNumber, Button, DatePicker, Typography, notification, theme } from "antd";
+import { Form, Input, InputNumber, Button, DatePicker, Typography, theme } from "antd";
+import { notifyMobile } from "../../utils/mobile-notify";
 import { ArrowLeft, User, Coins, Percent, Save, Phone } from "lucide-react";
 import dayjs from "dayjs";
 import type { IGoldLoan } from "../../libs/interfaces";
@@ -88,10 +89,10 @@ export const MobileGoldLoanForm: React.FC = () => {
         },
       });
 
-      notification.success({ message: "Gold loan registered successfully" });
+      notifyMobile.success("Gold loan registered successfully");
       navigate("/gold-ledger");
     } catch (err: any) {
-      notification.error({ message: err?.message || "Failed to create gold loan" });
+      notifyMobile.error(err?.message || "Failed to create gold loan");
     } finally {
       setIsSubmitting(false);
     }

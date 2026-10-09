@@ -1,11 +1,12 @@
 import { message } from "antd";
 
-// Mobile notification: sleek top-floating capsule notification (island style)
-// positioned at the top of the mobile viewport, safely away from bottom docks,
-// tab bars, and action drawers.
+// Mobile notification: sleek dynamic capsule notification (island style)
+// designed specifically for mobile screens — never occupies the whole screen,
+// compact width, pill-shaped, crisp typography, and non-blocking.
 
 export const MOBILE_TOAST_DURATION = 2.2;
-export const MOBILE_TOAST_CLASS = "mobile-capsule-notice";
+export const MOBILE_TOAST_BOTTOM_OFFSET = 84;
+export const MOBILE_TOAST_CLASS = "mobile-toast mobile-capsule-notice";
 
 type ToastContent = string;
 
@@ -18,6 +19,9 @@ function open(
     content,
     duration: MOBILE_TOAST_DURATION,
     className: MOBILE_TOAST_CLASS,
+    style: {
+      fontSize: 12,
+    },
   });
 }
 

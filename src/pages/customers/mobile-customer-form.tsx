@@ -1,7 +1,8 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router";
 import { useCreate, useGetIdentity, useList } from "@refinedev/core";
-import { Form, Input, Button, Typography, notification, theme, Select } from "antd";
+import { Form, Input, Button, Typography, theme, Select } from "antd";
+import { notifyMobile } from "../../utils/mobile-notify";
 import { ArrowLeft, User, Phone, MapPin, FileText, Save, Check } from "lucide-react";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import type { ICustomer } from "../../libs/interfaces";
@@ -53,7 +54,7 @@ export const MobileCustomerForm: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!shopId) {
-      notification.error({ message: "Shop information not available" });
+      notifyMobile.error("Shop information not available");
       return;
     }
 
@@ -73,10 +74,10 @@ export const MobileCustomerForm: React.FC = () => {
         },
       });
 
-      notification.success({ message: "Client added to directory successfully" });
+      notifyMobile.success("Client added to directory successfully");
       navigate("/customers");
     } catch (err: any) {
-      notification.error({ message: err?.message || "Failed to create client" });
+      notifyMobile.error(err?.message || "Failed to create client");
     } finally {
       setIsSubmitting(false);
     }

@@ -12,7 +12,6 @@ import {
   Typography,
   theme,
   Modal,
-  notification,
   Spin,
   Tooltip,
 } from "antd";
@@ -36,6 +35,7 @@ import {
 import dayjs from "dayjs";
 import { useShopCheck } from "../../../hooks/use-shop-check";
 import type { IOrnament, ICategory, IMetalType, IPurityLevel, IMetalRate } from "../../../libs/interfaces";
+import { notifyMobile } from "../../../utils/mobile-notify";
 import { ColorModeContext } from "../../../contexts/color-mode";
 
 const { Title, Text } = Typography;
@@ -321,9 +321,9 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
       if (newCat?.id) {
         form.setFieldValue("category_id", newCat.id);
       }
-      notification.success({ message: "Category created successfully" });
+      notifyMobile.success("Category created successfully");
     } catch (err: any) {
-      notification.error({ message: err?.message || "Failed to create category" });
+      notifyMobile.error(err?.message || "Failed to create category");
     } finally {
       setCreatingCategory(false);
     }
@@ -331,7 +331,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
 
   const handleSubmit = async (values: any) => {
     if (skuTaken) {
-      notification.error({ message: "This SKU is already taken. Please enter a unique SKU." });
+      notifyMobile.error("This SKU is already taken. Please enter a unique SKU.");
       return;
     }
 
@@ -370,19 +370,19 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
           resource: "ornaments",
           values: payload,
         });
-        notification.success({ message: "Ornament added to inventory successfully" });
+        notifyMobile.success("Ornament added to inventory successfully");
       } else if (id) {
         await updateOrnament({
           resource: "ornaments",
           id,
           values: payload,
         });
-        notification.success({ message: "Ornament updated successfully" });
+        notifyMobile.success("Ornament updated successfully");
       }
 
       navigate("/ornaments");
     } catch (err: any) {
-      notification.error({ message: err?.message || "Failed to save ornament" });
+      notifyMobile.error(err?.message || "Failed to save ornament");
     } finally {
       setIsSubmitting(false);
     }
