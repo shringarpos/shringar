@@ -348,6 +348,114 @@ test.describe("Task 2: gold-loan created_by schema error", () => {
   });
 });
 
+test.describe("Task 4: inventory form centered stock + desktop SKU parity", () => {
+  const mobileFormRel = "../src/pages/inventory/ornaments/mobile-ornament-form.tsx";
+  const desktopDrawerRel =
+    "../src/components/inventory/ornaments/ornament-drawer.tsx";
+
+  test("stock quantity input text is centered with even padding", async ({
+    page,
+  }) => {
+    // Source pin: centering lives in a scoped rule on the inner input
+    // (.ant-input-number-input) — a wrapper-level textAlign never reaches it,
+    // which is the reported bug.
+    const form = src(mobileFormRel);
+    expect(form).toContain("mobile-stock-input");
+    expect(form).toContain("mobile-stock-centered");
+    expect(form).toMatch(
+      /\.mobile-stock-centered \.ant-input-number-input\s*\{\s*text-align:\s*center;\s*padding:\s*0 8px;/
+    );
+
+    // UI pin: computed text-align of the inner input is center with symmetric
+    // horizontal padding (mock-auth; no writes anywhere in this flow).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/ornaments/new");
+    await expect(
+      page.locator('[data-testid="mobile-ornament-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    const inner = page.locator('[data-testid="mobile-stock-input"] input');
+    await expect(inner).toBeVisible();
+    const style = await inner.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        textAlign: cs.textAlign,
+        pl: cs.paddingLeft,
+        pr: cs.paddingRight,
+      };
+    });
+    expect(style.textAlign).toBe("center");
+    expect(style.pl).toBe(style.pr);
+  });
+
+  test("mobile SKU auto-value matches desktop for same name; manual edit sticks", async ({
+    page,
+  }) => {
+    // Source pins: generateSku chain ported verbatim from the desktop drawer
+    // (READ-ONLY origin — asserted present, never edited here), manual-edit
+    // stop flag, desktop help copy, and 500ms debounce parity.
+    const mobile = src(mobileFormRel);
+    expect(mobile).toContain("const generateSku = (name: string): string => {");
+    expect(mobile).toMatch(/split\(\/\\s\+\/\)/);
+    expect(mobile).toMatch(
+      /\.slice\(0,\s*3\)\.toUpperCase\(\)\.replace\(\/\[\^A-Z0-9\]\/g,\s*""\)/
+    );
+    expect(mobile).toContain("skuManuallyEdited");
+    expect(mobile).toContain("Auto-generated from name. Edit to customise.");
+    expect(mobile).toContain(
+      'setTimeout(() => setDebouncedSku(skuValue ?? ""), 500)'
+    );
+    expect(src(desktopDrawerRel)).toContain(
+      "const generateSku = (name: string): string => {"
+    );
+
+    // UI pins, zero saves: no ornament POST may fire (mock fulfills in-memory).
+    const posts: any[] = [];
+    page.on("request", (r) => {
+      if (
+        r.url().includes("/rest/v1/ornaments") &&
+        r.method() === "POST"
+      )
+        posts.push(r.postDataJSON());
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupAuthenticatedContext(page);
+    await page.goto("/ornaments/new");
+    await expect(
+      page.locator('[data-testid="mobile-ornament-form-page"]')
+    ).toBeVisible({ timeout: 15000 });
+    await page
+      .locator('input[placeholder="e.g. Traditional Antique Kundan Bridal Set"]')
+      .fill("Kundan Necklace");
+    const mobileSku = page.locator("#sku");
+    await expect
+      .poll(() => mobileSku.inputValue(), { timeout: 10000 })
+      .toBe("KUN-NEC");
+    // Manual edit wins: later name changes must not overwrite the SKU.
+    await mobileSku.fill("CUSTOM-1");
+    await page
+      .locator('input[placeholder="e.g. Traditional Antique Kundan Bridal Set"]')
+      .fill("Kundan Necklace Deluxe");
+    await page.waitForTimeout(600);
+    await expect(mobileSku).toHaveValue("CUSTOM-1");
+
+    // Desktop drawer parity: the same name yields the same auto SKU.
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/ornaments");
+    await page.getByRole("button", { name: /new ornament/i }).click();
+    const drawer = page.locator(".ant-drawer-open");
+    await expect(drawer).toBeVisible({ timeout: 10000 });
+    await drawer
+      .locator('input[placeholder="e.g. Kundan Necklace"]')
+      .fill("Kundan Necklace");
+    const drawerSku = drawer.locator('input[placeholder="e.g. GLD-001"]');
+    await expect
+      .poll(() => drawerSku.inputValue(), { timeout: 10000 })
+      .toBe("KUN-NEC");
+    expect(posts).toHaveLength(0);
+  });
+});
+
 test.describe("Task 3: new-sale empty state + gold/silver-only scope", () => {
   // A legacy DIAMOND metal row injected on top of the shared mock (which is
   // gold/silver-only). Ruling R3 (binding): diamond UI *options* go away, but

@@ -38,6 +38,19 @@ import { ColorModeContext } from "../../../contexts/color-mode";
 
 const { Title, Text } = Typography;
 
+// ─── SKU helper — ported verbatim from desktop
+// `src/components/inventory/ornaments/ornament-drawer.tsx` (READ-ONLY origin).
+// Keep the two in sync: same name must yield the same SKU on both forms.
+const generateSku = (name: string): string => {
+    return name
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => w.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, ""))
+        .filter(Boolean)
+        .join("-");
+};
+
 interface MobileOrnamentFormProps {
   id?: string;
   action: "create" | "edit";
@@ -86,8 +99,13 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
   const weightG = Form.useWatch("weight_g", form);
   const metalRateRs = Form.useWatch("purchase_metal_rate_rs", form);
   const makingChargeRs = Form.useWatch("purchase_making_charge_rs", form);
+  const nameValue = Form.useWatch("name", form);
   const skuValue = Form.useWatch("sku", form);
   const quantityValue = Form.useWatch("quantity", form);
+
+  // Track whether the user has manually edited SKU (stops auto-gen, desktop parity).
+  // Edit mode starts manually-edited so auto-gen never fires over a stored SKU.
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(action === "edit");
 
   // Load existing ornament if editing
   const { query: recordQuery } = useOne<IOrnament>({
@@ -189,9 +207,16 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
     }
   }, [ornament, action, form]);
 
+  // SKU auto-generation from name (desktop parity: stops once manually edited)
+  useEffect(() => {
+    if (skuManuallyEdited || !nameValue) return;
+    form.setFieldValue("sku", generateSku(nameValue));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameValue]);
+
   // Debounce SKU check
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSku(skuValue ?? ""), 400);
+    const timer = setTimeout(() => setDebouncedSku(skuValue ?? ""), 500);
     return () => clearTimeout(timer);
   }, [skuValue]);
 
@@ -593,13 +618,13 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
               name="sku"
               label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>SKU Code</span>}
               validateStatus={skuTaken ? "error" : ""}
-              help={skuTaken ? "SKU already in use" : undefined}
+              help={skuTaken ? "SKU already exists. Choose a different one." : "Auto-generated from name. Edit to customise."}
               style={{ marginBottom: 0 }}
             >
               <Input
                 placeholder="e.g. BR-0042"
-                style={{ height: 48, borderRadius: 14, fontSize: 15, textTransform: "uppercase" }}
-                onChange={(e) => form.setFieldValue("sku", e.target.value.toUpperCase())}
+                style={{ height: 48, borderRadius: 14, fontSize: 15 }}
+                onChange={() => setSkuManuallyEdited(true)}
               />
             </Form.Item>
 
@@ -821,12 +846,20 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
                 -
               </button>
 
+              <div data-testid="mobile-stock-input" style={{ display: "contents" }}>
+              {/* Scoped fix: center the inner input text with even padding.
+                  A wrapper-level textAlign never reaches
+                  .ant-input-number-input, and this antd InputNumber exposes
+                  no `styles.input` prop — so a scoped rule is required. */}
+              <style>{`.mobile-stock-centered .ant-input-number-input { text-align: center; padding: 0 8px; }`}</style>
               <InputNumber
+                className="mobile-stock-centered"
                 min={0}
                 value={quantityValue}
                 onChange={(val) => form.setFieldValue("quantity", val ?? 0)}
-                style={{ width: 84, height: 48, borderRadius: 14, fontSize: 17, fontWeight: 700, textAlign: "center" }}
+                style={{ width: 84, height: 48, borderRadius: 14, fontSize: 17, fontWeight: 700 }}
               />
+              </div>
 
               <button
                 type="button"
