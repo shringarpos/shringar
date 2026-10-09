@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { recordInstallment } from "../../services/payment-ledger";
 import { useList, useCreate, useUpdate, useGetIdentity } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import {
@@ -296,11 +297,12 @@ export const MobilePOS: React.FC<{
     : metalOnlyPaise;
   const grandTotalPaise = Math.max(0, subtotalPaise - discountPaise);
   const grandTotalRs = Math.round(grandTotalPaise / 100);
-  const effectivePaid = paidPaise !== null ? paidPaise : grandTotalPaise;
+  const effectivePaid = paidPaise !== null ? Math.min(grandTotalPaise, Math.max(0, paidPaise)) : grandTotalPaise;
+  const effectivePaidRs = Math.round(effectivePaid / 100);
   const balancePaise = Math.max(0, grandTotalPaise - effectivePaid);
   const changeDueRs =
-    paymentMode === "CASH" && cashTendered !== null && cashTendered > grandTotalRs
-      ? cashTendered - grandTotalRs
+    paymentMode === "CASH" && cashTendered !== null && cashTendered > effectivePaidRs
+      ? cashTendered - effectivePaidRs
       : 0;
 
   // Handler for Quick Client Creation inside the POS drawer
@@ -438,6 +440,28 @@ export const MobilePOS: React.FC<{
       });
 
       const newInvId = invoiceRes?.data?.id;
+
+      // 1b. Record initial payment into the sales ledger
+      if (newInvId && effectivePaid > 0) {
+        try {
+          await recordInstallment(
+            {
+              id: newInvId as string,
+              shop_id: shopId,
+              total_amount_paise: grandTotalPaise,
+              notes: saleNotes.trim() || null,
+            },
+            {
+              amountPaise: effectivePaid,
+              paymentMode: paymentMode,
+              notes: balancePaise > 0 ? "Initial advance payment at mobile checkout" : "Full payment at mobile checkout",
+              userId: userId,
+            }
+          );
+        } catch (ledgerErr) {
+          console.warn("Mobile ledger recording warning:", ledgerErr);
+        }
+      }
 
       // 2. Create Items & decrement stock
       for (const item of cart) {
@@ -1277,6 +1301,81 @@ export const MobilePOS: React.FC<{
             </div>
           </div>
 
+          {/* Amount Paid Now (Partial / Advance Payment) */}
+          <div
+            style={{
+              padding: "12px",
+              borderRadius: 10,
+              backgroundColor: token.colorFillAlter,
+              border: `1px solid ${token.colorBorderSecondary}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Text strong style={{ fontSize: 13 }}>
+                Amount Paid Now
+              </Text>
+              <div style={{ display: "flex", gap: 4 }}>
+                <Button
+                  size="small"
+                  type={paidPaise === null || paidPaise === grandTotalPaise ? "primary" : "default"}
+                  onClick={() => setPaidPaise(null)}
+                  style={{ fontSize: 11, padding: "0 6px", height: 22 }}
+                >
+                  Full
+                </Button>
+                <Button
+                  size="small"
+                  type={paidPaise === Math.round(grandTotalPaise * 0.5) ? "primary" : "default"}
+                  onClick={() => setPaidPaise(Math.round(grandTotalPaise * 0.5))}
+                  style={{ fontSize: 11, padding: "0 6px", height: 22 }}
+                >
+                  50%
+                </Button>
+                <Button
+                  size="small"
+                  type={paidPaise === 0 ? "primary" : "default"}
+                  onClick={() => setPaidPaise(0)}
+                  style={{ fontSize: 11, padding: "0 6px", height: 22 }}
+                >
+                  ₹0
+                </Button>
+              </div>
+            </div>
+
+            <InputNumber
+              prefix="₹"
+              placeholder={effectivePaidRs.toString()}
+              value={effectivePaidRs}
+              onChange={(val) => setPaidPaise(val !== null ? Math.round(val * 100) : null)}
+              style={{ width: "100%" }}
+              min={0}
+              max={grandTotalRs}
+            />
+
+            {balancePaise > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "6px 8px",
+                  borderRadius: 6,
+                  backgroundColor: "rgba(250, 173, 20, 0.12)",
+                }}
+              >
+                <Text style={{ fontSize: 12, color: "#d46b08" }}>
+                  {effectivePaid === 0 ? "Unpaid (Credit Sale)" : "Pending Balance Due"}
+                </Text>
+                <Text strong style={{ fontSize: 13, color: "#d46b08" }}>
+                  ₹{(balancePaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </Text>
+              </div>
+            )}
+          </div>
+
           {/* Cash Tendered Calculator if Cash is Selected */}
           {paymentMode === "CASH" && (
             <div
@@ -1292,7 +1391,7 @@ export const MobilePOS: React.FC<{
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ fontSize: 12 }}>Cash Tendered (₹)</Text>
                 <InputNumber
-                  placeholder={grandTotalRs.toString()}
+                  placeholder={effectivePaidRs.toString()}
                   value={cashTendered}
                   onChange={(val) => setCashTendered(val)}
                   style={{ width: 130 }}
@@ -1312,6 +1411,15 @@ export const MobilePOS: React.FC<{
             </div>
           )}
 
+          {balancePaise > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px" }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>Pending Balance</Text>
+              <Text strong style={{ fontSize: 13, color: token.colorError }}>
+                ₹{(balancePaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </Text>
+            </div>
+          )}
+
           {/* Complete Sale CTA */}
           <Button
             type="primary"
@@ -1325,7 +1433,7 @@ export const MobilePOS: React.FC<{
               marginTop: 6,
             }}
           >
-            Confirm & Generate Bill (₹{(grandTotalPaise / 100).toLocaleString("en-IN")})
+            Confirm & Generate Bill (₹{(effectivePaid / 100).toLocaleString("en-IN")})
           </Button>
         </div>
       </Drawer>
