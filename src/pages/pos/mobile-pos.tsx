@@ -402,7 +402,9 @@ export const MobilePOS: React.FC<{
       const walkIn = customers.find((c) =>
         c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
       );
-      customerIdToUse = walkIn ? walkIn.id : customers[0].id;
+      if (walkIn) {
+        customerIdToUse = walkIn.id;
+      }
     }
 
     if (!customerIdToUse) {
