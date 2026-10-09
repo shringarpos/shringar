@@ -115,7 +115,7 @@ select:-webkit-autofill:active,
 }
 
 /* ── Mobile Island Notifications: sleek dynamic capsule (app style) ────── */
-/* Sleek floating capsule at top-center, never stretches across the screen */
+/* Sleek floating capsule at top-left extreme left, never stretches across the screen */
 .ant-message .mobile-capsule-notice .ant-message-notice-content,
 .ant-message .mobile-toast .ant-message-notice-content,
 .mobile-toast .ant-message-notice-content {
@@ -133,76 +133,121 @@ select:-webkit-autofill:active,
   display: inline-flex !important;
   align-items: center !important;
   gap: 8px !important;
-  max-width: calc(100vw - 32px) !important;
+  max-width: calc(100vw - 16px) !important;
   width: auto !important;
   /* Variant anchor: bottom: 84px */
 }
 
+/* Position all notifications and messages at top-left (extreme left) */
+.ant-notification,
+.ant-notification-topRight,
+.ant-notification-topLeft {
+  top: 12px !important;
+  left: 8px !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: auto !important;
+  max-width: calc(100vw - 16px) !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+  z-index: 999999 !important;
+}
+.ant-notification-notice {
+  width: auto !important;
+  max-width: calc(100vw - 16px) !important;
+  min-width: 140px !important;
+  border-radius: 9999px !important;
+  padding: 7px 16px !important;
+  margin-bottom: 8px !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  pointer-events: auto !important;
+  float: left !important;
+}
+.ant-notification-notice-close {
+  display: none !important;
+}
+.ant-notification-notice-message {
+  margin-bottom: 0 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  color: #f8fafc !important;
+}
+.ant-notification-notice-description {
+  display: none !important;
+}
+.ant-notification-notice-icon {
+  top: 8px !important;
+  left: 14px !important;
+  font-size: 15px !important;
+}
+.ant-notification-notice-with-icon .ant-notification-notice-message {
+  margin-left: 24px !important;
+}
+
+.ant-message {
+  top: 12px !important;
+  left: 8px !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: auto !important;
+  max-width: calc(100vw - 16px) !important;
+  pointer-events: none !important;
+  z-index: 999999 !important;
+}
+.ant-message-notice {
+  text-align: left !important;
+  padding: 0 !important;
+  margin-bottom: 8px !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  pointer-events: auto !important;
+}
+
 @media (max-width: 768px) {
   .ant-message {
-    top: 14px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
+    top: 12px !important;
+    left: 8px !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
     width: auto !important;
-    max-width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 16px) !important;
     pointer-events: none !important;
     z-index: 999999 !important;
   }
   .ant-message-notice {
-    text-align: center !important;
+    text-align: left !important;
     padding: 0 !important;
     margin-bottom: 8px !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
     pointer-events: auto !important;
   }
 
   /* Transform any Ant Design Notification on mobile into sleek dynamic pill */
-  .ant-notification {
-    top: 14px !important;
-    left: 50% !important;
+  .ant-notification,
+  .ant-notification-topRight,
+  .ant-notification-topLeft {
+    top: 12px !important;
+    left: 8px !important;
     right: auto !important;
     bottom: auto !important;
-    transform: translateX(-50%) !important;
+    transform: none !important;
     width: auto !important;
-    max-width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 16px) !important;
     margin: 0 !important;
     pointer-events: none !important;
     z-index: 999999 !important;
-  }
-  .ant-notification-notice {
-    width: auto !important;
-    max-width: calc(100vw - 32px) !important;
-    min-width: 140px !important;
-    border-radius: 9999px !important;
-    padding: 7px 16px !important;
-    margin-bottom: 8px !important;
-    background: rgba(15, 23, 42, 0.95) !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    color: #f8fafc !important;
-    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.12) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    pointer-events: auto !important;
-  }
-  .ant-notification-notice-close {
-    display: none !important;
-  }
-  .ant-notification-notice-message {
-    margin-bottom: 0 !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    line-height: 1.4 !important;
-    color: #f8fafc !important;
-  }
-  .ant-notification-notice-description {
-    display: none !important;
-  }
-  .ant-notification-notice-icon {
-    top: 8px !important;
-    left: 14px !important;
-    font-size: 15px !important;
-  }
-  .ant-notification-notice-with-icon .ant-notification-notice-message {
-    margin-left: 24px !important;
   }
 }
 

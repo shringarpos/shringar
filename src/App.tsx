@@ -12,7 +12,15 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { App as AntdApp, Typography } from "antd";
+import { App as AntdApp, Typography, notification, message } from "antd";
+
+notification.config({
+  placement: "topLeft",
+  top: 12,
+});
+message.config({
+  top: 12,
+});
 import { BrowserRouter, Link, Navigate, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import authProvider from "./providers/auth";
@@ -66,7 +74,7 @@ function App() {
       {/* <GitHubBanner /> */}
       <RefineKbarProvider>
         <ColorModeContextProvider>
-          <AntdApp>
+          <AntdApp notification={{ placement: "topLeft", top: 12 }} message={{ top: 12 }}>
             <DevtoolsProvider>
               <Refine
                 dataProvider={dataProvider}
