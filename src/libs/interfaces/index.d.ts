@@ -156,9 +156,27 @@ export interface IInvoiceItem {
 }
 
 /** IInvoice with joined customer and items */
+export interface IInvoicePayment {
+  id: string;
+  shop_id: string;
+  invoice_id: string;
+  payment_date: string; // ISO date YYYY-MM-DD
+  amount_paise: number;
+  payment_mode: "CASH" | "UPI" | "CARD" | "BANK_TRANSFER" | string;
+  notes?: string | null;
+  balance_snapshot_paise: number;
+  created_at: string;
+  created_by?: string | null;
+}
+
+/** IInvoice with joined customer, items, and payment ledger */
 export interface IInvoiceWithDetails extends IInvoice {
-  customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone"> | null;
+  customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone" | "address" | "email"> | null;
   invoice_items?: IInvoiceItem[];
+  payments?: IInvoicePayment[];
+  paid_amount_paise?: number;
+  balance_amount_paise?: number;
+  payment_status?: "PAID" | "PARTIAL" | "UNPAID";
 }
 
 /** Standalone Gold / Silver Loan in Gold Ledger (independent from POS tables, strictly scoped to user_id) */
