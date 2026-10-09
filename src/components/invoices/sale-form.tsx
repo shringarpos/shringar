@@ -776,18 +776,22 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                       disabled={isEdit}
                       loading={customerListQuery?.isLoading}
                       dropdownRender={(menu) => (
-                        <>
+                        <div style={{ paddingBottom: 4 }}>
                           {menu}
-                          <Divider style={{ margin: "8px 0" }} />
-                          <Button
-                            type="link"
-                            icon={<UserAddOutlined />}
-                            block
-                            onClick={() => showCustModal()}
-                          >
-                            Create New Customer
-                          </Button>
-                        </>
+                          <Divider style={{ margin: "4px 0" }} />
+                          <div style={{ padding: "0 8px 4px 8px" }}>
+                            <Button
+                              type="link"
+                              icon={<UserAddOutlined />}
+                              block
+                              style={{ textAlign: "left", padding: "4px 0" }}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => showCustModal()}
+                            >
+                              Create New Customer
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     />
                   </Form.Item>
@@ -833,18 +837,22 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                   style={{ width: "100%" }}
                   loading={ornListQuery?.isLoading}
                   dropdownRender={(menu) => (
-                    <>
+                    <div style={{ paddingBottom: 4 }}>
                       {menu}
-                      <Divider style={{ margin: "8px 0" }} />
-                      <Button
-                        type="link"
-                        icon={<PlusOutlined />}
-                        block
-                        onClick={() => showOrnDrawer()}
-                      >
-                        Create New Ornament
-                      </Button>
-                    </>
+                      <Divider style={{ margin: "4px 0" }} />
+                      <div style={{ padding: "0 8px 4px 8px" }}>
+                        <Button
+                          type="link"
+                          icon={<PlusOutlined />}
+                          block
+                          style={{ textAlign: "left", padding: "4px 0" }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => showOrnDrawer()}
+                        >
+                          Create New Ornament
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 />
               </Card>
