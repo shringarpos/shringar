@@ -218,18 +218,23 @@ const InvoiceList: React.FC = () => {
         .select("ornament_id, quantity")
         .eq("invoice_id", cancelTarget.id);
 
-      if (itemsData) {
+      if (itemsData && itemsData.length > 0) {
         for (const item of itemsData) {
-          const { data: ornData } = await supabaseClient
-            .from("ornaments")
-            .select("quantity")
-            .eq("id", item.ornament_id)
-            .single();
-          if (ornData) {
-            await supabaseClient
+          if (!item.ornament_id) continue;
+          try {
+            const { data: ornData } = await supabaseClient
               .from("ornaments")
-              .update({ quantity: ornData.quantity + item.quantity })
-              .eq("id", item.ornament_id);
+              .select("quantity")
+              .eq("id", item.ornament_id)
+              .maybeSingle();
+            if (ornData && typeof ornData.quantity === "number") {
+              await supabaseClient
+                .from("ornaments")
+                .update({ quantity: ornData.quantity + (item.quantity || 1) })
+                .eq("id", item.ornament_id);
+            }
+          } catch (restockErr) {
+            console.error("Failed to restock ornament:", restockErr);
           }
         }
       }

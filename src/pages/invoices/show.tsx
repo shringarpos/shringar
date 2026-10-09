@@ -105,16 +105,21 @@ export default function InvoiceShow() {
 
       // Restore stock — read-then-increment per ornament (requires current qty)
       for (const item of invoice.invoice_items ?? []) {
-        const { data: ornData } = await supabaseClient
-          .from("ornaments")
-          .select("quantity")
-          .eq("id", item.ornament_id)
-          .single();
-        if (ornData) {
-          await supabaseClient
+        if (!item.ornament_id) continue;
+        try {
+          const { data: ornData } = await supabaseClient
             .from("ornaments")
-            .update({ quantity: ornData.quantity + item.quantity })
-            .eq("id", item.ornament_id);
+            .select("quantity")
+            .eq("id", item.ornament_id)
+            .maybeSingle();
+          if (ornData && typeof ornData.quantity === "number") {
+            await supabaseClient
+              .from("ornaments")
+              .update({ quantity: ornData.quantity + (item.quantity || 1) })
+              .eq("id", item.ornament_id);
+          }
+        } catch (restockErr) {
+          console.error("Failed to restock ornament:", restockErr);
         }
       }
 
