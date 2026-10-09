@@ -32,6 +32,7 @@ import {
     Space,
     Switch,
     Table,
+    Popconfirm,
     Tag,
     Tooltip,
     Typography,
@@ -689,16 +690,23 @@ const OrnamentList: React.FC = () => {
                                     >
                                         {qty} pcs
                                     </Tag>
-                                    <Tooltip title="Increase">
-                                        <Button
-                                            icon={<PlusOutlined />}
-                                            size="small"
-                                            type="primary"
-                                            loading={!!loadingQty[record.id]}
-                                            onClick={() => handleQtyChange(record, 1)}
-                                            style={{ minWidth: 22, padding: "0 4px" }}
-                                        />
-                                    </Tooltip>
+                                    <Popconfirm
+                                        title="Increase stock by 1 pc?"
+                                        description={`Stock will change from ${qty} to ${qty + 1}`}
+                                        onConfirm={() => handleQtyChange(record, 1)}
+                                        okText="Yes"
+                                        cancelText="No"
+                                    >
+                                        <Tooltip title="Increase quantity">
+                                            <Button
+                                                icon={<PlusOutlined />}
+                                                size="small"
+                                                type="primary"
+                                                loading={!!loadingQty[record.id]}
+                                                style={{ minWidth: 22, padding: "0 4px" }}
+                                            />
+                                        </Tooltip>
+                                    </Popconfirm>
                                 </Space>
                             );
                         }}
