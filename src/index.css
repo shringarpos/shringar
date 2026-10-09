@@ -115,7 +115,7 @@ select:-webkit-autofill:active,
 }
 
 /* ── Mobile Island Notifications: sleek dynamic capsule (app style) ────── */
-/* Sleek floating capsule at top-left extreme left, smooth frosted background */
+/* Sleek floating capsule at top-right extreme, smooth frosted background, no shadow clipping */
 .ant-message .mobile-capsule-notice .ant-message-notice-content,
 .ant-message .mobile-toast .ant-message-notice-content,
 .mobile-toast .ant-message-notice-content {
@@ -147,21 +147,50 @@ select:-webkit-autofill:active,
   box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.45) !important;
 }
 
-/* Position all notifications and messages at top-left (extreme left) */
+/* Position all notifications and messages at top-right (extreme right, 0 space on right) */
 .ant-notification,
 .ant-notification-topRight,
 .ant-notification-topLeft {
-  top: 12px !important;
-  left: 8px !important;
-  right: auto !important;
+  top: 10px !important;
+  right: 0 !important;
+  left: auto !important;
   bottom: auto !important;
   transform: none !important;
   width: auto !important;
-  max-width: calc(100vw - 16px) !important;
+  max-width: calc(100vw - 8px) !important;
   margin: 0 !important;
+  padding-right: 0 !important;
   pointer-events: none !important;
   z-index: 999999 !important;
 }
+
+/* Remove default Ant Design notice wrapper background and drop-shadow (eliminates ugly grey rectangular box) */
+.ant-notification-notice-wrapper {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin-bottom: 8px !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  float: right !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+
+[data-theme="dark"] .ant-notification-notice-wrapper {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.ant-notification-hook-holder {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .ant-notification-notice {
   width: auto !important;
   max-width: calc(100vw - 16px) !important;
@@ -169,8 +198,8 @@ select:-webkit-autofill:active,
   border-radius: 9999px !important;
   padding: 8px 18px !important;
   margin-bottom: 8px !important;
-  margin-left: 0 !important;
-  margin-right: auto !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
   background: rgba(255, 255, 255, 0.96) !important;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   color: #0f172a !important;
@@ -178,7 +207,7 @@ select:-webkit-autofill:active,
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   pointer-events: auto !important;
-  float: left !important;
+  float: right !important;
 }
 
 [data-theme="dark"] .ant-notification-notice {
@@ -215,58 +244,69 @@ select:-webkit-autofill:active,
 }
 
 .ant-message {
-  top: 12px !important;
-  left: 8px !important;
-  right: auto !important;
+  top: 10px !important;
+  right: 0 !important;
+  left: auto !important;
   bottom: auto !important;
   transform: none !important;
   width: auto !important;
-  max-width: calc(100vw - 16px) !important;
+  max-width: calc(100vw - 8px) !important;
   pointer-events: none !important;
   z-index: 999999 !important;
 }
 .ant-message-notice {
-  text-align: left !important;
+  text-align: right !important;
   padding: 0 !important;
   margin-bottom: 8px !important;
-  margin-left: 0 !important;
-  margin-right: auto !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
   pointer-events: auto !important;
+  float: right !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.ant-message-notice-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 @media (max-width: 768px) {
   .ant-message {
-    top: 12px !important;
-    left: 8px !important;
-    right: auto !important;
+    top: 10px !important;
+    right: 0 !important;
+    left: auto !important;
     bottom: auto !important;
     transform: none !important;
     width: auto !important;
-    max-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 8px) !important;
     pointer-events: none !important;
     z-index: 999999 !important;
   }
   .ant-message-notice {
-    text-align: left !important;
+    text-align: right !important;
     padding: 0 !important;
     margin-bottom: 8px !important;
-    margin-left: 0 !important;
-    margin-right: auto !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
     pointer-events: auto !important;
+    float: right !important;
+    background: transparent !important;
+    box-shadow: none !important;
   }
 
-  /* Transform any Ant Design Notification on mobile into sleek dynamic pill */
+  /* Transform any Ant Design Notification on mobile into sleek dynamic pill at extreme top-right */
   .ant-notification,
   .ant-notification-topRight,
   .ant-notification-topLeft {
-    top: 12px !important;
-    left: 8px !important;
-    right: auto !important;
+    top: 10px !important;
+    right: 0 !important;
+    left: auto !important;
     bottom: auto !important;
     transform: none !important;
     width: auto !important;
-    max-width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 8px) !important;
     margin: 0 !important;
+    padding-right: 0 !important;
     pointer-events: none !important;
     z-index: 999999 !important;
   }

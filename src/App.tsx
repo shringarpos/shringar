@@ -15,11 +15,11 @@ import routerProvider, {
 import { App as AntdApp, Typography, notification, message } from "antd";
 
 notification.config({
-  placement: "topLeft",
-  top: 12,
+  placement: "topRight",
+  top: 10,
 });
 message.config({
-  top: 12,
+  top: 10,
 });
 import { BrowserRouter, Link, Navigate, Outlet, Route, Routes } from "react-router";
 import { ColorModeContextProvider } from "./contexts/color-mode";
@@ -74,7 +74,7 @@ function App() {
       {/* <GitHubBanner /> */}
       <RefineKbarProvider>
         <ColorModeContextProvider>
-          <AntdApp notification={{ placement: "topLeft", top: 12 }} message={{ top: 12 }}>
+          <AntdApp notification={{ placement: "topRight", top: 10 }} message={{ top: 10 }}>
             <DevtoolsProvider>
               <Refine
                 dataProvider={dataProvider}
@@ -181,8 +181,7 @@ function App() {
                     element={
                       <Authenticated
                         key="authenticated-inner"
-                        fallback={<CatchAllNavigate to="/login" />
-                      }
+                        fallback={<CatchAllNavigate to="/login" />}
                       >
                         <OnboardingGuard>
                           <MobileShell SidebarTitle={SidebarTitle}>
