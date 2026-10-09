@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useList, useCreate, useUpdate, useGetIdentity } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import {
@@ -43,6 +43,7 @@ import type {
   IInvoice,
   IInvoiceItem,
   IOrnament,
+  IMakingCharge,
 } from "../../libs/interfaces";
 
 const { Title, Text } = Typography;
@@ -130,6 +131,18 @@ export const MobilePOS: React.FC<{
     queryOptions: { enabled: !!shopId },
   });
 
+  // 4. Fetch Active Making Charges (Desktop parity)
+  const { query: chargesQuery } = useList<IMakingCharge>({
+    resource: "making_charges",
+    filters: [
+      { field: "shop_id", operator: "eq", value: shopId },
+      { field: "is_active", operator: "eq", value: true },
+    ],
+    sorters: [{ field: "effective_from", order: "desc" }],
+    pagination: { mode: "off" },
+    queryOptions: { enabled: !!shopId, staleTime: 30 * 1000 },
+  });
+
   const { mutateAsync: createInvoice } = useCreate<IInvoice>();
   const { mutateAsync: createInvoiceItem } = useCreate<IInvoiceItem>();
   const { mutateAsync: updateOrnament } = useUpdate<IOrnament>();
@@ -138,20 +151,22 @@ export const MobilePOS: React.FC<{
   const customers = (customersQuery?.data?.data ?? []) as ICustomer[];
   const ornaments = (ornamentsQuery?.data?.data ?? []) as IOrnamentWithDetails[];
   const rates = (ratesQuery?.data?.data ?? []) as IMetalRate[];
+  const charges = (chargesQuery?.data?.data ?? []) as IMakingCharge[];
 
-  // Auto-select first customer or Walk-in if not yet selected
-  useEffect(() => {
-    if (!selectedCustomerId && customers.length > 0) {
-      const walkIn = customers.find((c) =>
-        c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
-      );
-      if (walkIn) {
-        setSelectedCustomerId(walkIn.id);
-      } else {
-        setSelectedCustomerId(customers[0].id);
-      }
-    }
-  }, [customers, selectedCustomerId]);
+  const getActiveMC = useCallback(
+    (metalTypeId?: string, purityLevelId?: string) => {
+      if (!metalTypeId || !purityLevelId) return undefined;
+      return charges
+        .filter((ch) => ch.metal_type_id === metalTypeId && ch.purity_level_id === purityLevelId)
+        .sort(
+          (a, b) =>
+            new Date(b.effective_from).getTime() - new Date(a.effective_from).getTime(),
+        )[0];
+    },
+    [charges],
+  );
+
+
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === selectedCustomerId) || null,
@@ -185,20 +200,35 @@ export const MobilePOS: React.FC<{
     });
   }, [ornaments, searchTerm, selectedMetalFilter]);
 
-  // Cart calculation helper
-  const calculateItemTotal = (orn: IOrnamentWithDetails, qty: number) => {
-    const weight = ((orn.weight_mg ? orn.weight_mg / 1000 : 1) || 1) * qty;
-    const rateItem = rates.find((r) => r.metal_type_id === orn.metal_type_id);
-    const ratePerGram = rateItem?.rate_per_gram_paise || 700000;
-    const metalVal = weight * ratePerGram;
-    const makingPaise = (orn.purchase_making_charge_paise || 35000) * qty;
-    return {
-      weightGrams: weight,
-      ratePerGram,
-      makingChargePaise: makingPaise,
-      totalPaise: Math.round(metalVal + makingPaise),
-    };
-  };
+  // Cart calculation helper (matches desktop logic: weight * live MC from table, or ornament purchase MC fallback)
+  const calculateItemTotal = useCallback(
+    (orn: IOrnamentWithDetails, qty: number) => {
+      const weightGrams = ((orn.weight_mg ? orn.weight_mg / 1000 : 1) || 1) * qty;
+      const rateItem = rates.find((r) => r.metal_type_id === orn.metal_type_id);
+      const ratePerGram = rateItem?.rate_per_gram_paise || 700000;
+      const metalVal = weightGrams * ratePerGram;
+
+      const mc = orn.metal_type_id && orn.purity_level_id ? getActiveMC(orn.metal_type_id, orn.purity_level_id) : undefined;
+      let makingPaise = 0;
+      if (mc && mc.charge_per_gram_paise > 0) {
+        makingPaise = Math.round(weightGrams * mc.charge_per_gram_paise);
+      } else if (orn.purchase_making_charge_paise) {
+        makingPaise = orn.purchase_making_charge_paise * qty;
+      } else {
+        makingPaise = 0;
+      }
+
+      return {
+        weightGrams,
+        ratePerGram,
+        makingChargePaise: makingPaise,
+        totalPaise: Math.round(metalVal + makingPaise),
+      };
+    },
+    [rates, getActiveMC],
+  );
+
+
 
   const handleAddToCart = (orn: IOrnamentWithDetails) => {
     setCart((prev) => {
@@ -260,11 +290,11 @@ export const MobilePOS: React.FC<{
   const makingTotalPaise = cart.reduce((sum, item) => sum + item.makingChargePaise, 0);
   // Desktop sale-form parity: line total = metal + making. Excluding making
   // drops exactly the making share — identical to zeroing making on desktop.
+  // Grand total = subtotal - discount (Zero added GST, exactly matching desktop).
   const subtotalPaise = includeMaking
     ? metalOnlyPaise + makingTotalPaise
     : metalOnlyPaise;
-  const gstPaise = Math.round(subtotalPaise * 0.03); // 3% GST
-  const grandTotalPaise = Math.max(0, subtotalPaise + gstPaise - discountPaise);
+  const grandTotalPaise = Math.max(0, subtotalPaise - discountPaise);
   const grandTotalRs = Math.round(grandTotalPaise / 100);
   const effectivePaid = paidPaise !== null ? paidPaise : grandTotalPaise;
   const balancePaise = Math.max(0, grandTotalPaise - effectivePaid);
@@ -367,7 +397,15 @@ export const MobilePOS: React.FC<{
       notifyMobile.error("No active shop found");
       return;
     }
-    if (!selectedCustomerId) {
+    let customerIdToUse = selectedCustomerId;
+    if (!customerIdToUse && customers.length > 0) {
+      const walkIn = customers.find((c) =>
+        c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
+      );
+      customerIdToUse = walkIn ? walkIn.id : customers[0].id;
+    }
+
+    if (!customerIdToUse) {
       notifyMobile.warning("Please select a client for this invoice");
       setCheckoutDrawerOpen(false);
       setCustomerDrawerOpen(true);
@@ -381,12 +419,10 @@ export const MobilePOS: React.FC<{
         resource: "invoices",
         values: {
           shop_id: shopId,
-          customer_id: selectedCustomerId,
+          customer_id: customerIdToUse,
           invoice_date: invoiceDate.format("YYYY-MM-DD"),
-          subtotal_amount_paise: subtotalPaise,
-          total_making_charges_paise: includeMaking
-            ? cart.reduce((sum, i) => sum + i.makingChargePaise, 0)
-            : 0,
+          subtotal_amount_paise: metalOnlyPaise,
+          total_making_charges_paise: includeMaking ? makingTotalPaise : 0,
           discount_amount_paise: discountPaise,
           total_amount_paise: grandTotalPaise,
           notes: saleNotes.trim()
@@ -1124,10 +1160,7 @@ export const MobilePOS: React.FC<{
                 aria-label="Include making charges"
               />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <Text type="secondary">GST (3%)</Text>
-              <Text>₹{(gstPaise / 100).toLocaleString("en-IN")}</Text>
-            </div>
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Text type="secondary">Discount (₹)</Text>
               <InputNumber

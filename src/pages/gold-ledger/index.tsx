@@ -409,7 +409,12 @@ function DesktopGoldLedger() {
                         tableProps.onChange?.(pagination, {}, sorter, extra);
                     }}
                     onRow={(record) => ({
-                        style: { cursor: "pointer" },
+                        style: {
+                            cursor: "pointer",
+                            ...(record.status !== "running"
+                                ? { backgroundColor: token.colorFillAlter }
+                                : {}),
+                        },
                         onClick: () => setShowRecord(record),
                     })}
                 >
@@ -582,7 +587,7 @@ function DesktopGoldLedger() {
                         fixed="right"
                         render={(_: unknown, record: IGoldLoan) => (
                             <Space size={4} onClick={(e) => e.stopPropagation()}>
-                                {record.status === "running" && (
+                                {record.status === "running" ? (
                                     <Popconfirm
                                         title="Close loan?"
                                         description={`Mark loan for ${record.customer_name} as settled?`}
@@ -601,6 +606,10 @@ function DesktopGoldLedger() {
                                             Close
                                         </Button>
                                     </Popconfirm>
+                                ) : (
+                                    <Button size="small" disabled>
+                                        Closed
+                                    </Button>
                                 )}
                                 <Tooltip title="View Details">
                                     <Button

@@ -103,7 +103,7 @@ export const MoreMenuDrawer: React.FC<MoreMenuDrawerProps> = ({ open, onClose })
       label: "Settings",
       icon: SettingsIcon,
       path: "/settings",
-      subtitle: "Showroom profile & staff access",
+      subtitle: "Showroom profile & making charges",
     },
   ];
 

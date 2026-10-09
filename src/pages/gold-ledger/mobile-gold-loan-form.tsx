@@ -41,12 +41,11 @@ export const MobileGoldLoanForm: React.FC = () => {
   const loanAmount = Form.useWatch("loan_amount", form) || 0;
   const interestRate = Form.useWatch("interest_rate", form) || 0;
   const durationMonths = Form.useWatch("duration_months", form) || 0;
-  // Same simple-interest derivation the badge below displays: the rate is a
-  // MONTHLY % (girvi convention), so monthly interest = round(P * r / 100),
-  // tenure interest = monthly x months, total = principal + tenure interest.
-  const monthlyInterestRs = Math.round((Number(loanAmount) * Number(interestRate)) / 100);
-  const tenureInterestRs = monthlyInterestRs * Number(durationMonths || 0);
-  const totalPayableRs = Number(loanAmount || 0) + tenureInterestRs;
+  // Desktop simple-interest parity: rate is Annual % (% p.a.), formula: (P * R * T) / 1200
+  const tenureInterestRs = Math.round(((Number(loanAmount) * Number(interestRate) * Number(durationMonths)) / 1200) * 100) / 100;
+  const monthlyInterestRs = Number(durationMonths) > 0 ? Math.round((tenureInterestRs / Number(durationMonths)) * 100) / 100 : 0;
+  const totalPayableRs = Math.round((Number(loanAmount || 0) + tenureInterestRs) * 100) / 100;
+  const effectiveMonthlyPct = Number(interestRate) ? (Number(interestRate) / 12).toFixed(2) : "0.00";
 
   const { mutateAsync: createLoan } = useCreate<IGoldLoan>();
 
@@ -62,9 +61,8 @@ export const MobileGoldLoanForm: React.FC = () => {
       const principal = Number(values.loan_amount);
       const rate = Number(values.interest_rate);
       const months = Number(values.duration_months);
-      const monthly = Math.round((principal * rate) / 100);
-      const interestAmount = monthly * months;
-      const totalAmount = principal + interestAmount;
+      const interestAmount = Math.round(((principal * rate * months) / 1200) * 100) / 100;
+      const totalAmount = Math.round((principal + interestAmount) * 100) / 100;
 
       // EXACT gold_loans columns only (migration 20261005154854): user_id
       // satisfies RLS user_id = auth.uid(); non-schema keys and UI-aliased
@@ -187,8 +185,8 @@ export const MobileGoldLoanForm: React.FC = () => {
         initialValues={{
           metal_type: "Gold",
           purity: "22K",
-          interest_rate: 2,
-          duration_months: 6,
+          interest_rate: 18,
+          duration_months: 12,
           loan_date: dayjs(),
         }}
         style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}
@@ -362,15 +360,21 @@ export const MobileGoldLoanForm: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Interest (%/mo)</span>}
+              label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Interest (% p.a.)</span>}
               name="interest_rate"
-              rules={[{ required: true, message: "Rate" }]}
+              rules={[
+                { required: true, message: "Interest rate is required" },
+                { type: "number", min: 0.1, max: 100, message: "Rate must be between 0.1% and 100%" },
+              ]}
               style={{ marginBottom: 14 }}
             >
               <InputNumber
-                min={0}
-                step={0.1}
-                placeholder="2.0%"
+                min={0.1}
+                max={100}
+                step={0.5}
+                precision={2}
+                placeholder="18"
+                addonAfter="% p.a."
                 style={{ width: "100%", height: 48, borderRadius: 14, fontSize: 15 }}
               />
             </Form.Item>
@@ -416,7 +420,7 @@ export const MobileGoldLoanForm: React.FC = () => {
                 ESTIMATED MONTHLY INTEREST
               </span>
               <span style={{ fontSize: 12, color: "#cbd5e1", fontWeight: 500 }}>
-                {interestRate}%/mo on ₹{Number(loanAmount || 0).toLocaleString("en-IN")} • Total ₹{totalPayableRs.toLocaleString("en-IN")} over {Number(durationMonths || 0)}mo
+                {interestRate}% p.a. (~{effectiveMonthlyPct}%/mo) on ₹{Number(loanAmount || 0).toLocaleString("en-IN")} • Total ₹{totalPayableRs.toLocaleString("en-IN")} over {Number(durationMonths || 0)}mo
               </span>
             </div>
             <div style={{ textAlign: "right" }}>

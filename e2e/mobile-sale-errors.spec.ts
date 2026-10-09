@@ -307,7 +307,7 @@ test.describe("Task 2: gold-loan created_by schema error", () => {
       .locator('input[placeholder="e.g. 2 Gold Bangles (24.5g gross)"]')
       .fill("Gold Choker 58g 22K");
     await page.locator('input[placeholder="₹ Principal"]').fill("100000");
-    await page.locator("#interest_rate").fill("2");
+    await page.locator("#interest_rate").fill("18");
     await page.locator("#duration_months").fill("12");
     await page.getByRole("button", { name: /create loan/i }).click();
     await expect
@@ -339,11 +339,11 @@ test.describe("Task 2: gold-loan created_by schema error", () => {
     expect(payload.nominee).toBe("Rajesh QA");
     expect(payload.status).toBe("running");
     expect(payload.loan_amount).toBe(100000);
-    expect(payload.interest_rate).toBe(2);
+    expect(payload.interest_rate).toBe(18);
     expect(payload.duration_months).toBe(12);
-    // 100000 @ 2%/mo x 12mo → monthly 2000, interest 24000, total 124000.
-    expect(payload.interest_amount).toBe(24000);
-    expect(payload.total_amount).toBe(124000);
+    // 100000 @ 18% p.a. x 12mo → (100000 * 18 * 12) / 1200 = 18000, total 118000.
+    expect(payload.interest_amount).toBe(18000);
+    expect(payload.total_amount).toBe(118000);
     expect(payload.loan_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
@@ -670,21 +670,18 @@ test.describe("Task 5: mobile native polish + parity", () => {
     const subOn = Number(await num("mobile-pos-subtotal"));
     const making = Number(await num("mobile-pos-making-total"));
     const grandOn = Number(await num("mobile-pos-grand-total"));
-    // orn-1 x1: making = its purchase_making_charge_paise (Rs 450); metal is
-    // whatever weight x live rate yields — the pin asserts formula structure.
-    expect(making).toBe(45000);
+    // orn-1 x1: making = live table rate 45000 paise/g x 45g = 2,025,000 paise (Rs 20,250).
+    expect(making).toBe(2025000);
     const metal = subOn - making;
     expect(metal).toBeGreaterThan(0);
-    expect(grandOn).toBe(subOn + Math.round(subOn * 0.03));
-    // Toggle making off: totals drop by exactly making + its GST share.
+    expect(grandOn).toBe(subOn);
+    // Toggle making off: totals drop by exactly making (zero added GST, desktop parity).
     await drawer.locator('[data-testid="mobile-pos-include-making"]').click();
     const subOff = Number(await num("mobile-pos-subtotal"));
     const grandOff = Number(await num("mobile-pos-grand-total"));
     expect(subOff).toBe(subOn - making);
-    expect(grandOff).toBe(subOff + Math.round(subOff * 0.03));
-    expect(grandOn - grandOff).toBe(
-      making + Math.round(subOn * 0.03) - Math.round(subOff * 0.03)
-    );
+    expect(grandOff).toBe(subOff);
+    expect(grandOn - grandOff).toBe(making);
   });
 
   test("(e) mobile sale posts desktop-identical payload incl. notes/date/making", async ({
@@ -725,16 +722,14 @@ test.describe("Task 5: mobile native polish + parity", () => {
     const today = new Date().toISOString().slice(0, 10);
     expect(inv.invoice_date).toBe(today);
     expect(inv.notes).toBe("Resize note");
-    expect(inv.total_making_charges_paise).toBe(45000);
+    expect(inv.total_making_charges_paise).toBe(2025000);
     expect(inv.discount_amount_paise).toBe(0);
     expect(inv.total_amount_paise).toBe(
-      inv.subtotal_amount_paise +
-        Math.round(inv.subtotal_amount_paise * 0.03) -
-        inv.discount_amount_paise
+      inv.subtotal_amount_paise + inv.total_making_charges_paise - inv.discount_amount_paise
     );
     await expect.poll(() => items.length, { timeout: 15000 }).toBeGreaterThan(0);
     const li = items[items.length - 1];
-    expect(li.making_charge_amount_paise).toBe(45000);
+    expect(li.making_charge_amount_paise).toBe(2025000);
     expect(li.line_total_paise).toBe(
       li.metal_amount_paise + li.making_charge_amount_paise
     );
@@ -773,7 +768,7 @@ test.describe("Task 5: mobile native polish + parity", () => {
     expect(inv.notes).toBe("Paid via CASH");
     expect(inv.total_amount_paise).toBe(
       inv.subtotal_amount_paise +
-        Math.round(inv.subtotal_amount_paise * 0.03) -
+        inv.total_making_charges_paise -
         inv.discount_amount_paise
     );
   });

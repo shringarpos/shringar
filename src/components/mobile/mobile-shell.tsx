@@ -51,7 +51,7 @@ export const MobileShell: React.FC<MobileShellProps> = ({ children, SidebarTitle
     return (
       <ThemedLayout
         Header={Header}
-        Sider={(props) => <ThemedSider {...props} Title={SidebarTitle} fixed />}
+        Sider={(props) => <ThemedSider {...props} Title={SidebarTitle} fixed render={({ items }) => <>{items}</>} />}
       >
         {children}
       </ThemedLayout>

@@ -28,7 +28,7 @@ export interface IPurityLevel {
   is_active: boolean;
 }
 
-interface IMakingCharge {
+export interface IMakingCharge {
   id: string;
   shop_id: string;
   metal_type_id: string;
