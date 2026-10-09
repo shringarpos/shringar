@@ -349,6 +349,20 @@ export const MOCK_INVOICES = [
   },
 ];
 
+export const MOCK_INVOICE_PAYMENTS = [
+  {
+    id: "pay-1",
+    shop_id: MOCK_SHOP.id,
+    invoice_id: "inv-1",
+    payment_date: "2026-10-04",
+    amount_paise: 20000000,
+    payment_mode: "UPI",
+    notes: "Advance via GooglePay",
+    balance_snapshot_paise: 12800000,
+    created_at: "2026-10-04T12:00:00Z",
+  },
+];
+
 export const MOCK_INVOICE_ITEMS = [
   {
     id: "inv-item-1",
@@ -400,6 +414,7 @@ export async function setupAuthenticatedContext(
   const categoriesData = [...MOCK_CATEGORIES];
   const invoicesData = [...MOCK_INVOICES];
   const invoiceItemsData = [...MOCK_INVOICE_ITEMS];
+  const paymentsData = [...MOCK_INVOICE_PAYMENTS];
   const ratesData = [...MOCK_RATES];
 
   // Mock Supabase Auth API
@@ -555,6 +570,11 @@ export async function setupAuthenticatedContext(
         invoice_items: invoiceItemsData.filter((it) => it.invoice_id === inv.id),
       }),
     });
+  });
+
+  // Mock Invoice Payments
+  await page.route("**/rest/v1/invoice_payments*", async (route) => {
+    await handleRestResource(route, paymentsData);
   });
 
   // Mock Invoice Items
