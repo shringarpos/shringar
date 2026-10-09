@@ -75,6 +75,7 @@ export const MobilePOS: React.FC<{
   const [selectedMetalFilter, setSelectedMetalFilter] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [pendingSaleOnCustomerSelect, setPendingSaleOnCustomerSelect] = useState(false);
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
   const [customerDrawerOpen, setCustomerDrawerOpen] = useState(false);
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
@@ -320,115 +321,8 @@ export const MobilePOS: React.FC<{
       ? cashTendered - effectivePaidRs
       : 0;
 
-  // Handler for Quick Client Creation inside the POS drawer
-  const handleCreateQuickClient = async () => {
-    if (!quickClientName.trim()) {
-      notifyMobile.error("Please enter client name");
-      return;
-    }
-    if (!quickClientAddress.trim()) {
-      notifyMobile.error("Please enter client address");
-      return;
-    }
-    if (!quickClientPhone.trim()) {
-      notifyMobile.error("Please enter client phone number");
-      return;
-    }
-    if (!shopId) return;
-
-    setCreatingClient(true);
-    try {
-      const res = await createCustomer({
-        resource: "customers",
-        values: {
-          name: quickClientName.trim(),
-          phone: quickClientPhone.trim(),
-          address: quickClientAddress.trim(),
-          shop_id: shopId,
-          created_by: userId,
-          updated_by: userId,
-          is_active: true,
-        },
-      });
-
-      const newId = res?.data?.id;
-      if (newId) {
-        setSelectedCustomerId(newId);
-        notifyMobile.success(`Client ${quickClientName} added and selected!`);
-      }
-      setShowQuickAddClient(false);
-      setQuickClientName("");
-      setQuickClientPhone("");
-      setQuickClientAddress("");
-      await customersQuery?.refetch();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create client";
-      notifyMobile.error(msg);
-    } finally {
-      setCreatingClient(false);
-    }
-  };
-
-  // Handler to select or create a Walk-in Customer
-  const handleSelectWalkIn = async () => {
-    const walkIn = customers.find((c) =>
-      c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
-    );
-    if (walkIn) {
-      setSelectedCustomerId(walkIn.id);
-      setCustomerDrawerOpen(false);
-      return;
-    }
-
-    // Auto-create a Walk-in Customer record so DB foreign key / NOT NULL constraint is satisfied
-    if (!shopId) return;
-    try {
-      const res = await createCustomer({
-        resource: "customers",
-        values: {
-          name: "Walk-in Customer",
-          phone: "9999999999",
-          address: "Walk-in counter sale",
-          shop_id: shopId,
-          created_by: userId,
-          updated_by: userId,
-          is_active: true,
-        },
-      });
-      if (res?.data?.id) {
-        setSelectedCustomerId(res.data.id);
-      }
-      await customersQuery?.refetch();
-      setCustomerDrawerOpen(false);
-    } catch {
-      notifyMobile.error("Could not set walk-in customer");
-    }
-  };
-
-  const handleCompleteSale = async () => {
-    if (cart.length === 0) {
-      notifyMobile.error("Cart is empty");
-      return;
-    }
-    if (!shopId) {
-      notifyMobile.error("No active shop found");
-      return;
-    }
-    let customerIdToUse = selectedCustomerId;
-    if (!customerIdToUse && customers.length > 0) {
-      const walkIn = customers.find((c) =>
-        c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
-      );
-      customerIdToUse = walkIn ? walkIn.id : customers[0].id;
-    }
-
-    if (!customerIdToUse) {
-      notifyMobile.warning("Please select a client for this invoice");
-      setCheckoutDrawerOpen(false);
-      setCustomerDrawerOpen(true);
-      return;
-    }
-
+  // Executes the actual invoice creation and checkout flow
+  const executeSaleSubmission = async (customerIdToUse: string) => {
     setSubmitting(true);
     try {
       // 1. Create Invoice with Postgres-compliant columns only
@@ -460,7 +354,7 @@ export const MobilePOS: React.FC<{
           await recordInstallment(
             {
               id: newInvId as string,
-              shop_id: shopId,
+              shop_id: shopId as string,
               total_amount_paise: grandTotalPaise,
               notes: saleNotes.trim() || null,
             },
@@ -521,7 +415,10 @@ export const MobilePOS: React.FC<{
       setSaleNotes("");
       setIncludeMaking(true);
       setInvoiceDate(dayjs());
+      setSelectedCustomerId(null);
+      setPendingSaleOnCustomerSelect(false);
       setCheckoutDrawerOpen(false);
+      setCustomerDrawerOpen(false);
       navigate(`/invoices/show/${newInvId}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create invoice";
@@ -529,6 +426,130 @@ export const MobilePOS: React.FC<{
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Handler for Quick Client Creation inside the POS drawer
+  const handleCreateQuickClient = async () => {
+    if (!quickClientName.trim()) {
+      notifyMobile.error("Please enter client name");
+      return;
+    }
+    if (!quickClientAddress.trim()) {
+      notifyMobile.error("Please enter client address");
+      return;
+    }
+    if (!quickClientPhone.trim()) {
+      notifyMobile.error("Please enter client phone number");
+      return;
+    }
+    if (!shopId) return;
+
+    setCreatingClient(true);
+    try {
+      const res = await createCustomer({
+        resource: "customers",
+        values: {
+          name: quickClientName.trim(),
+          phone: quickClientPhone.trim(),
+          address: quickClientAddress.trim(),
+          shop_id: shopId,
+          created_by: userId,
+          updated_by: userId,
+          is_active: true,
+        },
+      });
+
+      const newId = res?.data?.id;
+      if (newId) {
+        setSelectedCustomerId(newId);
+        notifyMobile.success(`Client ${quickClientName} added and selected!`);
+      }
+      setShowQuickAddClient(false);
+      setQuickClientName("");
+      setQuickClientPhone("");
+      setQuickClientAddress("");
+      await customersQuery?.refetch();
+      if (newId && pendingSaleOnCustomerSelect) {
+        setPendingSaleOnCustomerSelect(false);
+        setCustomerDrawerOpen(false);
+        await executeSaleSubmission(newId);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create client";
+      notifyMobile.error(msg);
+    } finally {
+      setCreatingClient(false);
+    }
+  };
+
+  // Handler to select or create a Walk-in Customer
+  const handleSelectWalkIn = async () => {
+    const walkIn = customers.find((c) =>
+      c.name.toLowerCase().includes("walk-in") || c.name.toLowerCase().includes("walk in")
+    );
+    let targetId = walkIn?.id;
+
+    if (!targetId && shopId) {
+      try {
+        const res = await createCustomer({
+          resource: "customers",
+          values: {
+            name: "Walk-in Customer",
+            phone: "9999999999",
+            address: "Walk-in counter sale",
+            shop_id: shopId,
+            created_by: userId,
+            updated_by: userId,
+            is_active: true,
+          },
+        });
+        targetId = res?.data?.id;
+        await customersQuery?.refetch();
+      } catch {
+        notifyMobile.error("Could not set walk-in customer");
+        return;
+      }
+    }
+
+    if (targetId) {
+      setSelectedCustomerId(targetId);
+      setCustomerDrawerOpen(false);
+      if (pendingSaleOnCustomerSelect) {
+        setPendingSaleOnCustomerSelect(false);
+        await executeSaleSubmission(targetId);
+      }
+    }
+  };
+
+  // Handler when user taps a saved customer row in the drawer
+  const handleSelectCustomer = async (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setCustomerDrawerOpen(false);
+    if (pendingSaleOnCustomerSelect) {
+      setPendingSaleOnCustomerSelect(false);
+      await executeSaleSubmission(customerId);
+    }
+  };
+
+  const handleCompleteSale = async () => {
+    if (cart.length === 0) {
+      notifyMobile.error("Cart is empty");
+      return;
+    }
+    if (!shopId) {
+      notifyMobile.error("No active shop found");
+      return;
+    }
+
+    if (!selectedCustomerId) {
+      notifyMobile.info("Please select a client or Walk-in to complete sale");
+      setPendingSaleOnCustomerSelect(true);
+      setCheckoutDrawerOpen(false);
+      setCustomerDrawerOpen(true);
+      return;
+    }
+
+    await executeSaleSubmission(selectedCustomerId);
   };
 
   const paymentModes = [
@@ -1031,7 +1052,10 @@ export const MobilePOS: React.FC<{
         placement="bottom"
         height="80%"
         open={customerDrawerOpen}
-        onClose={() => setCustomerDrawerOpen(false)}
+        onClose={() => {
+          setCustomerDrawerOpen(false);
+          setPendingSaleOnCustomerSelect(false);
+        }}
         styles={{ body: { padding: "16px 16px" } }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1140,10 +1164,7 @@ export const MobilePOS: React.FC<{
                 {filteredCustomers.map((c) => (
                   <div
                     key={c.id}
-                    onClick={() => {
-                      setSelectedCustomerId(c.id);
-                      setCustomerDrawerOpen(false);
-                    }}
+                    onClick={() => handleSelectCustomer(c.id)}
                     style={{
                       padding: "10px 12px",
                       borderRadius: 10,

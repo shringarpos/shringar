@@ -717,6 +717,10 @@ test.describe("Task 5: mobile native polish + parity", () => {
     await drawer
       .getByRole("button", { name: /confirm & generate bill/i })
       .click();
+    const walkIn17 = page.getByText("Walk-in Customer");
+    if (await walkIn17.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await walkIn17.click();
+    }
     await expect.poll(() => invoices.length, { timeout: 15000 }).toBeGreaterThan(0);
     const inv = invoices[invoices.length - 1];
     const today = new Date().toISOString().slice(0, 10);
@@ -762,6 +766,10 @@ test.describe("Task 5: mobile native polish + parity", () => {
     await drawer
       .getByRole("button", { name: /confirm & generate bill/i })
       .click();
+    const walkIn18 = page.getByText("Walk-in Customer");
+    if (await walkIn18.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await walkIn18.click();
+    }
     await expect.poll(() => invoices.length, { timeout: 15000 }).toBeGreaterThan(0);
     const inv = invoices[invoices.length - 1];
     expect(inv.total_making_charges_paise).toBe(0);
