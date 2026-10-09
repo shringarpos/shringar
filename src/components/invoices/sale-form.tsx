@@ -772,6 +772,7 @@ export const SaleForm: React.FC<SaleFormProps> = ({ mode, existingInvoice }) => 
                       optionFilterProp="label"
                       options={customerOptions}
                       placeholder="Search customer..."
+                      notFoundContent="No existing user"
                       disabled={isEdit}
                       loading={customerListQuery?.isLoading}
                       dropdownRender={(menu) => (

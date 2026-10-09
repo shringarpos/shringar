@@ -65,10 +65,7 @@ export const MobileCustomerForm: React.FC = () => {
           name: values.name.trim(),
           phone: values.phone?.trim() || null,
           email: values.email?.trim() || null,
-          address: values.address?.trim() || null,
-          pan_number: values.pan_number?.trim()?.toUpperCase() || null,
-          gst_number: values.gst_number?.trim()?.toUpperCase() || null,
-          notes: values.notes?.trim() || null,
+          address: values.address?.trim(),
           reference_by: values.reference_by || null,
           shop_id: shopId,
           created_by: userId,
@@ -273,37 +270,17 @@ export const MobileCustomerForm: React.FC = () => {
               <MapPin size={15} strokeWidth={2.5} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary, letterSpacing: "0.02em" }}>
-              ADDRESS & TAX / ID
+              ADDRESS
             </span>
           </div>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Postal Address</span>} name="address" style={{ marginBottom: 14 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Postal Address</span>} name="address" rules={[{ required: true, message: "Address is required" }]} style={{ marginBottom: 0 }}>
             <Input.TextArea
               rows={2}
               placeholder="Street, City, Pincode"
               style={{ borderRadius: 14, fontSize: 14 }}
             />
           </Form.Item>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>PAN Number</span>} name="pan_number" style={{ marginBottom: 0 }}>
-              <Input
-                placeholder="ABCDE1234F"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                style={{ height: 48, borderRadius: 14, fontSize: 14, textTransform: "uppercase", fontFamily: "monospace" }}
-              />
-            </Form.Item>
-
-            <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>GSTIN</span>} name="gst_number" style={{ marginBottom: 0 }}>
-              <Input
-                placeholder="Optional GSTIN"
-                autoCapitalize="characters"
-                autoCorrect="off"
-                style={{ height: 48, borderRadius: 14, fontSize: 14, textTransform: "uppercase", fontFamily: "monospace" }}
-              />
-            </Form.Item>
-          </div>
         </div>
 
         {/* ── Card 3: Referral & Notes ── */}
@@ -333,11 +310,11 @@ export const MobileCustomerForm: React.FC = () => {
               <FileText size={15} strokeWidth={2.5} />
             </div>
             <span style={{ fontSize: 13, fontWeight: 700, color: themeStyles.textPrimary, letterSpacing: "0.02em" }}>
-              REFERRAL & NOTES
+              REFERRAL
             </span>
           </div>
 
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Referred By (Optional)</span>} name="reference_by" style={{ marginBottom: 14 }}>
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Referred By (Optional)</span>} name="reference_by" style={{ marginBottom: 0 }}>
             <Select
               allowClear
               showSearch
@@ -351,14 +328,6 @@ export const MobileCustomerForm: React.FC = () => {
                 </Select.Option>
               ))}
             </Select>
-          </Form.Item>
-
-          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600, color: themeStyles.labelColor, marginBottom: 6, display: "inline-block" }}>Private Notes</span>} name="notes" style={{ marginBottom: 0 }}>
-            <Input.TextArea
-              rows={2}
-              placeholder="Family jeweler history, ring size, preferences..."
-              style={{ borderRadius: 14, fontSize: 14 }}
-            />
           </Form.Item>
         </div>
       </Form>

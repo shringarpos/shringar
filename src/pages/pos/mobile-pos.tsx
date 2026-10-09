@@ -77,6 +77,7 @@ export const MobilePOS: React.FC<{
   const [showQuickAddClient, setShowQuickAddClient] = useState(false);
   const [quickClientName, setQuickClientName] = useState("");
   const [quickClientPhone, setQuickClientPhone] = useState("");
+  const [quickClientAddress, setQuickClientAddress] = useState("");
   const [creatingClient, setCreatingClient] = useState(false);
 
   const [paymentMode, setPaymentMode] = useState<string>("CASH");
@@ -262,6 +263,10 @@ export const MobilePOS: React.FC<{
       message.error("Please enter client name");
       return;
     }
+    if (!quickClientAddress.trim()) {
+      message.error("Please enter client address");
+      return;
+    }
     if (!shopId) return;
 
     setCreatingClient(true);
@@ -271,6 +276,7 @@ export const MobilePOS: React.FC<{
         values: {
           name: quickClientName.trim(),
           phone: quickClientPhone.trim() || null,
+          address: quickClientAddress.trim(),
           shop_id: shopId,
           created_by: userId,
           updated_by: userId,
@@ -286,6 +292,7 @@ export const MobilePOS: React.FC<{
       setShowQuickAddClient(false);
       setQuickClientName("");
       setQuickClientPhone("");
+      setQuickClientAddress("");
       await customersQuery?.refetch();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create client";
@@ -314,6 +321,7 @@ export const MobilePOS: React.FC<{
         values: {
           name: "Walk-in Customer",
           phone: "9999999999",
+          address: "Walk-in counter sale",
           shop_id: shopId,
           created_by: userId,
           updated_by: userId,
@@ -911,6 +919,14 @@ export const MobilePOS: React.FC<{
                 style={{ height: 38, borderRadius: 8 }}
               />
 
+              <Input
+                data-testid="mobile-pos-quickadd-address"
+                placeholder="Client Address *"
+                value={quickClientAddress}
+                onChange={(e) => setQuickClientAddress(e.target.value)}
+                style={{ height: 44, borderRadius: 8 }}
+              />
+
               <Button
                 type="primary"
                 loading={creatingClient}
@@ -964,6 +980,9 @@ export const MobilePOS: React.FC<{
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "38vh", overflowY: "auto" }}>
+                {filteredCustomers.length === 0 && (
+                  <Empty description="No existing user" style={{ margin: "16px 0" }} />
+                )}
                 {filteredCustomers.map((c) => (
                   <div
                     key={c.id}
