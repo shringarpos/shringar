@@ -23,6 +23,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import type { ICustomer, IInvoice } from "../../libs/interfaces";
 import { useShopCheck } from "../../hooks/use-shop-check";
 import { DownloadInvoiceButton } from "./download-invoice-button";
+import { parseNotesPaymentLedger, calculatePaymentStatus } from "../../services/payment-ledger";
 import { notifyMobile } from "../../utils/mobile-notify";
 
 dayjs.extend(relativeTime);
@@ -47,11 +48,30 @@ function getInvoicePaymentStatus(inv: IInvoiceRow): "PAID" | "PARTIAL" | "UNPAID
     const s = inv.payment_status.toUpperCase();
     if (s === "PAID" || s === "PARTIAL" || s === "UNPAID") return s;
   }
+  if (inv.notes && inv.notes.includes("<!--PAYMENT_LEDGER:")) {
+    const { payments } = parseNotesPaymentLedger(inv.notes);
+    if (payments.length > 0) {
+      return calculatePaymentStatus(inv.total_amount_paise ?? 0, payments).status;
+    }
+  }
   const balance = inv.balance_amount_paise ?? 0;
   const total = inv.total_amount_paise ?? 0;
   if (balance <= 0) return "PAID";
   if (total > 0 && balance < total) return "PARTIAL";
   return "UNPAID";
+}
+
+function getInvoiceBalance(inv: IInvoiceRow): number {
+  if (inv.balance_amount_paise !== undefined && inv.balance_amount_paise !== null) {
+    return inv.balance_amount_paise;
+  }
+  if (inv.notes && inv.notes.includes("<!--PAYMENT_LEDGER:")) {
+    const { payments } = parseNotesPaymentLedger(inv.notes);
+    if (payments.length > 0) {
+      return calculatePaymentStatus(inv.total_amount_paise ?? 0, payments).balancePaise;
+    }
+  }
+  return 0;
 }
 
 export const MobileInvoiceList: React.FC = () => {
@@ -367,15 +387,18 @@ export const MobileInvoiceList: React.FC = () => {
                     <Text strong style={{ fontSize: 16, display: "block" }}>
                       {abbrRs(inv.total_amount_paise || 0)}
                     </Text>
-                    {inv.balance_amount_paise && inv.balance_amount_paise > 0 ? (
-                      <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>
-                        Due: {abbrRs(inv.balance_amount_paise)}
-                      </Text>
-                    ) : (
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        {inv.payment_method || "Paid"}
-                      </Text>
-                    )}
+                    {(() => {
+                      const balance = getInvoiceBalance(inv);
+                      return balance > 0 ? (
+                        <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>
+                          Due: {abbrRs(balance)}
+                        </Text>
+                      ) : (
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          {inv.payment_method || "Paid"}
+                        </Text>
+                      );
+                    })()}
                   </div>
                 </div>
 

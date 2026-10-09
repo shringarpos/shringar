@@ -40,6 +40,7 @@ import { useLocation, useNavigate } from "react-router";
 import { MobileInvoiceList } from "../../components/invoices/mobile-invoice-list";
 import { CancelInvoiceModal } from "../../components/invoices/cancel-invoice-modal";
 import type { ICustomer, IInvoice } from "../../../src/libs/interfaces";
+import { parseNotesPaymentLedger, calculatePaymentStatus } from "../../services/payment-ledger";
 import { useShopCheck } from "../../../src/hooks/use-shop-check";
 import { supabaseClient } from "../../../src/providers/supabase-client";
 
@@ -49,6 +50,9 @@ const { Text } = Typography;
 
 interface IInvoiceRow extends IInvoice {
   customer?: Pick<ICustomer, "id" | "name" | "customer_code" | "phone"> | null;
+  paid_amount_paise?: number;
+  balance_amount_paise?: number;
+  payment_status?: string;
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -64,6 +68,24 @@ export default function Invoices() {
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
+
+function getInvoicePaymentMeta(inv: IInvoiceRow): {
+  status: "PAID" | "PARTIAL" | "UNPAID";
+  balancePaise: number;
+} {
+  if (inv.notes && inv.notes.includes("<!--PAYMENT_LEDGER:")) {
+    const { payments } = parseNotesPaymentLedger(inv.notes);
+    if (payments.length > 0) {
+      const res = calculatePaymentStatus(inv.total_amount_paise ?? 0, payments);
+      return { status: res.status, balancePaise: res.balancePaise };
+    }
+  }
+  const balance = inv.balance_amount_paise ?? 0;
+  const total = inv.total_amount_paise ?? 0;
+  if (balance <= 0) return { status: "PAID", balancePaise: 0 };
+  if (total > 0 && balance < total) return { status: "PARTIAL", balancePaise: balance };
+  return { status: "UNPAID", balancePaise: balance };
+}
 
 const InvoiceList: React.FC = () => {
   const navigate = useNavigate();
@@ -506,18 +528,37 @@ const InvoiceList: React.FC = () => {
             )}
           />
 
-          {/* Status */}
+          {/* Status & Payment State */}
           <Table.Column<IInvoiceRow>
-            key="is_cancelled"
-            dataIndex="is_cancelled"
+            key="status"
             title="Status"
-            render={(_: unknown, record: IInvoiceRow) =>
-              record.is_cancelled ? (
-                <Tag icon={<CloseCircleOutlined />} color="error">Cancelled</Tag>
-              ) : (
-                <Tag icon={<CheckCircleOutlined />} color="success">Active</Tag>
-              )
-            }
+            render={(_: unknown, record: IInvoiceRow) => {
+              if (record.is_cancelled) {
+                return <Tag icon={<CloseCircleOutlined />} color="error">Cancelled</Tag>;
+              }
+              const { status, balancePaise } = getInvoicePaymentMeta(record);
+              if (status === "PAID") {
+                return <Tag color="success">Paid</Tag>;
+              }
+              if (status === "PARTIAL") {
+                return (
+                  <Space direction="vertical" size={2}>
+                    <Tag color="warning">Partial</Tag>
+                    <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>
+                      Due: ₹{p2Rs(balancePaise)}
+                    </Text>
+                  </Space>
+                );
+              }
+              return (
+                <Space direction="vertical" size={2}>
+                  <Tag color="error">Unpaid</Tag>
+                  <Text type="danger" style={{ fontSize: 11, fontWeight: 600 }}>
+                    Due: ₹{p2Rs(balancePaise || record.total_amount_paise)}
+                  </Text>
+                </Space>
+              );
+            }}
           />
 
           {/* Actions */}
