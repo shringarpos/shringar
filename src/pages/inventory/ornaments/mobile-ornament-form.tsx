@@ -961,7 +961,7 @@ export const MobileOrnamentForm: React.FC<MobileOrnamentFormProps> = ({ id, acti
                 </button>
 
                 <div data-testid="mobile-stock-input" style={{ display: "contents" }}>
-                  <style>{`.mobile-stock-centered .ant-input-number-input { text-align: center; padding: 0 4px; }`}</style>
+                  <style>{`.mobile-stock-centered .ant-input-number-input { text-align: center; padding: 0 8px; }`}</style>
                   <InputNumber
                     className="mobile-stock-centered"
                     min={0}
